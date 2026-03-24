@@ -5,15 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AMG.VID | مشاهدة أحدث الأفلام والمسلسلات حصرياً</title>
     
-    <meta name="description" content="منصة AMG.VID لمشاهدة أحدث الأفلام والمسلسلات بجودة عالية HD. استمتع بمشاهدة مباشرة بدون إعلانات مزعجة.">
+    <meta name="description" content="منصة AMG.VID لمشاهدة أحدث الأفلام والمسلسلات بجودة عالية HD. استمتع بمشاهدة مباشرة.">
     <meta name="keywords" content="افلام مترجمة, مسلسلات حصريا, مشاهدة اونلاين, AMG.VID, ماي سيما البديل">
     
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --primary-color: #e50914; /* أحمر سينمائي */
-            --bg-color: #0b0b0b;
+            --primary-color: #e50914; /* أحمر سينمائي نيتفليكس */
+            --bg-color: #0b0b0b; /* أسود عميق */
+            --card-bg: #1a1a1a;
             --text-color: #ffffff;
         }
 
@@ -23,17 +24,240 @@
             color: var(--text-color);
             margin: 0;
             padding: 0;
+            overflow-x: hidden;
         }
 
+        /* تنسيق الهيدر مع الصورة الأصلية */
         header {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
-            padding: 20px 5%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.95), transparent);
+            padding: 15px 5%;
             display: flex;
             justify-content: space-between;
             align-items: center;
             position: fixed;
             width: 90%;
+            top: 0;
             z-index: 1000;
+            height: 70px;
+        }
+
+        /* حاوية الصورة للحفاظ على الأبعاد */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+
+        .logo-image {
+            height: 50px; /* يمكنك تعديل الطول حسب الرغبة */
+            width: auto; /* الحفاظ على النسبة والتناسب */
+            object-fit: contain;
+        }
+
+        /* تنسيق القائمة */
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            gap: 20px;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--text-color);
+            font-size: 1rem;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--primary-color);
+        }
+
+        /* الحاوية الرئيسية للأفلام */
+        .container {
+            padding: 120px 5% 50px; /* مسافة كافية تحت الهيدر المثبت */
+        }
+
+        .section-title {
+            border-right: 4px solid var(--primary-color);
+            padding-right: 15px;
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+        }
+
+        /* تنسيق شبكة الأفلام */
+        .movie-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 25px;
+        }
+
+        /* كارت الفيلم بتأثيرات hover لزيادة التفاعل */
+        .movie-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+            border: 1px solid #333;
+            position: relative;
+        }
+
+        .movie-card:hover {
+            transform: translateY(-10px) scale(1.03);
+            border-color: var(--primary-color);
+            box-shadow: 0 10px 20px rgba(229, 9, 20, 0.3);
+        }
+
+        .movie-card img {
+            width: 100%;
+            height: 270px;
+            object-fit: cover;
+        }
+
+        .movie-info {
+            padding: 15px;
+            text-align: center;
+        }
+
+        .movie-title {
+            font-size: 0.95rem;
+            margin: 0;
+            font-weight: bold;
+            white-space: nowrap; /* لجعل العنوان في سطر واحد */
+            overflow: hidden;
+            text-overflow: ellipsis; /* إضافة نقاط إذا كان العنوان طويلاً */
+        }
+
+        /* مشغل الفيديو الخلفي (Iframe Overlay) */
+        #player-container {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.98);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .iframe-wrapper {
+            position: relative;
+            width: 80%;
+            padding-top: 45%; /* نسبة العرض إلى الارتفاع 16:9 تقريبا */
+        }
+
+        iframe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            border: 3px solid var(--primary-color);
+            border-radius: 10px;
+        }
+
+        .close-btn {
+            margin-top: 30px;
+            padding: 12px 40px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .close-btn:hover {
+            background: #b00710;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo-container">
+        <img src="AMG.VID.png" alt="AMG.VID Logo" class="logo-image">
+    </div>
+    <nav>
+        <ul>
+            <li><a href="#">الرئيسية</a></li>
+            <li><a href="#">أفلام</a></li>
+            <li><a href="#">مسلسلات</a></li>
+        </ul>
+    </nav>
+</header>
+
+<div class="container">
+    <h2 class="section-title">أحدث الإضافات</h2>
+    <div class="movie-grid" id="movie-grid">
+        </div>
+</div>
+
+<div id="player-container">
+    <div class="iframe-wrapper" id="video-wrapper">
+        </div>
+    <button class="close-btn" onclick="closePlayer()">إغلاق المشغل</button>
+</div>
+
+<script>
+    // بيانات الفيلم التجريبي للتأكد من عمل النظام
+    const movies = [
+        {
+            title: "Joker: Folie à Deux 2024",
+            poster: "https://image.tmdb.org/t/p/w500/udDcl70jRpkJSnyUoT8asIuS3un.jpg",
+            url: "https://vidoza.net/embed-xxxx.html" // استبدل بـ رابط السيرفر الخارجي (Upstream/Vidoza)
+        },
+        // هنا ستضاف المصفوفات الأخرى أوتوماتيكياً عبر الـ Scraper
+    ];
+
+    const grid = document.getElementById('movie-grid');
+
+    function displayMovies() {
+        grid.innerHTML = ''; // تنظيف الشبكة أولاً
+        movies.forEach(movie => {
+            const card = document.createElement('div');
+            card.className = 'movie-card';
+            card.innerHTML = `
+                <img src="${movie.poster}" alt="${movie.title}">
+                <div class="movie-info">
+                    <div class="movie-title">${movie.title}</div>
+                </div>
+            `;
+            // ربط الضغط على الكارت بفتح المشغل
+            card.onclick = () => openPlayer(movie.url);
+            grid.appendChild(card);
+        });
+    }
+
+    function openPlayer(url) {
+        // يمكنك إضافة أكواد الإعلانات هنا (Pop-under) قبل فتح الفيلم
+        console.log("بروتوكول الإعلانات نشط...");
+        
+        const videoWrapper = document.getElementById('video-wrapper');
+        // حقن الـ Iframe مع السماح بالملء الكامل للشاشة
+        videoWrapper.innerHTML = `<iframe src="${url}" frameborder="0" allowfullscreen webkitallowfullscreen mozallowfullscreen></iframe>`;
+        document.getElementById('player-container').style.display = 'flex';
+        // منع التمرير في الخلفية عند فتح المشغل
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePlayer() {
+        document.getElementById('player-container').style.display = 'none';
+        document.getElementById('video-wrapper').innerHTML = '';
+        // إعادة تفعيل التمرير في الخلفية
+        document.body.style.overflow = 'auto';
+    }
+
+    // تشغيل الدالة لعرض الأفلام عند تحميل الصفحة
+    displayMovies();
+</script>
+
+</body>
+</html>
         }
 
         .logo {
