@@ -3,334 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMG.VID | مشاهدة أحدث الأفلام والمسلسلات حصرياً</title>
-    
-    <meta name="description" content="منصة AMG.VID لمشاهدة أحدث الأفلام والمسلسلات بجودة عالية HD. استمتع بمشاهدة مباشرة.">
-    <meta name="keywords" content="افلام مترجمة, مسلسلات حصريا, مشاهدة اونلاين, AMG.VID, ماي سيما البديل">
+    <title>AMG.VID | عالم الأفلام</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --primary-color: #e50914; /* أحمر سينمائي نيتفليكس */
-            --bg-color: #0b0b0b; /* أسود عميق */
-            --card-bg: #1a1a1a;
-            --text-color: #ffffff;
+            --main-red: #e50914;
+            --main-black: #0b0b0b;
         }
 
         body {
             font-family: 'Cairo', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: var(--main-black);
+            color: white;
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
         }
 
-        /* تنسيق الهيدر مع الصورة الأصلية */
+        /* تنسيق الهيدر ومنع تداخل الكلام */
         header {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.95), transparent);
-            padding: 15px 5%;
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 10px 5%;
             display: flex;
             justify-content: space-between;
             align-items: center;
             position: fixed;
-            width: 90%;
-            top: 0;
-            z-index: 1000;
-            height: 70px;
+            top: 0; width: 90%; z-index: 1000;
+            height: 60px;
         }
 
-        /* حاوية الصورة للحفاظ على الأبعاد */
-        .logo-container {
-            display: flex;
-            align-items: center;
-            height: 100%;
+        .logo-container img {
+            height: 40px;
+            width: auto;
         }
 
-        .logo-image {
-            height: 50px; /* يمكنك تعديل الطول حسب الرغبة */
-            width: auto; /* الحفاظ على النسبة والتناسب */
-            object-fit: contain;
-        }
-
-        /* تنسيق القائمة */
         nav ul {
+            display: flex;
             list-style: none;
+            gap: 15px;
             margin: 0;
             padding: 0;
-            display: flex;
-            gap: 20px;
         }
 
         nav a {
+            color: white;
             text-decoration: none;
-            color: var(--text-color);
-            font-size: 1rem;
-            font-weight: bold;
-            transition: color 0.3s;
+            font-size: 0.9rem;
         }
 
-        nav a:hover {
-            color: var(--primary-color);
-        }
-
-        /* الحاوية الرئيسية للأفلام */
         .container {
-            padding: 120px 5% 50px; /* مسافة كافية تحت الهيدر المثبت */
+            padding: 100px 5% 20px;
         }
 
         .section-title {
-            border-right: 4px solid var(--primary-color);
-            padding-right: 15px;
-            font-size: 1.5rem;
-            margin-bottom: 30px;
+            border-right: 4px solid var(--main-red);
+            padding-right: 10px;
+            margin-bottom: 20px;
         }
 
-        /* تنسيق شبكة الأفلام */
+        /* شبكة الأفلام */
         .movie-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 25px;
-        }
-
-        /* كارت الفيلم بتأثيرات hover لزيادة التفاعل */
-        .movie-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            overflow: hidden;
-            transition: all 0.3s ease-in-out;
-            cursor: pointer;
-            border: 1px solid #333;
-            position: relative;
-        }
-
-        .movie-card:hover {
-            transform: translateY(-10px) scale(1.03);
-            border-color: var(--primary-color);
-            box-shadow: 0 10px 20px rgba(229, 9, 20, 0.3);
-        }
-
-        .movie-card img {
-            width: 100%;
-            height: 270px;
-            object-fit: cover;
-        }
-
-        .movie-info {
-            padding: 15px;
-            text-align: center;
-        }
-
-        .movie-title {
-            font-size: 0.95rem;
-            margin: 0;
-            font-weight: bold;
-            white-space: nowrap; /* لجعل العنوان في سطر واحد */
-            overflow: hidden;
-            text-overflow: ellipsis; /* إضافة نقاط إذا كان العنوان طويلاً */
-        }
-
-        /* مشغل الفيديو الخلفي (Iframe Overlay) */
-        #player-container {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.98);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-
-        .iframe-wrapper {
-            position: relative;
-            width: 80%;
-            padding-top: 45%; /* نسبة العرض إلى الارتفاع 16:9 تقريبا */
-        }
-
-        iframe {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%;
-            height: 100%;
-            border: 3px solid var(--primary-color);
-            border-radius: 10px;
-        }
-
-        .close-btn {
-            margin-top: 30px;
-            padding: 12px 40px;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-
-        .close-btn:hover {
-            background: #b00710;
-        }
-    </style>
-</head>
-<body>
-
-<header>
-    <div class="logo-container">
-        <img src="AMG.VID.png" alt="AMG.VID Logo" class="logo-image">
-    </div>
-    <nav>
-        <ul>
-            <li><a href="#">الرئيسية</a></li>
-            <li><a href="#">أفلام</a></li>
-            <li><a href="#">مسلسلات</a></li>
-        </ul>
-    </nav>
-</header>
-
-<div class="container">
-    <h2 class="section-title">أحدث الإضافات</h2>
-    <div class="movie-grid" id="movie-grid">
-        </div>
-</div>
-
-<div id="player-container">
-    <div class="iframe-wrapper" id="video-wrapper">
-        </div>
-    <button class="close-btn" onclick="closePlayer()">إغلاق المشغل</button>
-</div>
-
-<script>
-    // بيانات الفيلم التجريبي للتأكد من عمل النظام
-    const movies = [
-        {
-            title: "Joker: Folie à Deux 2024",
-            poster: "https://image.tmdb.org/t/p/w500/udDcl70jRpkJSnyUoT8asIuS3un.jpg",
-            url: "https://vidoza.net/embed-xxxx.html" // استبدل بـ رابط السيرفر الخارجي (Upstream/Vidoza)
-        },
-        // هنا ستضاف المصفوفات الأخرى أوتوماتيكياً عبر الـ Scraper
-    ];
-
-    const grid = document.getElementById('movie-grid');
-
-    function displayMovies() {
-        grid.innerHTML = ''; // تنظيف الشبكة أولاً
-        movies.forEach(movie => {
-            const card = document.createElement('div');
-            card.className = 'movie-card';
-            card.innerHTML = `
-                <img src="${movie.poster}" alt="${movie.title}">
-                <div class="movie-info">
-                    <div class="movie-title">${movie.title}</div>
-                </div>
-            `;
-            // ربط الضغط على الكارت بفتح المشغل
-            card.onclick = () => openPlayer(movie.url);
-            grid.appendChild(card);
-        });
-    }
-
-    function openPlayer(url) {
-        // يمكنك إضافة أكواد الإعلانات هنا (Pop-under) قبل فتح الفيلم
-        console.log("بروتوكول الإعلانات نشط...");
-        
-        const videoWrapper = document.getElementById('video-wrapper');
-        // حقن الـ Iframe مع السماح بالملء الكامل للشاشة
-        videoWrapper.innerHTML = `<iframe src="${url}" frameborder="0" allowfullscreen webkitallowfullscreen mozallowfullscreen></iframe>`;
-        document.getElementById('player-container').style.display = 'flex';
-        // منع التمرير في الخلفية عند فتح المشغل
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closePlayer() {
-        document.getElementById('player-container').style.display = 'none';
-        document.getElementById('video-wrapper').innerHTML = '';
-        // إعادة تفعيل التمرير في الخلفية
-        document.body.style.overflow = 'auto';
-    }
-
-    // تشغيل الدالة لعرض الأفلام عند تحميل الصفحة
-    displayMovies();
-</script>
-
-</body>
-</html>
-        }
-
-        .logo {
-            font-size: 2rem;
-            font-weight: bold;
-            color: var(--primary-color);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-
-        .container {
-            padding: 100px 5% 50px;
-        }
-
-        .movie-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 20px;
         }
 
         .movie-card {
             background: #1a1a1a;
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
-            transition: transform 0.3s;
-            cursor: pointer;
             border: 1px solid #333;
-        }
-
-        .movie-card:hover {
-            transform: scale(1.05);
-            border-color: var(--primary-color);
+            cursor: pointer;
         }
 
         .movie-card img {
             width: 100%;
-            height: 270px;
+            height: 220px;
             object-fit: cover;
         }
 
         .movie-info {
             padding: 10px;
             text-align: center;
+            font-size: 0.85rem;
         }
 
-        .movie-title {
-            font-size: 0.9rem;
-            margin: 5px 0;
-        }
-
-        /* مشغل الفيديو المخفي */
-        #player-container {
+        /* المشغل */
+        #player-layer {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 2000;
+            background: rgba(0,0,0,1);
+            z-index: 9999;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            flex-direction: column;
         }
 
         iframe {
-            width: 80%;
-            height: 70%;
-            border: 2px solid var(--primary-color);
+            width: 90%;
+            height: 60%;
+            border: 2px solid var(--main-red);
         }
 
         .close-btn {
-            margin-top: 20px;
-            padding: 10px 30px;
-            background: var(--primary-color);
+            background: var(--main-red);
             color: white;
             border: none;
+            padding: 10px 20px;
+            margin-top: 15px;
             cursor: pointer;
             border-radius: 5px;
         }
@@ -339,65 +121,67 @@
 <body>
 
 <header>
-    <div class="logo">AMG.VID</div>
-    <nav>بحث | الأقسام | اتصل بنا</nav>
+    <div class="logo-container">
+        <img src="AMG.VID.png" alt="AMG.VID">
+    </div>
+    <nav>
+        <ul>
+            <li><a href="#">الرئيسية</a></li>
+            <li><a href="#">الأقسام</a></li>
+            <li><a href="#">اتصل بنا</a></li>
+        </ul>
+    </nav>
 </header>
 
 <div class="container">
-    <h2 style="border-right: 4px solid var(--primary-color); padding-right: 15px;">أحدث الإضافات</h2>
-    <div class="movie-grid" id="movie-grid">
+    <h2 class="section-title">أحدث الإضافات</h2>
+    <div class="movie-grid" id="movie-display">
         </div>
 </div>
 
-<div id="player-container">
-    <div id="video-wrapper" style="width: 100%; display: flex; justify-content: center;"></div>
-    <button class="close-btn" onclick="closePlayer()">إغلاق المشغل</button>
+<div id="player-layer">
+    <div id="video-frame" style="width:100%; text-align:center;"></div>
+    <button class="close-btn" onclick="closeMe()">إغلاق</button>
 </div>
 
 <script>
-    // بيانات تجريبية (سيتم تعويضها لاحقاً بملف JSON يتم تحديثه تلقائياً)
-    const movies = [
+    // بيانات الأفلام
+    const myMovies = [
         {
-            title: "Joker: Folie à Deux",
-            poster: "https://image.tmdb.org/t/p/w500/udDcl70jRpkJSnyUoT8asIuS3un.jpg",
-            url: "https://vidoza.net/embed-xxxx.html" // هنا تضع رابط السيرفر الخارجي
-        },
-        // أضف المزيد هنا...
+            name: "Joker: Folie à Deux 2024",
+            img: "https://image.tmdb.org/t/p/w500/udDcl70jRpkJSnyUoT8asIuS3un.jpg",
+            link: "https://vidoza.net/embed-xxxx.html"
+        }
     ];
 
-    const grid = document.getElementById('movie-grid');
+    const display = document.getElementById('movie-display');
 
-    function displayMovies() {
-        movies.forEach(movie => {
-            const card = document.createElement('div');
-            card.className = 'movie-card';
-            card.innerHTML = `
-                <img src="${movie.poster}" alt="${movie.title}">
-                <div class="movie-info">
-                    <div class="movie-title">${movie.title}</div>
-                </div>
+    function render() {
+        display.innerHTML = '';
+        myMovies.forEach(m => {
+            const item = document.createElement('div');
+            item.className = 'movie-card';
+            item.innerHTML = `
+                <img src="${m.img}">
+                <div class="movie-info">${m.name}</div>
             `;
-            card.onclick = () => openPlayer(movie.url);
-            grid.appendChild(card);
+            item.onclick = () => play(m.link);
+            display.appendChild(item);
         });
     }
 
-    function openPlayer(url) {
-        // هنا يمكنك حقن كود الإعلانات (Pop-under) قبل فتح الفيلم
-        console.log("جارِ فتح الإعلانات...");
-        
-        document.getElementById('video-wrapper').innerHTML = `<iframe src="${url}" frameborder="0" allowfullscreen></iframe>`;
-        document.getElementById('player-container').style.display = 'flex';
+    function play(url) {
+        document.getElementById('video-frame').innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
+        document.getElementById('player-layer').style.display = 'flex';
     }
 
-    function closePlayer() {
-        document.getElementById('player-container').style.display = 'none';
-        document.getElementById('video-wrapper').innerHTML = '';
+    function closeMe() {
+        document.getElementById('player-layer').style.display = 'none';
+        document.getElementById('video-frame').innerHTML = '';
     }
 
-    displayMovies();
+    render();
 </script>
 
 </body>
 </html>
-
