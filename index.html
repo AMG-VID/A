@@ -3,203 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMG.VID - منصة الفيديو</title>
+    <title>AMG.VID | مشاهدة أحدث الأفلام والمسلسلات حصرياً</title>
+    
+    <meta name="description" content="منصة AMG.VID لمشاهدة أحدث الأفلام والمسلسلات بجودة عالية HD. استمتع بمشاهدة مباشرة بدون إعلانات مزعجة.">
+    <meta name="keywords" content="افلام مترجمة, مسلسلات حصريا, مشاهدة اونلاين, AMG.VID, ماي سيما البديل">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    
     <style>
-        /* --- CSS (التنسيق) --- */
         :root {
-            --bg-color: #0f172a; /* لون خلفية غامق مريح */
-            --card-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-            --accent: #38bdf8; /* لون أزرق سماوي للتمييز */
+            --primary-color: #e50914; /* أحمر سينمائي */
+            --bg-color: #0b0b0b;
+            --text-color: #ffffff;
         }
 
         body {
+            font-family: 'Cairo', sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-color);
             margin: 0;
             padding: 0;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
         }
 
         header {
-            background-color: #1e293b;
-            padding: 2rem 5%; /* زيادة الـ padding لإعطاء مساحة للشعار الجديد */
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            padding: 20px 5%;
             display: flex;
-            flex-direction: column; /* ترتيب العناصر عموديًا في الـ header */
-            align-items: center; /* توسيط العناصر أفقيًا */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            position: sticky;
-            top: 0;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 90%;
             z-index: 1000;
-            gap: 1.5rem; /* مسافة بين الشعار وشريط البحث */
         }
 
-        .logo-container {
-            width: 100%;
-            display: flex;
-            justify-content: center; /* توسيط الشعار */
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
-        .logo-image {
-            max-height: 80px; /* تحديد أقصى ارتفاع للشعار */
-            width: auto; /* الحفاظ على أبعاد الصورة */
+        .container {
+            padding: 100px 5% 50px;
         }
 
-        .search-box {
-            position: relative;
-            width: 100%; /* اجعل شريط البحث يأخذ المساحة المتاحة */
-            max-width: 500px; /* تحديد أقصى عرض لشريط البحث */
-        }
-
-        input#searchInput {
-            width: 100%;
-            padding: 12px 20px; /* زيادة التباعد الداخلي قليلاً */
-            border-radius: 8px;
-            border: 1px solid #334155;
-            background: #0f172a;
-            color: white;
-            outline: none;
-            transition: border 0.3s;
-            font-size: 1rem;
-        }
-
-        input#searchInput:focus {
-            border-color: var(--accent);
-        }
-
-        main {
-            padding: 2rem 5%;
-            flex-grow: 1; /* السماح لـ main بأخذ المساحة المتبقية */
-        }
-
-        .video-grid {
+        .movie-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 20px;
         }
 
-        .video-card {
-            background: var(--card-bg);
-            border-radius: 12px;
+        .movie-card {
+            background: #1a1a1a;
+            border-radius: 10px;
             overflow: hidden;
-            transition: all 0.3s ease;
-            border: 1px solid #334155;
+            transition: transform 0.3s;
             cursor: pointer;
+            border: 1px solid #333;
         }
 
-        .video-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--accent);
+        .movie-card:hover {
+            transform: scale(1.05);
+            border-color: var(--primary-color);
         }
 
-        .thumbnail {
+        .movie-card img {
             width: 100%;
-            height: 160px;
-            background: #334155;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
+            height: 270px;
+            object-fit: cover;
         }
 
-        .info {
-            padding: 15px;
-        }
-
-        .info h3 {
-            margin: 0 0 8px 0;
-            font-size: 1.1rem;
-        }
-
-        .info p {
-            color: var(--text-dim);
-            font-size: 0.9rem;
-            margin: 0;
-        }
-
-        /* رسالة عند عدم وجود نتائج */
-        #noResults {
+        .movie-info {
+            padding: 10px;
             text-align: center;
-            grid-column: 1 / -1;
-            padding: 50px;
-            color: var(--text-dim);
+        }
+
+        .movie-title {
+            font-size: 0.9rem;
+            margin: 5px 0;
+        }
+
+        /* مشغل الفيديو المخفي */
+        #player-container {
             display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        iframe {
+            width: 80%;
+            height: 70%;
+            border: 2px solid var(--primary-color);
+        }
+
+        .close-btn {
+            margin-top: 20px;
+            padding: 10px 30px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="logo-container">
-            <img src="AMG.VID.png" alt="AMG.VID Logo" class="logo-image">
+<header>
+    <div class="logo">AMG.VID</div>
+    <nav>بحث | الأقسام | اتصل بنا</nav>
+</header>
+
+<div class="container">
+    <h2 style="border-right: 4px solid var(--primary-color); padding-right: 15px;">أحدث الإضافات</h2>
+    <div class="movie-grid" id="movie-grid">
         </div>
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="ابحث عن فيديوهات...">
-        </div>
-    </header>
+</div>
 
-    <main>
-        <div class="video-grid" id="videoGrid">
-            </div>
-        <div id="noResults">عذراً، لم نجد فيديوهات تطابق بحثك.</div>
-    </main>
+<div id="player-container">
+    <div id="video-wrapper" style="width: 100%; display: flex; justify-content: center;"></div>
+    <button class="close-btn" onclick="closePlayer()">إغلاق المشغل</button>
+</div>
 
-    <script>
-        /* --- JavaScript (التفاعل) --- */
+<script>
+    // بيانات تجريبية (سيتم تعويضها لاحقاً بملف JSON يتم تحديثه تلقائياً)
+    const movies = [
+        {
+            title: "Joker: Folie à Deux",
+            poster: "https://image.tmdb.org/t/p/w500/udDcl70jRpkJSnyUoT8asIuS3un.jpg",
+            url: "https://vidoza.net/embed-xxxx.html" // هنا تضع رابط السيرفر الخارجي
+        },
+        // أضف المزيد هنا...
+    ];
 
-        // قاعدة بيانات تجريبية (يمكنك إضافة روابط يوتيوب هنا لاحقاً)
-        const videoData = [
-            { id: 1, title: "تطوير تطبيقات الأندرويد", category: "برمجة", icon: "📱" },
-            { id: 2, title: "أساسيات لغة بايثون", category: "تعليم", icon: "🐍" },
-            { id: 3, title: "تحليل الشبكات المتقدم", category: "سيكيورتي", icon: "🛡️" },
-            { id: 4, title: "شرح أوامر Termux", category: "أدوات", icon: "💻" },
-            { id: 5, title: "تعديل ملفات النظام BuildProp", category: "موبايل", icon: "⚙️" },
-            { id: 6, title: "تصميم واجهات المستخدم UI", category: "تصميم", icon: "🎨" },
-        ];
+    const grid = document.getElementById('movie-grid');
 
-        const videoGrid = document.getElementById('videoGrid');
-        const searchInput = document.getElementById('searchInput');
-        const noResults = document.getElementById('noResults');
-
-        // دالة رسم البطاقات
-        function renderVideos(list) {
-            videoGrid.innerHTML = '';
-            if (list.length === 0) {
-                noResults.style.display = 'block';
-                return;
-            }
-            
-            noResults.style.display = 'none';
-            list.forEach(video => {
-                const card = document.createElement('div');
-                card.className = 'video-card';
-                card.innerHTML = `
-                    <div class="thumbnail">${video.icon}</div>
-                    <div class="info">
-                        <h3>${video.title}</h3>
-                        <p>${video.category}</p>
-                    </div>
-                `;
-                videoGrid.appendChild(card);
-            });
-        }
-
-        // محرك البحث
-        searchInput.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            const filtered = videoData.filter(v => 
-                v.title.toLowerCase().includes(term) || 
-                v.category.toLowerCase().includes(term)
-            );
-            renderVideos(filtered);
+    function displayMovies() {
+        movies.forEach(movie => {
+            const card = document.createElement('div');
+            card.className = 'movie-card';
+            card.innerHTML = `
+                <img src="${movie.poster}" alt="${movie.title}">
+                <div class="movie-info">
+                    <div class="movie-title">${movie.title}</div>
+                </div>
+            `;
+            card.onclick = () => openPlayer(movie.url);
+            grid.appendChild(card);
         });
+    }
 
-        // التشغيل المبدئي
-        renderVideos(videoData);
-    </script>
+    function openPlayer(url) {
+        // هنا يمكنك حقن كود الإعلانات (Pop-under) قبل فتح الفيلم
+        console.log("جارِ فتح الإعلانات...");
+        
+        document.getElementById('video-wrapper').innerHTML = `<iframe src="${url}" frameborder="0" allowfullscreen></iframe>`;
+        document.getElementById('player-container').style.display = 'flex';
+    }
+
+    function closePlayer() {
+        document.getElementById('player-container').style.display = 'none';
+        document.getElementById('video-wrapper').innerHTML = '';
+    }
+
+    displayMovies();
+</script>
+
 </body>
 </html>
+
