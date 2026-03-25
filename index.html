@@ -3,124 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سيما جو|cima go</title>
+    <title>LEX-Ω Cinema Orange</title>
     <style>
-        /* CSS - لغة التنسيق */
+        /* CSS - لغة التنسيق المطورة */
         :root {
-            --primary-red: #ff0000;
+            --bg-orange: #ff6600; /* البرتقالي المطلوب للخلفية */
+            --primary-red: #cc0000;
             --pure-white: #ffffff;
-            --deep-black: #0a0a0a;
+            --deep-black: #000000;
             --caution-yellow: #ffcc00;
         }
 
         body {
-            background-color: var(--deep-black);
-            color: var(--pure-white);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-orange);
+            color: var(--deep-black);
+            font-family: 'Segoe UI', Arial, sans-serif;
             margin: 0;
             padding: 0;
         }
 
+        /* تعديل الهيدر ليكون غير ثابت (يتحرك مع السكرول) */
         header {
             background-color: var(--deep-black);
-            border-bottom: 3px solid var(--primary-red);
-            padding: 20px;
+            border-bottom: 5px solid var(--caution-yellow);
+            padding: 30px 20px;
             text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
+            /* تم إزالة position: sticky لجعل الهيدر يختفي عند النزول لأسفل */
+            position: relative; 
         }
 
         .logo {
-            max-width: 150px;
-            margin-bottom: 15px;
-            border: 2px solid var(--caution-yellow);
+            max-width: 180px;
+            margin-bottom: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            border: 3px solid var(--pure-white);
         }
 
         .search-container {
-            margin-top: 10px;
+            width: 100%;
         }
 
         #movieSearch {
-            width: 80%;
-            max-width: 500px;
-            padding: 12px;
-            border-radius: 5px;
-            border: 2px solid var(--caution-yellow);
+            width: 90%;
+            max-width: 600px;
+            padding: 15px;
+            border-radius: 30px;
+            border: 3px solid var(--primary-red);
             background-color: var(--pure-white);
             color: var(--deep-black);
+            font-size: 1.1rem;
             font-weight: bold;
             outline: none;
-        }
-
-        #movieSearch:focus {
-            border-color: var(--primary-red);
-            box-shadow: 0 0 10px var(--primary-red);
+            text-align: center;
         }
 
         .movies-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 25px;
-            padding: 40px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 20px;
         }
 
         .movie-card {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 10px;
+            background-color: var(--deep-black);
+            border-radius: 15px;
             overflow: hidden;
-            transition: transform 0.3s, border-color 0.3s;
-            text-align: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            transition: transform 0.3s;
         }
 
         .movie-card:hover {
-            transform: scale(1.05);
-            border-color: var(--primary-red);
+            transform: translateY(-10px);
         }
 
         video {
             width: 100%;
-            height: auto;
+            display: block;
             background-color: #000;
+            border-bottom: 3px solid var(--primary-red);
         }
 
         .movie-info {
             padding: 15px;
-            background-color: var(--deep-black);
+            text-align: center;
         }
 
         .movie-title {
-            color: var(--caution-yellow);
-            font-size: 1.2rem;
+            color: var(--pure-white);
+            font-size: 1.3rem;
             margin: 0;
-            text-transform: uppercase;
         }
 
         footer {
+            background-color: var(--deep-black);
+            color: var(--caution-yellow);
             text-align: center;
             padding: 20px;
-            color: var(--primary-red);
-            font-size: 0.8rem;
-            border-top: 1px solid #222;
+            margin-top: 50px;
+        }
+
+        /* تحسينات للهواتف */
+        @media (max-width: 600px) {
+            .movies-grid {
+                padding: 10px;
+                gap: 15px;
+            }
+            #movieSearch {
+                width: 85%;
+            }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <img src="AMG.VID.png" alt="شعار الموقع" class="logo" onerror="this.src='https://via.placeholder.com/150x50/ff0000/ffffff?text=LEX-OMEGA'">
+        <img src="AMG.VID.png" alt="شعار الموقع" class="logo" onerror="this.src='https://via.placeholder.com/200x80/000000/ffffff?text=LEX-CINEMA'">
         
         <div class="search-container">
-            <input type="text" id="movieSearch" placeholder="ابحث عن فيلمك المفضل..." onkeyup="searchMovie()">
+            <input type="text" id="movieSearch" placeholder="🔍 ابحث عن اسم الفيلم هنا..." onkeyup="searchMovie()">
         </div>
     </header>
 
     <main class="movies-grid" id="movieContainer">
+        
         <div class="movie-card">
-            <video controls>
+            <video controls preload="metadata">
                 <source src="elshater.mp4" type="video/mp4">
-                متصفحك لا يدعم تشغيل الفيديو.
             </video>
             <div class="movie-info">
                 <h3 class="movie-title">فيلم الشاطر</h3>
@@ -128,7 +138,7 @@
         </div>
 
         <div class="movie-card">
-            <video controls>
+            <video controls preload="metadata">
                 <source src="egybest.mp4" type="video/mp4">
             </video>
             <div class="movie-info">
@@ -137,7 +147,7 @@
         </div>
 
         <div class="movie-card">
-            <video controls>
+            <video controls preload="metadata">
                 <source src="bershama.mp4" type="video/mp4">
             </video>
             <div class="movie-info">
@@ -146,7 +156,7 @@
         </div>
 
         <div class="movie-card">
-            <video controls>
+            <video controls preload="metadata">
                 <source src="elafadel.mp4" type="video/mp4">
             </video>
             <div class="movie-info">
@@ -155,21 +165,22 @@
         </div>
 
         <div class="movie-card">
-            <video controls>
+            <video controls preload="metadata">
                 <source src="ahmedandahmed.mp4" type="video/mp4">
             </video>
             <div class="movie-info">
                 <h3 class="movie-title">فيلم احمد واحمد</h3>
             </div>
         </div>
+
     </main>
 
     <footer>
-        &copy; 2026 - نظام LEX-Ω للأرشفة السينمائية
+        <p>تم استخراج البيانات بواسطة نظام LEX-Ω &copy; 2026</p>
     </footer>
 
     <script>
-        // JavaScript - منطق البحث
+        // JavaScript - منطق البحث الفوري
         function searchMovie() {
             let input = document.getElementById('movieSearch').value.toLowerCase();
             let cards = document.getElementsByClassName('movie-card');
@@ -177,7 +188,7 @@
             for (let i = 0; i < cards.length; i++) {
                 let title = cards[i].getElementsByClassName('movie-title')[0].innerText.toLowerCase();
                 if (title.includes(input)) {
-                    cards[i].style.display = "";
+                    cards[i].style.display = "block";
                 } else {
                     cards[i].style.display = "none";
                 }
