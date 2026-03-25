@@ -1,0 +1,28 @@
+
+[
+    {
+        "name": "Avatar: The Way of Water",
+        "img": "https://image.tmdb.org/t/p/w500/t6mE1pBgyq79HeUdS9s0IuI7fyC.jpg",
+        "link": "https://vidsrc.to/embed/movie/tt1630029"
+    },
+    {
+        "name": "Oppenheimer",
+        "img": "https://image.tmdb.org/t/p/w500/8Gxv2mSbiubL7S3vR92u9opq1V8.jpg",
+        "link": "https://vidsrc.to/embed/movie/tt1532723"
+    },
+    {
+        "name": "Spider-Man: Across the Spider-Verse",
+        "img": "https://image.tmdb.org/t/p/w500/8Vtbb9pWxSctU1t96jC9pL1pPre.jpg",
+        "link": "https://vidsrc.to/embed/movie/tt1397514"
+    },
+    {
+        "name": "John Wick: Chapter 4",
+        "img": "https://image.tmdb.org/t/p/w500/vZloYm7pS7lsSvyZp92vQnMdnH2.jpg",
+        "link": "https://vidsrc.to/embed/movie/tt10366206"
+    },
+    {
+        "name": "The Batman",
+        "img": "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onDB.jpg",
+        "link": "https://vidsrc.to/embed/movie/tt1877830"
+    }
+]
