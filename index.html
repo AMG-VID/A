@@ -3,39 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMG.VID | مشاهدة أحدث الأفلام والمسلسلات</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>سينما LEX-Ω</title>
+    <style>
+        /* CSS - لغة التنسيق */
+        :root {
+            --primary-red: #ff0000;
+            --pure-white: #ffffff;
+            --deep-black: #0a0a0a;
+            --caution-yellow: #ffcc00;
+        }
+
+        body {
+            background-color: var(--deep-black);
+            color: var(--pure-white);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: var(--deep-black);
+            border-bottom: 3px solid var(--primary-red);
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo {
+            max-width: 150px;
+            margin-bottom: 15px;
+            border: 2px solid var(--caution-yellow);
+        }
+
+        .search-container {
+            margin-top: 10px;
+        }
+
+        #movieSearch {
+            width: 80%;
+            max-width: 500px;
+            padding: 12px;
+            border-radius: 5px;
+            border: 2px solid var(--caution-yellow);
+            background-color: var(--pure-white);
+            color: var(--deep-black);
+            font-weight: bold;
+            outline: none;
+        }
+
+        #movieSearch:focus {
+            border-color: var(--primary-red);
+            box-shadow: 0 0 10px var(--primary-red);
+        }
+
+        .movies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 25px;
+            padding: 40px;
+        }
+
+        .movie-card {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s, border-color 0.3s;
+            text-align: center;
+        }
+
+        .movie-card:hover {
+            transform: scale(1.05);
+            border-color: var(--primary-red);
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            background-color: #000;
+        }
+
+        .movie-info {
+            padding: 15px;
+            background-color: var(--deep-black);
+        }
+
+        .movie-title {
+            color: var(--caution-yellow);
+            font-size: 1.2rem;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--primary-red);
+            font-size: 0.8rem;
+            border-top: 1px solid #222;
+        }
+    </style>
 </head>
 <body>
 
-    <header class="main-header">
-        <div class="container">
-            <div class="logo">AMG<span>.VID</span></div>
-            <nav class="main-nav">
-                <ul>
-                    <li><a href="#"><i class="fas fa-home"></i> الرئيسية</a></li>
-                    <li><a href="#"><i class="fas fa-film"></i> الأفلام</a></li>
-                    <li><a href="#"><i class="fas fa-tv"></i> المسلسلات</a></li>
-                </ul>
-            </nav>
-            <div class="search-box">
-                <input type="text" placeholder="ابحث عن فيلمك...">
-                <button><i class="fas fa-search"></i></button>
-            </div>
+    <header>
+        <img src="AMG.VID.png" alt="شعار الموقع" class="logo" onerror="this.src='https://via.placeholder.com/150x50/ff0000/ffffff?text=LEX-OMEGA'">
+        
+        <div class="search-container">
+            <input type="text" id="movieSearch" placeholder="ابحث عن فيلمك المفضل..." onkeyup="searchMovie()">
         </div>
     </header>
 
-    <main class="container">
-        <section class="movies-section">
-            <div class="section-title">
-                <h2><i class="fas fa-star"></i> المضاف حديثاً</h2>
+    <main class="movies-grid" id="movieContainer">
+        <div class="movie-card">
+            <video controls>
+                <source src="elshater.mp4" type="video/mp4">
+                متصفحك لا يدعم تشغيل الفيديو.
+            </video>
+            <div class="movie-info">
+                <h3 class="movie-title">فيلم الشاطر</h3>
             </div>
-            <div class="movies-grid" id="movie-display">
-                </div>
-        </section>
+        </div>
+
+        <div class="movie-card">
+            <video controls>
+                <source src="egybest.mp4" type="video/mp4">
+            </video>
+            <div class="movie-info">
+                <h3 class="movie-title">فيلم ايجي بيست</h3>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <video controls>
+                <source src="bershama.mp4" type="video/mp4">
+            </video>
+            <div class="movie-info">
+                <h3 class="movie-title">فيلم برشامة</h3>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <video controls>
+                <source src="elafadel.mp4" type="video/mp4">
+            </video>
+            <div class="movie-info">
+                <h3 class="movie-title">فيلم السادة الافاضل</h3>
+            </div>
+        </div>
+
+        <div class="movie-card">
+            <video controls>
+                <source src="ahmedandahmed.mp4" type="video/mp4">
+            </video>
+            <div class="movie-info">
+                <h3 class="movie-title">فيلم احمد واحمد</h3>
+            </div>
+        </div>
     </main>
 
-    <script src="script.js"></script>
+    <footer>
+        &copy; 2026 - نظام LEX-Ω للأرشفة السينمائية
+    </footer>
+
+    <script>
+        // JavaScript - منطق البحث
+        function searchMovie() {
+            let input = document.getElementById('movieSearch').value.toLowerCase();
+            let cards = document.getElementsByClassName('movie-card');
+
+            for (let i = 0; i < cards.length; i++) {
+                let title = cards[i].getElementsByClassName('movie-title')[0].innerText.toLowerCase();
+                if (title.includes(input)) {
+                    cards[i].style.display = "";
+                } else {
+                    cards[i].style.display = "none";
+                }
+            }
+        }
+    </script>
 </body>
 </html>
