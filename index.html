@@ -39,7 +39,6 @@
             cursor: pointer;
         }
 
-        /* تنسيق الأقسام في الرئيسية */
         .categories-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -68,7 +67,6 @@
             color: white;
         }
 
-        /* إخفاء الأقسام */
         .section-content {
             display: none;
             padding: 20px;
@@ -79,7 +77,6 @@
 
         .active-section { display: block; }
 
-        /* تنسيق شريط البحث داخل القسم */
         .section-header {
             text-align: center;
             margin-bottom: 30px;
@@ -121,7 +118,13 @@
             transition: 0.3s;
         }
 
-        video { width: 100%; display: block; border-bottom: 3px solid var(--primary-red); }
+        /* تعديل المشغل ليكون متوافقاً مع التصميم */
+        iframe {
+            width: 100%;
+            height: 200px;
+            border: none;
+            border-bottom: 3px solid var(--primary-red);
+        }
 
         .movie-info { padding: 15px; text-align: center; color: white; }
 
@@ -156,14 +159,20 @@
         <div class="category-card" onclick="showSection('allMovies')">جميع الأفلام</div>
     </div>
 
-    <!-- قسم 2024 -->
+    <!-- قسم 2024 (تم إضافة الفيلم والبحث) -->
     <div id="year2024" class="section-content">
         <div class="section-header">
             <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
             <h2>قسم أفلام 2024</h2>
+            <input type="text" class="search-input" placeholder="🔍 ابحث في أفلام 2024..." onkeyup="filterMovies(this, 'year2024')">
         </div>
         <div class="movies-grid">
-            <p class="status-msg">يتم العمل علي تحضير الافلام وستكون جاهزة قريبا</p>
+            <div class="movie-card">
+                <!-- تم استخدام الرابط المباشر للمشغل ليعمل داخل الموقع -->
+                <iframe src="https://drive.google.com"></iframe>
+                <div class="movie-info"><h3>فيلم الدشاش</h3></div>
+            </div>
+            <p class="status-msg">سيتم اضافة المزيد قريبا</p>
         </div>
     </div>
 
@@ -175,9 +184,6 @@
             <input type="text" class="search-input" placeholder="🔍 ابحث في أفلام 2025..." onkeyup="filterMovies(this, 'year2025')">
         </div>
         <div class="movies-grid">
-            <div class="movie-card"><video controls><source src="elshater.mp4"></video><div class="movie-info"><h3>فيلم الشاطر</h3></div></div>
-            <div class="movie-card"><video controls><source src="ahmedandahmed.mp4"></video><div class="movie-info"><h3>فيلم احمد واحمد</h3></div></div>
-            <div class="movie-card"><video controls><source src="elafadel.mp4"></video><div class="movie-info"><h3>فيلم السادة الافاضل</h3></div></div>
             <p class="status-msg">سيتم اضافة جميع الافلام قريبا</p>
         </div>
     </div>
@@ -190,8 +196,6 @@
             <input type="text" class="search-input" placeholder="🔍 ابحث في أفلام 2026..." onkeyup="filterMovies(this, 'year2026')">
         </div>
         <div class="movies-grid">
-            <div class="movie-card"><video controls><source src="egybest.mp4"></video><div class="movie-info"><h3>فيلم ايجي بيست</h3></div></div>
-            <div class="movie-card"><video controls><source src="bershama.mp4"></video><div class="movie-info"><h3>فيلم برشامة</h3></div></div>
             <p class="status-msg">سيتم اضافة جميع الافلام قريبا</p>
         </div>
     </div>
@@ -204,12 +208,12 @@
             <input type="text" class="search-input" placeholder="🔍 ابحث في كل الأفلام..." onkeyup="filterMovies(this, 'allMovies')">
         </div>
         <div class="movies-grid">
-            <div class="movie-card"><video controls><source src="elshater.mp4"></video><div class="movie-info"><h3>فيلم الشاطر</h3></div></div>
-            <div class="movie-card"><video controls><source src="egybest.mp4"></video><div class="movie-info"><h3>فيلم ايجي بيست</h3></div></div>
-            <div class="movie-card"><video controls><source src="bershama.mp4"></video><div class="movie-info"><h3>فيلم برشامة</h3></div></div>
-            <div class="movie-card"><video controls><source src="elafadel.mp4"></video><div class="movie-info"><h3>فيلم السادة الافاضل</h3></div></div>
-            <div class="movie-card"><video controls><source src="ahmedandahmed.mp4"></video><div class="movie-info"><h3>فيلم احمد واحمد</h3></div></div>
-            <p class="status-msg">سيتم اضافة جميع الافلام قريبا</p>
+            <!-- الفيلم مضاف هنا أيضاً ليظهر في جميع الأفلام -->
+            <div class="movie-card">
+                <iframe src="https://drive.google.com"></iframe>
+                <div class="movie-info"><h3>فيلم الدشاش</h3></div>
+            </div>
+            <p class="status-msg">سيتم اضافة المزيد قريبا</p>
         </div>
     </div>
 
@@ -218,35 +222,27 @@
     </footer>
 
     <script>
-        // دالة إظهار الأقسام
         function showSection(sectionId) {
             document.getElementById('homePage').style.display = 'none';
-            let sections = document.getElementsByClassName('section-content');
-            for (let s of sections) { s.classList.remove('active-section'); }
+            const sections = document.querySelectorAll('.section-content');
+            sections.forEach(sec => sec.classList.remove('active-section'));
             document.getElementById(sectionId).classList.add('active-section');
-            window.scrollTo(0,0);
+            window.scrollTo(0, 0);
         }
 
-        // دالة العودة للرئيسية
         function showHome() {
-            let sections = document.getElementsByClassName('section-content');
-            for (let s of sections) { s.classList.remove('active-section'); }
+            const sections = document.querySelectorAll('.section-content');
+            sections.forEach(sec => sec.classList.remove('active-section'));
             document.getElementById('homePage').style.display = 'grid';
         }
 
-        // دالة البحث الذكية لكل قسم
-        function filterMovies(inputElement, sectionId) {
-            let filter = inputElement.value.toLowerCase();
-            let section = document.getElementById(sectionId);
-            let cards = section.getElementsByClassName('movie-card');
-
+        function filterMovies(input, sectionId) {
+            const filter = input.value.toLowerCase();
+            const section = document.getElementById(sectionId);
+            const cards = section.getElementsByClassName('movie-card');
             for (let i = 0; i < cards.length; i++) {
-                let title = cards[i].getElementsByTagName('h3')[0].innerText.toLowerCase();
-                if (title.includes(filter)) {
-                    cards[i].style.display = "";
-                } else {
-                    cards[i].style.display = "none";
-                }
+                const title = cards[i].querySelector('h3').innerText.toLowerCase();
+                cards[i].style.display = title.includes(filter) ? "" : "none";
             }
         }
     </script>
