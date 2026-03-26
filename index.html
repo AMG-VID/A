@@ -33,102 +33,104 @@
 
         .logo {
             max-width: 180px;
-            margin-bottom: 20px;
             display: block;
-            margin-left: auto;
-            margin-right: auto;
+            margin: 0 auto;
             border: 3px solid var(--pure-white);
             cursor: pointer;
         }
 
-        /* تنسيق أزرار الأقسام في الصفحة الرئيسية */
+        /* تنسيق الأقسام في الرئيسية */
         .categories-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            padding: 40px 20px;
-            max-width: 1000px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            padding: 50px 20px;
+            max-width: 1100px;
             margin: 0 auto;
         }
 
         .category-card {
             background-color: var(--deep-black);
             color: var(--caution-yellow);
-            padding: 40px 20px;
+            padding: 50px 20px;
             text-align: center;
-            border-radius: 15px;
-            font-size: 1.5rem;
+            border-radius: 20px;
+            font-size: 1.8rem;
             font-weight: bold;
             cursor: pointer;
             transition: 0.3s;
-            border: 3px solid transparent;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
         }
 
         .category-card:hover {
-            transform: scale(1.05);
-            border-color: var(--pure-white);
+            transform: translateY(-10px);
             background-color: var(--primary-red);
             color: white;
         }
 
-        /* إخفاء الأقسام افتراضياً */
+        /* إخفاء الأقسام */
         .section-content {
             display: none;
             padding: 20px;
+            animation: fadeIn 0.5s;
         }
 
-        .active-section {
-            display: block;
+        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+
+        .active-section { display: block; }
+
+        /* تنسيق شريط البحث داخل القسم */
+        .section-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .search-input {
+            width: 80%;
+            max-width: 500px;
+            padding: 12px;
+            border-radius: 25px;
+            border: 3px solid var(--deep-black);
+            font-size: 1rem;
+            text-align: center;
+            outline: none;
+            margin: 10px 0;
         }
 
         .back-btn {
             background: var(--deep-black);
-            color: white;
+            color: var(--caution-yellow);
             border: none;
-            padding: 10px 20px;
-            margin: 10px;
+            padding: 10px 25px;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 30px;
             font-weight: bold;
+            margin-bottom: 15px;
         }
 
         .movies-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
-            padding: 20px;
         }
 
         .movie-card {
             background-color: var(--deep-black);
             border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            transition: 0.3s;
         }
 
-        video {
-            width: 100%;
-            display: block;
-            border-bottom: 3px solid var(--primary-red);
-        }
+        video { width: 100%; display: block; border-bottom: 3px solid var(--primary-red); }
 
-        .movie-info {
-            padding: 15px;
-            text-align: center;
-        }
-
-        .movie-title {
-            color: var(--pure-white);
-            font-size: 1.3rem;
-            margin: 0;
-        }
+        .movie-info { padding: 15px; text-align: center; color: white; }
 
         .status-msg {
             text-align: center;
             font-weight: bold;
             grid-column: 1 / -1;
-            padding: 20px;
-            color: var(--deep-black);
+            padding: 30px;
+            font-size: 1.2rem;
         }
 
         footer {
@@ -146,7 +148,7 @@
         <img src="AMG.VID.png" alt="شعار الموقع" class="logo" onclick="showHome()">
     </header>
 
-    <!-- الصفحة الرئيسية: الأقسام -->
+    <!-- الصفحة الرئيسية -->
     <div id="homePage" class="categories-container">
         <div class="category-card" onclick="showSection('year2024')">أفلام 2024</div>
         <div class="category-card" onclick="showSection('year2025')">أفلام 2025</div>
@@ -154,65 +156,59 @@
         <div class="category-card" onclick="showSection('allMovies')">جميع الأفلام</div>
     </div>
 
-    <!-- محتوى قسم 2024 -->
+    <!-- قسم 2024 -->
     <div id="year2024" class="section-content">
-        <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+        <div class="section-header">
+            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+            <h2>قسم أفلام 2024</h2>
+        </div>
         <div class="movies-grid">
             <p class="status-msg">يتم العمل علي تحضير الافلام وستكون جاهزة قريبا</p>
         </div>
     </div>
 
-    <!-- محتوى قسم 2025 -->
+    <!-- قسم 2025 -->
     <div id="year2025" class="section-content">
-        <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+        <div class="section-header">
+            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+            <h2>قسم أفلام 2025</h2>
+            <input type="text" class="search-input" placeholder="🔍 ابحث في أفلام 2025..." onkeyup="filterMovies(this, 'year2025')">
+        </div>
         <div class="movies-grid">
-            <div class="movie-card">
-                <video controls><source src="elshater.mp4" type="video/mp4"></video>
-                <div class="movie-info"><h3 class="movie-title">فيلم الشاطر</h3></div>
-            </div>
-            <div class="movie-card">
-                <video controls><source src="ahmedandahmed.mp4" type="video/mp4"></video>
-                <div class="movie-info"><h3 class="movie-title">فيلم احمد واحمد</h3></div>
-            </div>
-            <div class="movie-card">
-                <video controls><source src="elafadel.mp4" type="video/mp4"></video>
-                <div class="movie-info"><h3 class="movie-title">فيلم السادة الافاضل</h3></div>
-            </div>
+            <div class="movie-card"><video controls><source src="elshater.mp4"></video><div class="movie-info"><h3>فيلم الشاطر</h3></div></div>
+            <div class="movie-card"><video controls><source src="ahmedandahmed.mp4"></video><div class="movie-info"><h3>فيلم احمد واحمد</h3></div></div>
+            <div class="movie-card"><video controls><source src="elafadel.mp4"></video><div class="movie-info"><h3>فيلم السادة الافاضل</h3></div></div>
             <p class="status-msg">سيتم اضافة جميع الافلام قريبا</p>
         </div>
     </div>
 
-    <!-- محتوى قسم 2026 -->
+    <!-- قسم 2026 -->
     <div id="year2026" class="section-content">
-        <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+        <div class="section-header">
+            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+            <h2>قسم أفلام 2026</h2>
+            <input type="text" class="search-input" placeholder="🔍 ابحث في أفلام 2026..." onkeyup="filterMovies(this, 'year2026')">
+        </div>
         <div class="movies-grid">
-            <div class="movie-card">
-                <video controls><source src="egybest.mp4" type="video/mp4"></video>
-                <div class="movie-info"><h3 class="movie-title">فيلم ايجي بيست</h3></div>
-            </div>
-            <div class="movie-card">
-                <video controls><source src="bershama.mp4" type="video/mp4"></video>
-                <div class="movie-info"><h3 class="movie-title">فيلم برشامة</h3></div>
-            </div>
+            <div class="movie-card"><video controls><source src="egybest.mp4"></video><div class="movie-info"><h3>فيلم ايجي بيست</h3></div></div>
+            <div class="movie-card"><video controls><source src="bershama.mp4"></video><div class="movie-info"><h3>فيلم برشامة</h3></div></div>
             <p class="status-msg">سيتم اضافة جميع الافلام قريبا</p>
         </div>
     </div>
 
-    <!-- محتوى قسم جميع الأفلام -->
+    <!-- قسم جميع الأفلام -->
     <div id="allMovies" class="section-content">
-        <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+        <div class="section-header">
+            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+            <h2>قسم جميع الافلام</h2>
+            <input type="text" class="search-input" placeholder="🔍 ابحث في كل الأفلام..." onkeyup="filterMovies(this, 'allMovies')">
+        </div>
         <div class="movies-grid">
-            <!-- الشاطر -->
-            <div class="movie-card"><video controls><source src="elshater.mp4" type="video/mp4"></video><div class="movie-info"><h3 class="movie-title">فيلم الشاطر</h3></div></div>
-            <!-- ايجي بيست -->
-            <div class="movie-card"><video controls><source src="egybest.mp4" type="video/mp4"></video><div class="movie-info"><h3 class="movie-title">فيلم ايجي بيست</h3></div></div>
-            <!-- برشامة -->
-            <div class="movie-card"><video controls><source src="bershama.mp4" type="video/mp4"></video><div class="movie-info"><h3 class="movie-title">فيلم برشامة</h3></div></div>
-            <!-- السادة الافاضل -->
-            <div class="movie-card"><video controls><source src="elafadel.mp4" type="video/mp4"></video><div class="movie-info"><h3 class="movie-title">فيلم السادة الافاضل</h3></div></div>
-            <!-- احمد واحمد -->
-            <div class="movie-card"><video controls><source src="ahmedandahmed.mp4" type="video/mp4"></video><div class="movie-info"><h3 class="movie-title">فيلم احمد واحمد</h3></div></div>
-            
+            <div class="movie-card"><video controls><source src="elshater.mp4"></video><div class="movie-info"><h3>فيلم الشاطر</h3></div></div>
+            <div class="movie-card"><video controls><source src="egybest.mp4"></video><div class="movie-info"><h3>فيلم ايجي بيست</h3></div></div>
+            <div class="movie-card"><video controls><source src="bershama.mp4"></video><div class="movie-info"><h3>فيلم برشامة</h3></div></div>
+            <div class="movie-card"><video controls><source src="elafadel.mp4"></video><div class="movie-info"><h3>فيلم السادة الافاضل</h3></div></div>
+            <div class="movie-card"><video controls><source src="ahmedandahmed.mp4"></video><div class="movie-info"><h3>فيلم احمد واحمد</h3></div></div>
             <p class="status-msg">سيتم اضافة جميع الافلام قريبا</p>
         </div>
     </div>
@@ -222,22 +218,36 @@
     </footer>
 
     <script>
+        // دالة إظهار الأقسام
         function showSection(sectionId) {
-            // إخفاء الرئيسية
             document.getElementById('homePage').style.display = 'none';
-            // إخفاء أي قسم مفتوح
             let sections = document.getElementsByClassName('section-content');
             for (let s of sections) { s.classList.remove('active-section'); }
-            // إظهار القسم المطلوب
             document.getElementById(sectionId).classList.add('active-section');
             window.scrollTo(0,0);
         }
 
+        // دالة العودة للرئيسية
         function showHome() {
-            // إخفاء الأقسام وإظهار الرئيسية
             let sections = document.getElementsByClassName('section-content');
             for (let s of sections) { s.classList.remove('active-section'); }
             document.getElementById('homePage').style.display = 'grid';
+        }
+
+        // دالة البحث الذكية لكل قسم
+        function filterMovies(inputElement, sectionId) {
+            let filter = inputElement.value.toLowerCase();
+            let section = document.getElementById(sectionId);
+            let cards = section.getElementsByClassName('movie-card');
+
+            for (let i = 0; i < cards.length; i++) {
+                let title = cards[i].getElementsByTagName('h3')[0].innerText.toLowerCase();
+                if (title.includes(filter)) {
+                    cards[i].style.display = "";
+                } else {
+                    cards[i].style.display = "none";
+                }
+            }
         }
     </script>
 </body>
