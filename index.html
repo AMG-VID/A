@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>يلا بينا افلام وبس || AMG-VID</title>
-    <meta name="description" content="الموقع أفلام فقط... وهو عبارة عن احدث الأفلام ويتم تطوير الموقع كل ثانية لكي تشاهد بأفضل شكل ممكن.">
     <link rel="icon" type="image/png" href="icone.png">
 
     <style>
@@ -61,88 +60,39 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.4);
         }
 
-        .category-card:hover {
-            transform: translateY(-10px);
-            background-color: var(--primary-red);
-            color: white;
-        }
+        .category-card:hover { transform: translateY(-10px); background-color: var(--primary-red); color: white; }
 
-        .section-content {
-            display: none;
-            padding: 20px;
-            animation: fadeIn 0.5s;
-        }
-
+        .section-content { display: none; padding: 20px; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
-
         .active-section { display: block; }
 
-        .section-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
+        .section-header { text-align: center; margin-bottom: 30px; }
         .search-input {
-            width: 80%;
-            max-width: 500px;
-            padding: 12px;
-            border-radius: 25px;
-            border: 3px solid var(--deep-black);
-            font-size: 1rem;
-            text-align: center;
-            outline: none;
-            margin: 10px 0;
+            width: 80%; max-width: 500px; padding: 12px; border-radius: 25px;
+            border: 3px solid var(--deep-black); font-size: 1rem; text-align: center; outline: none;
         }
 
         .back-btn {
-            background: var(--deep-black);
-            color: var(--caution-yellow);
-            border: none;
-            padding: 10px 25px;
-            cursor: pointer;
-            border-radius: 30px;
-            font-weight: bold;
-            margin-bottom: 15px;
+            background: var(--deep-black); color: var(--caution-yellow); border: none;
+            padding: 10px 25px; cursor: pointer; border-radius: 30px; font-weight: bold; margin-bottom: 15px;
         }
 
-        .movies-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
+        .movies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .movie-card { background-color: var(--deep-black); border-radius: 15px; overflow: hidden; transition: 0.3s; }
 
-        .movie-card {
-            background-color: var(--deep-black);
-            border-radius: 15px;
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* نسبة 16:9 */
+            height: 0;
             overflow: hidden;
-            transition: 0.3s;
         }
-
-        /* تعديل المشغل ليكون متوافقاً مع التصميم */
-        iframe {
-            width: 100%;
-            height: 200px;
-            border: none;
-            border-bottom: 3px solid var(--primary-red);
+        .video-container iframe {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%; border: none;
         }
 
         .movie-info { padding: 15px; text-align: center; color: white; }
-
-        .status-msg {
-            text-align: center;
-            font-weight: bold;
-            grid-column: 1 / -1;
-            padding: 30px;
-            font-size: 1.2rem;
-        }
-
-        footer {
-            background-color: var(--deep-black);
-            color: var(--caution-yellow);
-            text-align: center;
-            padding: 20px;
-            margin-top: 50px;
-        }
+        footer { background-color: var(--deep-black); color: var(--caution-yellow); text-align: center; padding: 20px; margin-top: 50px; }
     </style>
 </head>
 <body>
@@ -151,7 +101,6 @@
         <img src="AMG.VID.png" alt="شعار الموقع" class="logo" onclick="showHome()">
     </header>
 
-    <!-- الصفحة الرئيسية -->
     <div id="homePage" class="categories-container">
         <div class="category-card" onclick="showSection('year2024')">أفلام 2024</div>
         <div class="category-card" onclick="showSection('year2025')">أفلام 2025</div>
@@ -159,44 +108,19 @@
         <div class="category-card" onclick="showSection('allMovies')">جميع الأفلام</div>
     </div>
 
-    <!-- قسم 2024 (تم إضافة الفيلم والبحث) -->
+    <!-- قسم 2024 -->
     <div id="year2024" class="section-content">
         <div class="section-header">
             <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
             <h2>قسم أفلام 2024</h2>
-            <input type="text" class="search-input" placeholder="🔍 ابحث في أفلام 2024..." onkeyup="filterMovies(this, 'year2024')">
         </div>
         <div class="movies-grid">
             <div class="movie-card">
-                <!-- تم استخدام الرابط المباشر للمشغل ليعمل داخل الموقع -->
-                <iframe src="1DlydZ2mezh3GxLupr7DnTPV0hTBt8z9n"></iframe>
+                <div class="video-container">
+                    <iframe src="https://drive.google.com/file/1DlydZ2mezh3GxLupr7DnTPV0hTBt8z9n/preview" allow="autoplay" allowfullscreen></iframe>
+                </div>
                 <div class="movie-info"><h3>فيلم الدشاش</h3></div>
             </div>
-            <p class="status-msg">سيتم اضافة المزيد قريبا</p>
-        </div>
-    </div>
-
-    <!-- قسم 2025 -->
-    <div id="year2025" class="section-content">
-        <div class="section-header">
-            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
-            <h2>قسم أفلام 2025</h2>
-            <input type="text" class="search-input" placeholder="🔍 ابحث في أفلام 2025..." onkeyup="filterMovies(this, 'year2025')">
-        </div>
-        <div class="movies-grid">
-            <p class="status-msg">سيتم اضافة جميع الافلام قريبا</p>
-        </div>
-    </div>
-
-    <!-- قسم 2026 -->
-    <div id="year2026" class="section-content">
-        <div class="section-header">
-            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
-            <h2>قسم أفلام 2026</h2>
-            <input type="text" class="search-input" placeholder="🔍 ابحث في أفلام 2026..." onkeyup="filterMovies(this, 'year2026')">
-        </div>
-        <div class="movies-grid">
-            <p class="status-msg">سيتم اضافة جميع الافلام قريبا</p>
         </div>
     </div>
 
@@ -204,46 +128,33 @@
     <div id="allMovies" class="section-content">
         <div class="section-header">
             <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
-            <h2>قسم جميع الافلام</h2>
-            <input type="text" class="search-input" placeholder="🔍 ابحث في كل الأفلام..." onkeyup="filterMovies(this, 'allMovies')">
+            <h2>جميع الأفلام</h2>
         </div>
         <div class="movies-grid">
-            <!-- الفيلم مضاف هنا أيضاً ليظهر في جميع الأفلام -->
             <div class="movie-card">
-                <iframe src="https://drive.google.com"></iframe>
+                <div class="video-container">
+                    <iframe src="https://drive.google.com/file/1DlydZ2mezh3GxLupr7DnTPV0hTBt8z9n/preview" allow="autoplay" allowfullscreen></iframe>
+                </div>
                 <div class="movie-info"><h3>فيلم الدشاش</h3></div>
             </div>
-            <p class="status-msg">سيتم اضافة المزيد قريبا</p>
         </div>
     </div>
 
-    <footer>
-        <p>تم استخراج البيانات بواسطة نظام الفراعنة &copy; 2026</p>
-    </footer>
+    <!-- باقي الأقسام -->
+    <div id="year2025" class="section-content"><div class="section-header"><button class="back-btn" onclick="showHome()">←</button><h2>2025</h2></div><p style="text-align:center">قريباً...</p></div>
+    <div id="year2026" class="section-content"><div class="section-header"><button class="back-btn" onclick="showHome()">←</button><h2>2026</h2></div><p style="text-align:center">قريباً...</p></div>
+
+    <footer><p>تم استخراج البيانات بواسطة نظام الفراعنة &copy; 2026</p></footer>
 
     <script>
-        function showSection(sectionId) {
+        function showSection(id) {
             document.getElementById('homePage').style.display = 'none';
-            const sections = document.querySelectorAll('.section-content');
-            sections.forEach(sec => sec.classList.remove('active-section'));
-            document.getElementById(sectionId).classList.add('active-section');
-            window.scrollTo(0, 0);
+            document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active-section'));
+            document.getElementById(id).classList.add('active-section');
         }
-
         function showHome() {
-            const sections = document.querySelectorAll('.section-content');
-            sections.forEach(sec => sec.classList.remove('active-section'));
+            document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active-section'));
             document.getElementById('homePage').style.display = 'grid';
-        }
-
-        function filterMovies(input, sectionId) {
-            const filter = input.value.toLowerCase();
-            const section = document.getElementById(sectionId);
-            const cards = section.getElementsByClassName('movie-card');
-            for (let i = 0; i < cards.length; i++) {
-                const title = cards[i].querySelector('h3').innerText.toLowerCase();
-                cards[i].style.display = title.includes(filter) ? "" : "none";
-            }
         }
     </script>
 </body>
