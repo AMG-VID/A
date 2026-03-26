@@ -67,10 +67,6 @@
         .active-section { display: block; }
 
         .section-header { text-align: center; margin-bottom: 30px; }
-        .search-input {
-            width: 80%; max-width: 500px; padding: 12px; border-radius: 25px;
-            border: 3px solid var(--deep-black); font-size: 1rem; text-align: center; outline: none;
-        }
 
         .back-btn {
             background: var(--deep-black); color: var(--caution-yellow); border: none;
@@ -82,9 +78,10 @@
 
         .video-container {
             position: relative;
-            padding-bottom: 56.25%; /* نسبة 16:9 */
+            padding-bottom: 56.25%; 
             height: 0;
             overflow: hidden;
+            background: #1a1a1a;
         }
         .video-container iframe {
             position: absolute;
@@ -115,12 +112,42 @@
             <h2>قسم أفلام 2024</h2>
         </div>
         <div class="movies-grid">
-            <div class="movie-card">
-                <div class="video-container">
-                    <iframe src="https://drive.google.com/file/1DlydZ2mezh3GxLupr7DnTPV0hTBt8z9n/preview" allow="autoplay" allowfullscreen></iframe>
-                </div>
-                <div class="movie-info"><h3>فيلم الدشاش</h3></div>
-            </div>
+            <!-- 5 خانات جاهزة -->
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+        </div>
+    </div>
+
+    <!-- قسم 2025 -->
+    <div id="year2025" class="section-content">
+        <div class="section-header">
+            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+            <h2>قسم أفلام 2025</h2>
+        </div>
+        <div class="movies-grid">
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+        </div>
+    </div>
+
+    <!-- قسم 2026 -->
+    <div id="year2026" class="section-content">
+        <div class="section-header">
+            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+            <h2>قسم أفلام 2026</h2>
+        </div>
+        <div class="movies-grid">
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
+            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
         </div>
     </div>
 
@@ -131,18 +158,9 @@
             <h2>جميع الأفلام</h2>
         </div>
         <div class="movies-grid">
-            <div class="movie-card">
-                <div class="video-container">
-                    <iframe src="https://drive.google.com/file/1DlydZ2mezh3GxLupr7DnTPV0hTBt8z9n/preview" allow="autoplay" allowfullscreen></iframe>
-                </div>
-                <div class="movie-info"><h3>فيلم الدشاش</h3></div>
-            </div>
+            <p style="text-align:center; color:white; width: 100%;">سيتم تحديث هذا القسم تلقائياً لاحقاً</p>
         </div>
     </div>
-
-    <!-- باقي الأقسام -->
-    <div id="year2025" class="section-content"><div class="section-header"><button class="back-btn" onclick="showHome()">←</button><h2>2025</h2></div><p style="text-align:center">قريباً...</p></div>
-    <div id="year2026" class="section-content"><div class="section-header"><button class="back-btn" onclick="showHome()">←</button><h2>2026</h2></div><p style="text-align:center">قريباً...</p></div>
 
     <footer><p>تم استخراج البيانات بواسطة نظام الفراعنة &copy; 2026</p></footer>
 
