@@ -3,15 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
     <title>يلا بينا افلام وبس || AMG-VID</title>
-    
     <meta name="description" content="الموقع أفلام فقط... وهو عبارة عن احدث الأفلام ويتم تطوير الموقع كل ثانية لكي تشاهد بأفضل شكل ممكن.">
-    
     <link rel="icon" type="image/png" href="icone.png">
 
     <style>
-        /* CSS - لغة التنسيق المطورة */
         :root {
             --bg-orange: #ff6600; 
             --primary-red: #cc0000;
@@ -33,7 +29,6 @@
             border-bottom: 5px solid var(--caution-yellow);
             padding: 30px 20px;
             text-align: center;
-            position: relative; 
         }
 
         .logo {
@@ -43,24 +38,58 @@
             margin-left: auto;
             margin-right: auto;
             border: 3px solid var(--pure-white);
+            cursor: pointer;
         }
 
-        .search-container {
-            width: 100%;
+        /* تنسيق أزرار الأقسام في الصفحة الرئيسية */
+        .categories-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 40px 20px;
+            max-width: 1000px;
+            margin: 0 auto;
         }
 
-        #movieSearch {
-            width: 90%;
-            max-width: 600px;
-            padding: 15px;
-            border-radius: 30px;
-            border: 3px solid var(--primary-red);
-            background-color: var(--pure-white);
-            color: var(--deep-black);
-            font-size: 1.1rem;
-            font-weight: bold;
-            outline: none;
+        .category-card {
+            background-color: var(--deep-black);
+            color: var(--caution-yellow);
+            padding: 40px 20px;
             text-align: center;
+            border-radius: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            border: 3px solid transparent;
+        }
+
+        .category-card:hover {
+            transform: scale(1.05);
+            border-color: var(--pure-white);
+            background-color: var(--primary-red);
+            color: white;
+        }
+
+        /* إخفاء الأقسام افتراضياً */
+        .section-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .active-section {
+            display: block;
+        }
+
+        .back-btn {
+            background: var(--deep-black);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
         }
 
         .movies-grid {
@@ -75,17 +104,11 @@
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            transition: transform 0.3s;
-        }
-
-        .movie-card:hover {
-            transform: translateY(-10px);
         }
 
         video {
             width: 100%;
             display: block;
-            background-color: #000;
             border-bottom: 3px solid var(--primary-red);
         }
 
@@ -100,6 +123,14 @@
             margin: 0;
         }
 
+        .status-msg {
+            text-align: center;
+            font-weight: bold;
+            grid-column: 1 / -1;
+            padding: 20px;
+            color: var(--deep-black);
+        }
+
         footer {
             background-color: var(--deep-black);
             color: var(--caution-yellow);
@@ -107,94 +138,106 @@
             padding: 20px;
             margin-top: 50px;
         }
-
-        @media (max-width: 600px) {
-            .movies-grid {
-                padding: 10px;
-                gap: 15px;
-            }
-            #movieSearch {
-                width: 85%;
-            }
-        }
     </style>
 </head>
 <body>
 
     <header>
-        <img src="AMG.VID.png" alt="شعار الموقع" class="logo" onerror="this.src='https://via.placeholder.com/200x80/000000/ffffff?text=LEX-CINEMA'">
-        
-        <div class="search-container">
-            <input type="text" id="movieSearch" placeholder="🔍 ابحث عن اسم الفيلم هنا..." onkeyup="searchMovie()">
-        </div>
+        <img src="AMG.VID.png" alt="شعار الموقع" class="logo" onclick="showHome()">
     </header>
 
-    <main class="movies-grid" id="movieContainer">
-        
-        <div class="movie-card">
-            <video controls preload="metadata">
-                <source src="elshater.mp4" type="video/mp4">
-            </video>
-            <div class="movie-info">
-                <h3 class="movie-title">فيلم الشاطر</h3>
-            </div>
-        </div>
+    <!-- الصفحة الرئيسية: الأقسام -->
+    <div id="homePage" class="categories-container">
+        <div class="category-card" onclick="showSection('year2024')">أفلام 2024</div>
+        <div class="category-card" onclick="showSection('year2025')">أفلام 2025</div>
+        <div class="category-card" onclick="showSection('year2026')">أفلام 2026</div>
+        <div class="category-card" onclick="showSection('allMovies')">جميع الأفلام</div>
+    </div>
 
-        <div class="movie-card">
-            <video controls preload="metadata">
-                <source src="egybest.mp4" type="video/mp4">
-            </video>
-            <div class="movie-info">
-                <h3 class="movie-title">فيلم ايجي بيست</h3>
-            </div>
+    <!-- محتوى قسم 2024 -->
+    <div id="year2024" class="section-content">
+        <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+        <div class="movies-grid">
+            <p class="status-msg">يتم العمل علي تحضير الافلام وستكون جاهزة قريبا</p>
         </div>
+    </div>
 
-        <div class="movie-card">
-            <video controls preload="metadata">
-                <source src="bershama.mp4" type="video/mp4">
-            </video>
-            <div class="movie-info">
-                <h3 class="movie-title">فيلم برشامة</h3>
+    <!-- محتوى قسم 2025 -->
+    <div id="year2025" class="section-content">
+        <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+        <div class="movies-grid">
+            <div class="movie-card">
+                <video controls><source src="elshater.mp4" type="video/mp4"></video>
+                <div class="movie-info"><h3 class="movie-title">فيلم الشاطر</h3></div>
             </div>
-        </div>
-
-        <div class="movie-card">
-            <video controls preload="metadata">
-                <source src="elafadel.mp4" type="video/mp4">
-            </video>
-            <div class="movie-info">
-                <h3 class="movie-title">فيلم السادة الافاضل</h3>
+            <div class="movie-card">
+                <video controls><source src="ahmedandahmed.mp4" type="video/mp4"></video>
+                <div class="movie-info"><h3 class="movie-title">فيلم احمد واحمد</h3></div>
             </div>
-        </div>
-
-        <div class="movie-card">
-            <video controls preload="metadata">
-                <source src="ahmedandahmed.mp4" type="video/mp4">
-            </video>
-            <div class="movie-info">
-                <h3 class="movie-title">فيلم احمد واحمد</h3>
+            <div class="movie-card">
+                <video controls><source src="elafadel.mp4" type="video/mp4"></video>
+                <div class="movie-info"><h3 class="movie-title">فيلم السادة الافاضل</h3></div>
             </div>
+            <p class="status-msg">سيتم اضافة جميع الافلام قريبا</p>
         </div>
+    </div>
 
-    </main>
+    <!-- محتوى قسم 2026 -->
+    <div id="year2026" class="section-content">
+        <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+        <div class="movies-grid">
+            <div class="movie-card">
+                <video controls><source src="egybest.mp4" type="video/mp4"></video>
+                <div class="movie-info"><h3 class="movie-title">فيلم ايجي بيست</h3></div>
+            </div>
+            <div class="movie-card">
+                <video controls><source src="bershama.mp4" type="video/mp4"></video>
+                <div class="movie-info"><h3 class="movie-title">فيلم برشامة</h3></div>
+            </div>
+            <p class="status-msg">سيتم اضافة جميع الافلام قريبا</p>
+        </div>
+    </div>
+
+    <!-- محتوى قسم جميع الأفلام -->
+    <div id="allMovies" class="section-content">
+        <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+        <div class="movies-grid">
+            <!-- الشاطر -->
+            <div class="movie-card"><video controls><source src="elshater.mp4" type="video/mp4"></video><div class="movie-info"><h3 class="movie-title">فيلم الشاطر</h3></div></div>
+            <!-- ايجي بيست -->
+            <div class="movie-card"><video controls><source src="egybest.mp4" type="video/mp4"></video><div class="movie-info"><h3 class="movie-title">فيلم ايجي بيست</h3></div></div>
+            <!-- برشامة -->
+            <div class="movie-card"><video controls><source src="bershama.mp4" type="video/mp4"></video><div class="movie-info"><h3 class="movie-title">فيلم برشامة</h3></div></div>
+            <!-- السادة الافاضل -->
+            <div class="movie-card"><video controls><source src="elafadel.mp4" type="video/mp4"></video><div class="movie-info"><h3 class="movie-title">فيلم السادة الافاضل</h3></div></div>
+            <!-- احمد واحمد -->
+            <div class="movie-card"><video controls><source src="ahmedandahmed.mp4" type="video/mp4"></video><div class="movie-info"><h3 class="movie-title">فيلم احمد واحمد</h3></div></div>
+            
+            <p class="status-msg">سيتم اضافة جميع الافلام قريبا</p>
+        </div>
+    </div>
 
     <footer>
         <p>تم استخراج البيانات بواسطة نظام الفراعنة &copy; 2026</p>
     </footer>
 
     <script>
-        function searchMovie() {
-            let input = document.getElementById('movieSearch').value.toLowerCase();
-            let cards = document.getElementsByClassName('movie-card');
+        function showSection(sectionId) {
+            // إخفاء الرئيسية
+            document.getElementById('homePage').style.display = 'none';
+            // إخفاء أي قسم مفتوح
+            let sections = document.getElementsByClassName('section-content');
+            for (let s of sections) { s.classList.remove('active-section'); }
+            // إظهار القسم المطلوب
+            document.getElementById(sectionId).classList.add('active-section');
+            window.scrollTo(0,0);
+        }
 
-            for (let i = 0; i < cards.length; i++) {
-                let title = cards[i].getElementsByClassName('movie-title')[0].innerText.toLowerCase();
-                if (title.includes(input)) {
-                    cards[i].style.display = "block";
-                } else {
-                    cards[i].style.display = "none";
-                }
-            }
+        function showHome() {
+            // إخفاء الأقسام وإظهار الرئيسية
+            let sections = document.getElementsByClassName('section-content');
+            for (let s of sections) { s.classList.remove('active-section'); }
+            document.getElementById('homePage').style.display = 'grid';
         }
     </script>
 </body>
