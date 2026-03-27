@@ -1,44 +1,27 @@
 import requests
 import re
 
-# روابط البحث المباشرة (هذه الروابط نادراً ما تُحجب)
-SOURCES = {
-    "ماي سيما": "https://mycima.pw",
-    "ايجي بست": "https://egybest.media",
-    "لاروزا": "https://laroza.site"
-}
-
 def get_movies():
     all_content = []
-    # نستخدم User-Agent قوي جداً لمحاكاة متصفح حقيقي 100%
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}
+    # نستخدم مصدر بيانات مفتوح (TMDB API أو RSS Feed عام)
+    # هنا جلبنا قائمة أفلام حديثة من مصدر وسيط لا يحجب GitHub
+    api_url = "https://api.themoviedb.org"
     
-    for name, url in SOURCES.items():
-        try:
-            print(f"📡 محاولة اختراق حماية {name}...")
-            # نستخدم بروكسي مجاني بسيط لتغيير عنوان الـ IP الخاص بـ GitHub
-            proxied_url = f"https://api.allorigins.win{url}"
-            response = requests.get(proxied_url, timeout=20)
-            data = response.json()
-            html = data['contents']
-            
-            # البحث عن الصور والروابط باستخدام Regex (أسرع وأدق في حالة الحماية)
-            # نبحث عن نمط: رابط يحتوي على صورة
-            matches = re.findall(r'<a href="(.*?)".*?src="(.*?)" alt="(.*?)"', html)
-            
-            count = 0
-            for link, img, title in matches:
-                if count < 8 and len(title) > 5:
-                    all_content.append({
-                        "title": title.strip(),
-                        "img": img if img.startswith('http') else "https:" + img,
-                        "link": link if link.startswith('http') else "https://" + link.split('/')[2] + link,
-                        "source": name
-                    })
-                    count += 1
-            print(f"✅ تم جلب {count} فيلم من {name}")
-        except Exception as e:
-            print(f"❌ فشل في {name}: {e}")
+    try:
+        print("📡 جلب البيانات من القاعدة السحابية...")
+        response = requests.get(api_url, timeout=20)
+        data = response.json()
+        
+        for movie in data['results'][:12]:
+            all_content.append({
+                "title": movie['title'],
+                "img": f"https://image.tmdb.org{movie['poster_path']}",
+                "link": f"https://www.google.com+{movie['title']}+mycima", # رابط بحث ذكي
+                "source": "قاعدة البيانات"
+            })
+        print(f"✅ تم جلب {len(all_content)} فيلم بنجاح!")
+    except Exception as e:
+        print(f"❌ فشل الجلب: {e}")
             
     return all_content
 
@@ -50,11 +33,11 @@ def update_html(data):
     for m in data:
         cards += f'''
         <div class="movie-card">
-            <img src="{m['img']}" alt="{m['title']}" onerror="this.src='https://via.placeholder.com'">
+            <img src="{m['img']}" alt="{m['title']}">
             <div class="movie-info">
-                <span class="badge">{m['source']}</span>
-                <h5>{m['title']}</h5>
-                <a href="{m['link']}" class="play-link" target="_blank">مشاهدة</a>
+                <span class="badge">تحديث آلي</span>
+                <h5 style="color:white; font-size:0.9rem; margin:10px 0;">{m['title']}</h5>
+                <a href="{m['link']}" class="play-link" target="_blank" style="background:red; color:white; padding:5px 15px; text-decoration:none; border-radius:5px; display:block;">بحث عن المشاهدة</a>
             </div>
         </div>'''
 
@@ -67,6 +50,3 @@ if __name__ == "__main__":
     movies = get_movies()
     if movies:
         update_html(movies)
-        print("🎉 الموقع الآن يحتوي على أفلام!")
-    else:
-        print("🤷‍♂️ لا تزال المواقع ترفض الروبوت، سأحاول بطريقة بديلة في التحديث القادم.")
