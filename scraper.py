@@ -2,45 +2,49 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
-# روابط المواقع المحدثة مع رأس طلب (Headers) لمحاكاة متصفح حقيقي
+# الروابط المباشرة للأقسام لضمان الوصول للمحتوى
 SOURCES = {
-    "mycima": "https://mycima.pw",
-    "egibest": "https://egibest.monster",
-    "laroza": "https://laroza.vip"
+    "ماي سيما": "https://mycima.pw",
+    "ايجي بست": "https://egibest.monster",
+    "لاروزا": "https://laroza.vip"
 }
 
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-    'Accept-Language': 'ar,en-US;q=0.7,en;q=0.3'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
 
 def get_movies():
     all_content = []
     for name, url in SOURCES.items():
         try:
-            print(f"جاري محاولة سحب الأفلام من {name}...")
-            response = requests.get(url, headers=HEADERS, timeout=20)
-            if response.status_code != 200: continue
-            
+            print(f"جاري البحث في {name}...")
+            response = requests.get(url, headers=HEADERS, timeout=30)
             soup = BeautifulSoup(response.content, 'html.parser')
-            # محاولة البحث عن العناصر بأكثر من طريقة لأن الكلاسات تتغير
-            items = soup.select('.GridItem') or soup.select('.movie-item') or soup.find_all('div', class_=re.compile('box|item|card'))
             
-            for item in items[:6]:
-                title = item.find(['h2', 'h3', 'h4'])
-                img = item.find('img')
-                link = item.find('a')
+            # ابحث عن أي div يحتوي على رابط وصورة (نمط الفيلم المشترك)
+            items = soup.find_all(['div', 'article'], limit=15)
+            
+            count = 0
+            for item in items:
+                link_el = item.find('a', href=True)
+                img_el = item.find('img')
                 
-                if title and img and link:
-                    all_content.append({
-                        "title": title.text.strip(),
-                        "img": img.get('src') or img.get('data-src'),
-                        "link": link.get('href'),
-                        "source": name
-                    })
-        except Exception as e:
-            print(f"فشل السحب من {name}: {e}")
-            
+                if link_el and img_el and count < 8:
+                    title = img_el.get('alt') or link_el.get('title') or "فيلم جديد"
+                    img_url = img_el.get('data-src') or img_el.get('src') or ""
+                    # تأكد أن الرابط كامل
+                    link_url = link_el['href']
+                    if link_url.startswith('/'): link_url = url.split('.com')[0] + '.com' + link_url
+                    
+                    if img_url and len(title) > 5:
+                        all_content.append({
+                            "title": title.strip(),
+                            "img": img_url,
+                            "link": link_url,
+                            "source": name
+                        })
+                        count += 1
+        except: continue
     return all_content
 
 def update_html(data):
@@ -51,14 +55,15 @@ def update_html(data):
     for m in data:
         cards_html += f'''
         <div class="movie-card">
-            <img src="{m['img']}" alt="{m['title']}">
+            <img src="{m['img']}" alt="{m['title']}" onerror="this.src='https://via.placeholder.com'">
             <div class="movie-info">
                 <span class="badge">{m['source']}</span>
-                <h5>{m['title']}</h5>
-                <a href="{m['link']}" class="play-link" target="_blank">مشاهدة الآن</a>
+                <h5 style="color:white; font-size:0.9rem; margin:10px 0;">{m['title']}</h5>
+                <a href="{m['link']}" class="play-link" target="_blank" style="background:red; color:white; padding:5px 15px; text-decoration:none; border-radius:5px;">شاهد الآن</a>
             </div>
         </div>'''
 
+    # الحقن الذكي
     pattern = r"<!-- MOVIES_START -->.*?<!-- MOVIES_END -->"
     replacement = f"<!-- MOVIES_START -->\n{cards_html}\n<!-- MOVIES_END -->"
     new_html = re.sub(pattern, replacement, html, flags=re.DOTALL)
@@ -67,9 +72,9 @@ def update_html(data):
         f.write(new_html)
 
 if __name__ == "__main__":
-    data = get_movies()
-    if data:
-        update_html(data)
-        print(f"تم بنجاح! تم إضافة {len(data)} فيلم.")
+    movies = get_movies()
+    if movies:
+        update_html(movies)
+        print(f"تم بنجاح! أضفنا {len(movies)} فيلم للموقع.")
     else:
-        print("لم يتم العثور على أي أفلام، جرب تحديث الروابط.")
+        print("لم يتم العثور على محتوى، تأكد من روابط المواقع.")
