@@ -4,163 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>يلا بينا افلام وبس || AMG-VID</title>
-    <link rel="icon" type="image/png" href="icone.png">
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-157JSET2S8"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-157JSET2S8');
-    </script>
-
     <style>
-        :root {
-            --bg-orange: #ff6600; 
-            --primary-red: #cc0000;
-            --pure-white: #ffffff;
-            --deep-black: #000000;
-            --caution-yellow: #ffcc00;
-        }
-
-        body {
-            background-color: var(--bg-orange);
-            color: var(--deep-black);
-            font-family: 'Segoe UI', Arial, sans-serif;
-            margin: 0; padding: 0;
-        }
-
-        header {
-            background-color: var(--deep-black);
-            border-bottom: 5px solid var(--caution-yellow);
-            padding: 30px 20px;
-            text-align: center;
-        }
-
-        .logo { max-width: 180px; display: block; margin: 0 auto; border: 3px solid var(--pure-white); cursor: pointer; }
-
-        .categories-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px;
-            padding: 50px 20px;
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-
-        .category-card {
-            background-color: var(--deep-black);
-            color: var(--caution-yellow);
-            padding: 50px 20px;
-            text-align: center;
-            border-radius: 20px;
-            font-size: 1.8rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-        }
-
-        .category-card:hover { transform: translateY(-10px); background-color: var(--primary-red); color: white; }
-
-        .section-content { display: none; padding: 20px; animation: fadeIn 0.5s; }
-        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
-        .active-section { display: block; }
-
-        .section-header { text-align: center; margin-bottom: 30px; }
-
-        .back-btn {
-            background: var(--deep-black); color: var(--caution-yellow); border: none;
-            padding: 10px 25px; cursor: pointer; border-radius: 30px; font-weight: bold; margin-bottom: 15px;
-        }
-
+        :root { --bg-orange: #ff6600; --primary-red: #cc0000; --caution-yellow: #ffcc00; }
+        body { background-color: var(--bg-orange); font-family: sans-serif; margin: 0; text-align: center; }
+        header { background: #000; padding: 20px; border-bottom: 4px solid var(--caution-yellow); }
+        .logo { max-width: 150px; border: 2px solid #fff; }
+        
+        /* شبكة الأفلام */
         .movies-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
-            gap: 20px; 
-            padding: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+            gap: 20px; padding: 20px; 
         }
         
         .movie-card { 
-            background-color: var(--deep-black); 
-            border-radius: 15px; 
-            overflow: hidden; 
-            transition: 0.3s;
-            border: 2px solid var(--caution-yellow);
+            background: #000; border-radius: 10px; overflow: hidden; 
+            border: 2px solid var(--caution-yellow); transition: 0.3s;
         }
-
-        .movie-card img { width: 100%; height: 350px; object-fit: cover; }
-
-        .movie-info { padding: 15px; text-align: center; color: white; }
-        
-        .play-link {
-            display: inline-block;
-            background: var(--primary-red);
-            color: white;
-            padding: 8px 20px;
-            text-decoration: none;
-            border-radius: 5px;
-            margin-top: 10px;
-            font-weight: bold;
+        .movie-card:hover { transform: scale(1.05); }
+        .movie-card img { width: 100%; height: 300px; object-fit: cover; }
+        .movie-info { padding: 10px; color: #fff; }
+        .play-link { 
+            background: var(--primary-red); color: #fff; padding: 8px 15px; 
+            text-decoration: none; border-radius: 5px; display: block; margin-top: 5px;
         }
-
-        footer { background-color: var(--deep-black); color: var(--caution-yellow); text-align: center; padding: 20px; margin-top: 50px; }
-        
-        .badge { background: var(--bg-orange); color: black; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 5px; display: inline-block;}
+        .badge { background: var(--bg-orange); color: #000; padding: 2px 5px; font-size: 0.7rem; border-radius: 3px; }
     </style>
 </head>
 <body>
 
     <header>
-        <img src="AMG.VID.png" alt="شعار الموقع" class="logo" onclick="showHome()">
+        <img src="AMG.VID.png" alt="AMG-VID" class="logo">
+        <h1 style="color:white">أحدث الأفلام والمسلسلات</h1>
     </header>
 
-    <div id="homePage" class="categories-container">
-        <div class="category-card" onclick="showSection('allMovies')">🔥 أحدث الإضافات (آلي)</div>
-        <div class="category-card" onclick="showSection('year2024')">أفلام 2024</div>
-        <div class="category-card" onclick="showSection('year2025')">أفلام 2025</div>
+    <div class="movies-grid">
+        <!-- MOVIES_START -->
+        <!-- لا تلمس هذا الجزء، الروبوت سيضع الأفلام هنا تلقائياً -->
+        <!-- MOVIES_END -->
     </div>
 
-    <!-- قسم جميع الأفلام (المستقبل للروبوت) -->
-    <div id="allMovies" class="section-content">
-        <div class="section-header">
-            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
-            <h2>أحدث الأفلام والمسلسلات المسحوبة</h2>
-        </div>
-        <div class="movies-grid">
-            <!-- MOVIES_START -->
-            <!-- الروبوت سيضع الأفلام والبوسترات هنا تلقائياً -->
-            <!-- MOVIES_END -->
-        </div>
-    </div>
-
-    <!-- الأقسام اليدوية (مثال 2025) -->
-    <div id="year2025" class="section-content">
-        <div class="section-header">
-            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
-            <h2>أرشيف أفلام 2025</h2>
-        </div>
-        <div class="movies-grid">
-            <!-- يمكنك وضع أفلام يدوية هنا لو أردت -->
-        </div>
-    </div>
-
-    <footer>
-        <p>جميع الحقوق محفوظة لـ AMG-VID &copy; 2099 - نظام LEX-Ω</p>
+    <footer style="background:#000; color:#fff; padding:20px; margin-top:40px;">
+        جميع الحقوق محفوظة لـ AMG-VID &copy; 2099
     </footer>
 
-    <script>
-        function showSection(sectionId) {
-            document.getElementById('homePage').style.display = 'none';
-            document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active-section'));
-            document.getElementById(sectionId).classList.add('active-section');
-        }
-
-        function showHome() {
-            document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active-section'));
-            document.getElementById('homePage').style.display = 'grid';
-        }
-    </script>
 </body>
 </html>
