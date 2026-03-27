@@ -12,7 +12,6 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-157JSET2S8');
     </script>
 
@@ -29,8 +28,7 @@
             background-color: var(--bg-orange);
             color: var(--deep-black);
             font-family: 'Segoe UI', Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
         }
 
         header {
@@ -40,13 +38,7 @@
             text-align: center;
         }
 
-        .logo {
-            max-width: 180px;
-            display: block;
-            margin: 0 auto;
-            border: 3px solid var(--pure-white);
-            cursor: pointer;
-        }
+        .logo { max-width: 180px; display: block; margin: 0 auto; border: 3px solid var(--pure-white); cursor: pointer; }
 
         .categories-container {
             display: grid;
@@ -83,23 +75,39 @@
             padding: 10px 25px; cursor: pointer; border-radius: 30px; font-weight: bold; margin-bottom: 15px;
         }
 
-        .movies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        .movie-card { background-color: var(--deep-black); border-radius: 15px; overflow: hidden; transition: 0.3s; }
+        .movies-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
+            gap: 20px; 
+            padding: 10px;
+        }
+        
+        .movie-card { 
+            background-color: var(--deep-black); 
+            border-radius: 15px; 
+            overflow: hidden; 
+            transition: 0.3s;
+            border: 2px solid var(--caution-yellow);
+        }
 
-        .video-container {
-            position: relative;
-            padding-bottom: 56.25%; 
-            height: 0;
-            overflow: hidden;
-            background: #1a1a1a;
-        }
-        .video-container iframe {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%; border: none;
-        }
+        .movie-card img { width: 100%; height: 350px; object-fit: cover; }
 
         .movie-info { padding: 15px; text-align: center; color: white; }
+        
+        .play-link {
+            display: inline-block;
+            background: var(--primary-red);
+            color: white;
+            padding: 8px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
         footer { background-color: var(--deep-black); color: var(--caution-yellow); text-align: center; padding: 20px; margin-top: 50px; }
+        
+        .badge { background: var(--bg-orange); color: black; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 5px; display: inline-block;}
     </style>
 </head>
 <body>
@@ -109,76 +117,46 @@
     </header>
 
     <div id="homePage" class="categories-container">
+        <div class="category-card" onclick="showSection('allMovies')">🔥 أحدث الإضافات (آلي)</div>
         <div class="category-card" onclick="showSection('year2024')">أفلام 2024</div>
         <div class="category-card" onclick="showSection('year2025')">أفلام 2025</div>
-        <div class="category-card" onclick="showSection('year2026')">أفلام 2026</div>
-        <div class="category-card" onclick="showSection('allMovies')">جميع الأفلام</div>
     </div>
 
-    <!-- قسم 2024 -->
-    <div id="year2024" class="section-content">
-        <div class="section-header">
-            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
-            <h2>قسم أفلام 2024</h2>
-        </div>
-        <div class="movies-grid">
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-        </div>
-    </div>
-
-    <!-- قسم 2025 -->
-    <div id="year2025" class="section-content">
-        <div class="section-header">
-            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
-            <h2>قسم أفلام 2025</h2>
-        </div>
-        <div class="movies-grid">
-            <div class="movie-card"><div class="video-container"><iframe src="https://www.youtube.com/embed/Zkr9745mW0I" allowfullscreen></iframe></div><div class="movie-info"><h3>فيلم سيكو سيكو كامل بدون تقطيع</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="https://www.youtube.com/embed/nN9max87bSo" allowfullscreen></iframe></div><div class="movie-info"><h3>فيلم الغاوي ملخص مسلسل الغاوي</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-        </div>
-    </div>
-
-    <!-- قسم 2026 -->
-    <div id="year2026" class="section-content">
-        <div class="section-header">
-            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
-            <h2>قسم أفلام 2026</h2>
-        </div>
-        <div class="movies-grid">
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-            <div class="movie-card"><div class="video-container"><iframe src="ضيف الرابط هنا" allowfullscreen></iframe></div><div class="movie-info"><h3>اكتب العنوان هنا</h3></div></div>
-        </div>
-    </div>
-
-    <!-- قسم جميع الأفلام -->
+    <!-- قسم جميع الأفلام (المستقبل للروبوت) -->
     <div id="allMovies" class="section-content">
         <div class="section-header">
             <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
-            <h2>جميع الأفلام</h2>
+            <h2>أحدث الأفلام والمسلسلات المسحوبة</h2>
         </div>
         <div class="movies-grid">
-            <p style="text-align:center; color:white; width: 100%;">سيتم تحديث هذا القسم تلقائياً لاحقاً</p>
+            <!-- MOVIES_START -->
+            <!-- الروبوت سيضع الأفلام والبوسترات هنا تلقائياً -->
+            <!-- MOVIES_END -->
         </div>
     </div>
 
-    <footer><p>تم استخراج البيانات بواسطة نظام الفراعنة &copy; 2026</p></footer>
+    <!-- الأقسام اليدوية (مثال 2025) -->
+    <div id="year2025" class="section-content">
+        <div class="section-header">
+            <button class="back-btn" onclick="showHome()">← العودة للرئيسية</button>
+            <h2>أرشيف أفلام 2025</h2>
+        </div>
+        <div class="movies-grid">
+            <!-- يمكنك وضع أفلام يدوية هنا لو أردت -->
+        </div>
+    </div>
+
+    <footer>
+        <p>جميع الحقوق محفوظة لـ AMG-VID &copy; 2099 - نظام LEX-Ω</p>
+    </footer>
 
     <script>
-        function showSection(id) {
+        function showSection(sectionId) {
             document.getElementById('homePage').style.display = 'none';
             document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active-section'));
-            document.getElementById(id).classList.add('active-section');
+            document.getElementById(sectionId).classList.add('active-section');
         }
+
         function showHome() {
             document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active-section'));
             document.getElementById('homePage').style.display = 'grid';
