@@ -4,13 +4,16 @@ on:
     - cron: '0 */2 * * *'
   workflow_dispatch:
 
+permissions:  # هذا هو السطر السحري الذي سيحل مشكلة الـ 403 نهائياً
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3 # تحديث للإصدار v3 أضمن
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.x'
       - name: Install Dependencies
@@ -19,8 +22,8 @@ jobs:
         run: python scraper.py
       - name: Commit Changes
         run: |
-          git config --global user.name "LEX-BOT"
-          git config --global user.email "bot@lex.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "Auto Update Movies" || echo "No changes"
+          git commit -m "Auto Update Movies" || echo "No changes to commit"
           git push
