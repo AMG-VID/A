@@ -2,594 +2,102 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>مدير البقالة - نظام SaaS متطور</title>
-  <!-- Firebase SDK v9 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مدير البقالة</title>
+
+  <!-- Firebase Compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Tajawal', sans-serif;
-    }
-    body {
-      background: #f0f7f0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 700px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 32px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-      overflow: hidden;
-      padding: 24px;
-    }
-    /* شاشة الدخول */
-    .login-box {
-      text-align: center;
-      padding: 40px 20px;
-    }
-    .login-box h1 {
-      color: #2e7d32;
-      margin-bottom: 40px;
-      font-size: 32px;
-    }
-    .input-group {
-      margin-bottom: 24px;
-    }
-    .input-group input {
-      width: 100%;
-      padding: 16px;
-      border: 1px solid #c8e6c9;
-      border-radius: 48px;
-      font-size: 18px;
-      background: #fefefe;
-      transition: 0.2s;
-    }
-    .input-group input:focus {
-      outline: none;
-      border-color: #2e7d32;
-      box-shadow: 0 0 0 3px rgba(46,125,50,0.2);
-    }
-    button {
-      background: #2e7d32;
-      color: white;
-      border: none;
-      padding: 14px 28px;
-      border-radius: 48px;
-      font-size: 18px;
-      font-weight: bold;
-      width: 100%;
-      cursor: pointer;
-      transition: 0.2s;
-      margin-top: 10px;
-    }
-    button:hover {
-      background: #1b5e20;
-      transform: scale(0.98);
-    }
-    .error-msg {
-      color: #d32f2f;
-      margin-top: 16px;
-      font-size: 15px;
-    }
-    /* شريط التنقل */
-    .top-nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
-      background: white;
-      padding: 12px 0;
-      border-bottom: 2px solid #e0f2e0;
-      margin-bottom: 25px;
-    }
-    .nav-btn {
-      background: transparent;
-      color: #2e7d32;
-      font-weight: 600;
-      width: auto;
-      padding: 10px 20px;
-      margin: 0;
-      border-radius: 60px;
-      font-size: 16px;
-    }
-    .nav-btn.active {
-      background: #2e7d32;
-      color: white;
-    }
-    /* فلتر التقارير */
-    .filter-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-      background: #f9fff9;
-      padding: 15px;
-      border-radius: 60px;
-      margin-bottom: 20px;
-    }
-    .filter-bar input {
-      flex: 1;
-      padding: 12px;
-      border: 1px solid #c8e6c9;
-      border-radius: 40px;
-      font-size: 16px;
-    }
-    .filter-bar button {
-      width: auto;
-      margin: 0;
-      padding: 12px 24px;
-    }
-    /* بطاقات المنتجات والمبيعات */
-    .card {
-      background: #ffffff;
-      border-radius: 28px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      border: 1px solid #e8f5e9;
-      transition: 0.2s;
-    }
-    .card.low-stock {
-      border-right: 8px solid #f44336;
-      background: #fff5f5;
-    }
-    .card.expiry-warning {
-      border-left: 8px solid #ff9800;
-      background: #fff8e7;
-    }
-    .product-row {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-    .product-name {
-      font-weight: bold;
-      font-size: 20px;
-      color: #1b5e20;
-    }
-    .badge {
-      background: #e8f5e9;
-      padding: 6px 16px;
-      border-radius: 40px;
-      font-size: 14px;
-      font-weight: 500;
-    }
-    .btn-small {
-      background: #2e7d32;
-      padding: 10px 20px;
-      font-size: 15px;
-      width: auto;
-      margin: 5px;
-      border-radius: 40px;
-    }
-    .btn-danger {
-      background: #c62828;
-    }
-    .btn-outline {
-      background: transparent;
-      border: 2px solid #2e7d32;
-      color: #2e7d32;
-    }
-    .form-add {
-      background: #f9fff9;
-      padding: 20px;
-      border-radius: 32px;
-      margin-bottom: 30px;
-    }
-    .form-add input {
-      width: 100%;
-      margin-bottom: 15px;
-      padding: 14px;
-      border-radius: 48px;
-      border: 1px solid #c8e6c9;
-      font-size: 16px;
-    }
-    h3 {
-      color: #1b5e20;
-      margin: 20px 0 12px;
-      font-size: 22px;
-    }
-    .logout-btn {
-      background: #e0e0e0;
-      color: #2e7d32;
-      margin-top: 30px;
-    }
-    /* Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    .modal-content {
-      background: white;
-      padding: 30px;
-      border-radius: 48px;
-      width: 90%;
-      max-width: 350px;
-      text-align: center;
-    }
-    .modal-content input {
-      width: 100%;
-      padding: 14px;
-      margin: 20px 0;
-      border-radius: 48px;
-      border: 1px solid #ccc;
-      font-size: 18px;
-    }
-    .modal-buttons {
-      display: flex;
-      gap: 12px;
-    }
-    @media (max-width: 550px) {
-      .container { padding: 16px; }
-      .product-row { flex-direction: column; align-items: stretch; }
-      .btn-small { width: 100%; }
-    }
+    body { font-family: 'Tajawal'; background:#f0f7f0; padding:20px; }
+    .container { max-width:700px; margin:auto; background:#fff; padding:20px; border-radius:20px; }
+    input, button { width:100%; padding:12px; margin:10px 0; border-radius:20px; border:1px solid #ccc; }
+    button { background:#2e7d32; color:#fff; border:none; cursor:pointer; }
+    button:hover { background:#1b5e20; }
+    .error { color:red; }
   </style>
 </head>
+
 <body>
-<div class="container" id="app">
+
+<div class="container">
+
   <div id="loginScreen">
-    <div class="login-box">
-      <h1>📍 مدير البقالة الذكي</h1>
-      <div class="input-group">
-        <input type="text" id="userId" placeholder="رقم المعرف (ID)" autocomplete="off">
-      </div>
-      <div class="input-group">
-        <input type="password" id="password" placeholder="كلمة المرور">
-      </div>
-      <button id="loginBtn">تسجيل الدخول</button>
-      <div id="loginError" class="error-msg"></div>
-    </div>
+    <h2>تسجيل الدخول</h2>
+    <input id="userId" placeholder="ID">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="login()">دخول</button>
+    <p class="error" id="error"></p>
   </div>
 
-  <div id="dashboard" style="display:none;">
-    <div class="top-nav">
-      <button class="nav-btn" data-tab="products">📦 السلع</button>
-      <button class="nav-btn" data-tab="sales">💰 المبيعات</button>
-      <button class="nav-btn" data-tab="reports">📊 التقارير</button>
-    </div>
-
-    <div id="tabProducts" class="tab-content">
-      <div class="form-add">
-        <h3>➕ إضافة منتج جديد</h3>
-        <input type="text" id="prodName" placeholder="اسم السلعة">
-        <input type="number" id="prodBuyPrice" placeholder="سعر الشراء">
-        <input type="number" id="prodSellPrice" placeholder="سعر البيع">
-        <input type="number" id="prodQty" placeholder="الكمية">
-        <input type="date" id="prodProdDate">
-        <input type="date" id="prodExpDate">
-        <button id="addProductBtn">➕ إضافة المنتج</button>
-      </div>
-      <div id="productsList">جاري التحميل...</div>
-    </div>
-
-    <div id="tabSales" class="tab-content" style="display:none;">
-      <h3>📋 سجل المبيعات</h3>
-      <div id="salesList">لا توجد مبيعات</div>
-    </div>
-
-    <div id="tabReports" class="tab-content" style="display:none;">
-      <div class="filter-bar">
-        <input type="date" id="reportFromDate">
-        <input type="date" id="reportToDate">
-        <button id="applyReportFilter">عرض التقرير</button>
-      </div>
-      <div id="reportStats" class="card">
-        <p>📦 القطع المباعة: --</p>
-        <p>💰 الإيرادات: --</p>
-        <p>📈 الربح: --</p>
-        <p>🧮 المتبقي: --</p>
-      </div>
-    </div>
-
-    <button id="logoutBtn" class="logout-btn">🚪 تسجيل خروج</button>
+  <div id="app" style="display:none;">
+    <h2>Dashboard</h2>
+    <button onclick="logout()">خروج</button>
   </div>
-</div>
 
-<!-- Modal for selling -->
-<div id="sellModal" class="modal">
-  <div class="modal-content">
-    <h3>🛒 بيع المنتج</h3>
-    <p id="modalProductName"></p>
-    <input type="number" id="modalQuantity" placeholder="الكمية المباعة" min="1">
-    <div class="modal-buttons">
-      <button id="confirmSellBtn">تأكيد</button>
-      <button id="closeModalBtn" style="background:#ccc;">إلغاء</button>
-    </div>
-  </div>
 </div>
 
 <script>
-  // ---------- إعدادات Firebase (استبدلها ببيانات مشروعك) ----------
+  // Firebase Config (حطيت اللي انت بعته)
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCYh6oC5nM2DZHgdOquHuo1so1DiQ7Gbs0",
+    authDomain: "bakkala-system.firebaseapp.com",
+    projectId: "bakkala-system",
+    storageBucket: "bakkala-system.firebasestorage.app",
+    messagingSenderId: "807660158854",
+    appId: "1:807660158854:web:c3690293a27185f07fb607",
+    measurementId: "G-6H51EXR563"
   };
+
   firebase.initializeApp(firebaseConfig);
+
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let currentUser = null;
-  // متغيرات للمودال
-  let pendingProduct = null; // {id, name, sellPrice, buyPrice}
+  const loginScreen = document.getElementById("loginScreen");
+  const app = document.getElementById("app");
+  const error = document.getElementById("error");
 
-  // عناصر DOM
-  const loginScreen = document.getElementById('loginScreen');
-  const dashboardDiv = document.getElementById('dashboard');
-  const loginError = document.getElementById('loginError');
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const productsListDiv = document.getElementById('productsList');
-  const salesListDiv = document.getElementById('salesList');
-  const addProductBtn = document.getElementById('addProductBtn');
-  const applyReportFilter = document.getElementById('applyReportFilter');
-  const reportStatsDiv = document.getElementById('reportStats');
-  const sellModal = document.getElementById('sellModal');
-  const modalProductName = document.getElementById('modalProductName');
-  const modalQuantity = document.getElementById('modalQuantity');
-  const confirmSellBtn = document.getElementById('confirmSellBtn');
-  const closeModalBtn = document.getElementById('closeModalBtn');
+  function login() {
+    const userId = document.getElementById("userId").value.trim();
+    const password = document.getElementById("password").value;
 
-  // إظهار/إخفاء المودال
-  function openSellModal(product) {
-    pendingProduct = product;
-    modalProductName.innerText = product.name;
-    modalQuantity.value = 1;
-    sellModal.style.display = 'flex';
-  }
-  function closeModal() {
-    sellModal.style.display = 'none';
-    pendingProduct = null;
-  }
-  closeModalBtn.onclick = closeModal;
-  window.onclick = (e) => { if (e.target === sellModal) closeModal(); };
-
-  confirmSellBtn.onclick = async () => {
-    if (!pendingProduct) return;
-    const qty = parseInt(modalQuantity.value);
-    if (isNaN(qty) || qty <= 0) {
-      alert('أدخل كمية صحيحة');
+    if (!userId || !password) {
+      error.innerText = "اكتب البيانات";
       return;
     }
-    const productRef = db.collection('products').doc(pendingProduct.id);
-    const productDoc = await productRef.get();
-    if (!productDoc.exists) { alert('المنتج غير موجود'); closeModal(); return; }
-    const currentQty = productDoc.data().quantity;
-    if (currentQty < qty) {
-      alert(`الكمية المتاحة فقط ${currentQty}`);
-      return;
-    }
-    const batch = db.batch();
-    batch.update(productRef, { quantity: currentQty - qty });
-    const saleRef = db.collection('sales').doc();
-    batch.set(saleRef, {
-      productId: pendingProduct.id,
-      productName: pendingProduct.name,
-      quantity: qty,
-      sellingPrice: pendingProduct.sellPrice,
-      purchasePrice: pendingProduct.buyPrice,
-      totalRevenue: pendingProduct.sellPrice * qty,
-      profit: (pendingProduct.sellPrice - pendingProduct.buyPrice) * qty,
-      date: firebase.firestore.FieldValue.serverTimestamp(),
-      userId: currentUser.uid
+
+    const email = userId + "@bkalla.com";
+
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => {
+        loginScreen.style.display = "none";
+        app.style.display = "block";
+        error.innerText = "";
+      })
+      .catch(err => {
+        error.innerText = "بيانات غلط أو المستخدم مش موجود";
+      });
+  }
+
+  function logout() {
+    auth.signOut().then(() => {
+      loginScreen.style.display = "block";
+      app.style.display = "none";
     });
-    await batch.commit();
-    alert(`تم بيع ${qty} من ${pendingProduct.name}`);
-    closeModal();
-    loadProducts();
-    loadSalesHistory();
-    refreshReport();
-  };
-
-  // التحقق من انتهاء الصلاحية (أقل من 7 أيام)
-  function isExpiryNear(expiryDateStr) {
-    if (!expiryDateStr) return false;
-    const today = new Date();
-    const expiry = new Date(expiryDateStr);
-    const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
-    return diffDays >= 0 && diffDays <= 7;
   }
 
-  function showDashboard() {
-    loginScreen.style.display = 'none';
-    dashboardDiv.style.display = 'block';
-    loadProducts();
-    loadSalesHistory();
-    refreshReport();
-  }
-  function showLogin() {
-    loginScreen.style.display = 'block';
-    dashboardDiv.style.display = 'none';
-    currentUser = null;
-  }
-
-  logoutBtn.onclick = () => auth.signOut().then(() => showLogin());
-
-  loginBtn.onclick = async () => {
-    const userId = document.getElementById('userId').value.trim();
-    const password = document.getElementById('password').value;
-    if (!userId || !password) { loginError.innerText = 'أدخل ID وكلمة المرور'; return; }
-    const email = userId + '@bkalla.com';
-    try {
-      const userCred = await auth.signInWithEmailAndPassword(email, password);
-      currentUser = userCred.user;
-      loginError.innerText = '';
-      showDashboard();
-    } catch (err) { loginError.innerText = 'بيانات غير صحيحة'; }
-  };
-
-  auth.onAuthStateChanged((user) => {
-    if (user) { currentUser = user; showDashboard(); } 
-    else showLogin();
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      loginScreen.style.display = "none";
+      app.style.display = "block";
+    }
   });
-
-  async function loadProducts() {
-    if (!currentUser) return;
-    const snapshot = await db.collection('products').where('userId', '==', currentUser.uid).orderBy('createdAt', 'desc').get();
-    if (snapshot.empty) { productsListDiv.innerHTML = '<div class="card">لا توجد منتجات. أضف منتجك الأول ➕</div>'; return; }
-    let html = '';
-    snapshot.forEach(doc => {
-      const p = doc.data();
-      let lowStockClass = (p.quantity < 5) ? 'low-stock' : '';
-      let expiryClass = isExpiryNear(p.expiryDate) ? 'expiry-warning' : '';
-      let expiryWarningHtml = isExpiryNear(p.expiryDate) ? '<span style="color:#ff9800;">⚠️ تنبيه: اقتراب انتهاء الصلاحية</span>' : '';
-      html += `
-        <div class="card ${lowStockClass} ${expiryClass}" data-id="${doc.id}">
-          <div class="product-row">
-            <span class="product-name">${escapeHtml(p.name)}</span>
-            <span class="badge">${p.quantity} قطعة</span>
-          </div>
-          <div class="product-row">
-            <span>💰 شراء: ${p.purchasePrice} | 💵 بيع: ${p.sellingPrice}</span>
-            <span>📅 صلاحية: ${p.expiryDate || 'بدون صلاحية'} ${expiryWarningHtml}</span>
-          </div>
-          ${p.quantity < 5 ? '<div class="product-row"><span style="color:#d32f2f;">⚠️ مخزون منخفض (أقل من 5)</span></div>' : ''}
-          <div class="product-row">
-            <button class="btn-small sell-product" data-id="${doc.id}" data-name="${escapeHtml(p.name)}" data-price="${p.sellingPrice}" data-buyprice="${p.purchasePrice}">🛒 بيع</button>
-            <button class="btn-small btn-danger delete-product" data-id="${doc.id}">🗑 حذف</button>
-          </div>
-        </div>
-      `;
-    });
-    productsListDiv.innerHTML = html;
-
-    document.querySelectorAll('.sell-product').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const product = {
-          id: btn.dataset.id,
-          name: btn.dataset.name,
-          sellPrice: parseFloat(btn.dataset.price),
-          buyPrice: parseFloat(btn.dataset.buyprice)
-        };
-        openSellModal(product);
-      });
-    });
-
-    document.querySelectorAll('.delete-product').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (confirm('حذف المنتج نهائياً؟')) {
-          await db.collection('products').doc(btn.dataset.id).delete();
-          loadProducts();
-          refreshReport();
-        }
-      });
-    });
-  }
-
-  addProductBtn.onclick = async () => {
-    const name = document.getElementById('prodName').value.trim();
-    const purchasePrice = parseFloat(document.getElementById('prodBuyPrice').value);
-    const sellingPrice = parseFloat(document.getElementById('prodSellPrice').value);
-    const quantity = parseInt(document.getElementById('prodQty').value);
-    const productionDate = document.getElementById('prodProdDate').value;
-    const expiryDate = document.getElementById('prodExpDate').value;
-    if (!name || isNaN(purchasePrice) || isNaN(sellingPrice) || isNaN(quantity) || quantity < 0) {
-      alert('جميع الحقول مطلوبة بشكل صحيح');
-      return;
-    }
-    await db.collection('products').add({
-      name, purchasePrice, sellingPrice, quantity, productionDate, expiryDate,
-      userId: currentUser.uid,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    document.getElementById('prodName').value = '';
-    document.getElementById('prodBuyPrice').value = '';
-    document.getElementById('prodSellPrice').value = '';
-    document.getElementById('prodQty').value = '';
-    document.getElementById('prodProdDate').value = '';
-    document.getElementById('prodExpDate').value = '';
-    loadProducts();
-    refreshReport();
-  };
-
-  async function loadSalesHistory() {
-    if (!currentUser) return;
-    const snapshot = await db.collection('sales').where('userId', '==', currentUser.uid).orderBy('date', 'desc').limit(100).get();
-    if (snapshot.empty) { salesListDiv.innerHTML = '<div class="card">لا توجد مبيعات مسجلة</div>'; return; }
-    let html = '';
-    snapshot.forEach(doc => {
-      const s = doc.data();
-      const dateStr = s.date?.toDate().toLocaleDateString('ar-EG') || 'تاريخ غير محدد';
-      html += `<div class="card"><div><strong>${escapeHtml(s.productName)}</strong> - ${s.quantity} قطعة</div><div>💰 الإيراد: ${s.totalRevenue} | الربح: ${s.profit}</div><div>📅 ${dateStr} | سعر القطعة: ${s.sellingPrice}</div></div>`;
-    });
-    salesListDiv.innerHTML = html;
-  }
-
-  async function refreshReport(fromDateVal, toDateVal) {
-    if (!currentUser) return;
-    let fromDate = fromDateVal ? new Date(fromDateVal) : null;
-    let toDate = toDateVal ? new Date(toDateVal) : null;
-    if (toDate) toDate.setHours(23,59,59,999);
-    let query = db.collection('sales').where('userId', '==', currentUser.uid).orderBy('date', 'asc');
-    let salesSnapshot;
-    try {
-      if (fromDate && toDate) salesSnapshot = await query.where('date', '>=', fromDate).where('date', '<=', toDate).get();
-      else if (fromDate) salesSnapshot = await query.where('date', '>=', fromDate).get();
-      else if (toDate) salesSnapshot = await query.where('date', '<=', toDate).get();
-      else salesSnapshot = await query.get();
-    } catch(e) {
-      const all = await db.collection('sales').where('userId', '==', currentUser.uid).get();
-      let filtered = [];
-      all.forEach(d => filtered.push(d));
-      if (fromDate) filtered = filtered.filter(d => d.data().date?.toDate() >= fromDate);
-      if (toDate) filtered = filtered.filter(d => d.data().date?.toDate() <= toDate);
-      salesSnapshot = { empty: filtered.length===0, forEach: (cb) => filtered.forEach(cb) };
-    }
-    let totalQuantitySold = 0, totalRevenue = 0, totalProfit = 0;
-    if (!salesSnapshot.empty) {
-      salesSnapshot.forEach(doc => {
-        const sale = doc.data();
-        totalQuantitySold += sale.quantity || 0;
-        totalRevenue += sale.totalRevenue || 0;
-        totalProfit += sale.profit || 0;
-      });
-    }
-    const productsSnap = await db.collection('products').where('userId', '==', currentUser.uid).get();
-    let remainingQty = 0;
-    productsSnap.forEach(doc => { remainingQty += doc.data().quantity || 0; });
-    reportStatsDiv.innerHTML = `<p>📦 عدد القطع المباعة: ${totalQuantitySold}</p><p>💰 إجمالي الإيرادات: ${totalRevenue} جنيه</p><p>📈 إجمالي الربح: ${totalProfit} جنيه</p><p>🧮 القطع المتبقية في المخزون: ${remainingQty}</p>`;
-  }
-
-  applyReportFilter.onclick = () => {
-    const from = document.getElementById('reportFromDate').value;
-    const to = document.getElementById('reportToDate').value;
-    refreshReport(from ? new Date(from) : null, to ? new Date(to) : null);
-  };
-
-  const tabs = document.querySelectorAll('.nav-btn');
-  const contents = { products: document.getElementById('tabProducts'), sales: document.getElementById('tabSales'), reports: document.getElementById('tabReports') };
-  function switchTab(tabId) {
-    Object.keys(contents).forEach(id => contents[id].style.display = id === tabId ? 'block' : 'none');
-    tabs.forEach(btn => { if (btn.dataset.tab === tabId) btn.classList.add('active'); else btn.classList.remove('active'); });
-    if (tabId === 'sales') loadSalesHistory();
-    if (tabId === 'reports') refreshReport();
-  }
-  tabs.forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
-  switchTab('products');
-
-  function escapeHtml(str) { return str.replace(/[&<>]/g, function(m) { if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
 </script>
+
 </body>
 </html>
