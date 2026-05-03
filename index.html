@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>مدير البقالة - نظام SaaS متطور</title>
+  <title>مدير البقالة - نظام متكامل</title>
 
-  <!-- Firebase Compat ONLY -->
+  <!-- Firebase Compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -13,117 +13,260 @@
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; font-family:'Tajawal'; }
-    body { background:#f0f7f0; padding:20px; }
-
-    .container {
-      max-width:700px;
-      margin:auto;
-      background:white;
-      border-radius:30px;
-      padding:20px;
-      box-shadow:0 10px 25px rgba(0,0,0,0.05);
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Tajawal', sans-serif;
     }
 
-    .login-box { text-align:center; padding:40px 20px; }
-    .login-box h1 { color:#2e7d32; margin-bottom:30px; }
+    body {
+      background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
 
-    input {
-      width:100%;
-      padding:14px;
-      margin:10px 0;
-      border-radius:30px;
-      border:1px solid #c8e6c9;
-      font-size:16px;
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      border-radius: 35px;
+      padding: 25px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Login screen */
+    .login-box {
+      text-align: center;
+      padding: 40px 20px;
+      max-width: 400px;
+      margin: auto;
+    }
+
+    h1 {
+      color: #2e7d32;
+      margin-bottom: 20px;
+      font-size: 28px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 14px;
+      margin: 10px 0;
+      border-radius: 30px;
+      border: 1px solid #c8e6c9;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #2e7d32;
+      box-shadow: 0 0 0 3px rgba(46,125,50,0.2);
     }
 
     button {
-      width:100%;
-      padding:14px;
-      border:none;
-      border-radius:30px;
-      background:#2e7d32;
-      color:white;
-      font-weight:bold;
-      cursor:pointer;
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 30px;
+      background: #2e7d32;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+      transition: transform 0.1s, background 0.2s;
     }
 
-    button:hover { background:#1b5e20; }
+    button:active {
+      transform: scale(0.98);
+    }
 
-    .error { color:red; margin-top:10px; }
+    button:hover {
+      background: #1b5e20;
+    }
+
+    .btn-secondary {
+      background: #ff9800;
+    }
+    .btn-secondary:hover { background: #f57c00; }
+
+    .btn-danger {
+      background: #f44336;
+    }
+    .btn-danger:hover { background: #d32f2f; }
+
+    .btn-small {
+      width: auto;
+      padding: 8px 15px;
+      margin: 5px;
+    }
 
     .top-nav {
-      display:flex;
-      justify-content:center;
-      gap:10px;
-      margin-bottom:20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
     }
 
     .nav-btn {
-      padding:10px 20px;
-      border-radius:30px;
-      border:none;
-      background:#eee;
-      cursor:pointer;
+      padding: 10px 20px;
+      border-radius: 30px;
+      border: none;
+      background: #eee;
+      cursor: pointer;
+      font-weight: bold;
     }
 
-    .nav-btn.active { background:#2e7d32; color:white; }
+    .nav-btn.active {
+      background: #2e7d32;
+      color: white;
+    }
 
     .card {
-      background:#fff;
-      padding:15px;
-      border-radius:20px;
-      margin:10px 0;
-      box-shadow:0 3px 10px rgba(0,0,0,0.05);
+      background: #fff;
+      padding: 15px;
+      border-radius: 20px;
+      margin: 10px 0;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .product-info {
+      flex: 1;
+    }
+
+    .product-actions button {
+      width: auto;
+      margin: 5px;
+      padding: 6px 12px;
+    }
+
+    .error {
+      color: #f44336;
+      margin-top: 10px;
+    }
+
+    .success {
+      color: #2e7d32;
+      margin-top: 10px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #2e7d32;
+    }
+
+    .sales-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .sales-row select, .sales-row input {
+      flex: 1;
+      margin: 5px;
+    }
+
+    hr {
+      margin: 20px 0;
+      border: none;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .report-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .stat-card {
+      background: #f1f8e9;
+      padding: 15px;
+      border-radius: 20px;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 15px; }
+      .card { flex-direction: column; text-align: center; }
     }
   </style>
 </head>
-
 <body>
 
 <div class="container">
 
-  <!-- LOGIN -->
+  <!-- LOGIN SCREEN (ONLY) -->
   <div id="loginScreen">
     <div class="login-box">
-      <h1>📍 مدير البقالة</h1>
-
-      <input id="userId" placeholder="ID">
-      <input id="password" type="password" placeholder="Password">
-
+      <h1>📦 مدير البقالة</h1>
+      <input id="userId" placeholder="اسم المستخدم (ID)" autocomplete="off">
+      <input id="password" type="password" placeholder="كلمة المرور">
       <button onclick="login()">تسجيل الدخول</button>
-      <div class="error" id="error"></div>
+      <div class="error" id="errorMsg"></div>
     </div>
   </div>
 
-  <!-- DASHBOARD -->
+  <!-- DASHBOARD (يظهر بعد الدخول) -->
   <div id="dashboard" style="display:none;">
-
     <div class="top-nav">
-      <button class="nav-btn active">📦 المنتجات</button>
-      <button class="nav-btn">💰 المبيعات</button>
-      <button class="nav-btn">📊 التقارير</button>
+      <button class="nav-btn active" data-tab="products">📦 المنتجات</button>
+      <button class="nav-btn" data-tab="sales">💰 المبيعات</button>
+      <button class="nav-btn" data-tab="reports">📊 التقارير</button>
     </div>
 
-    <h3>إضافة منتج</h3>
+    <!-- تبويب المنتجات -->
+    <div id="productsTab">
+      <h3>➕ إضافة منتج جديد</h3>
+      <input type="text" id="pname" placeholder="اسم المنتج">
+      <input type="number" id="pprice" placeholder="سعر البيع (بالجنيه)">
+      <input type="number" id="pqty" placeholder="الكمية المتاحة">
+      <button onclick="addProduct()">إضافة المنتج</button>
+      <div id="productMsg" class="success"></div>
 
-    <input id="pname" placeholder="اسم المنتج">
-    <input id="pprice" type="number" placeholder="سعر البيع">
-    <input id="pqty" type="number" placeholder="الكمية">
+      <h3 style="margin-top:20px;">📋 قائمة المنتجات</h3>
+      <div id="productsList"></div>
+    </div>
 
-    <button onclick="addProduct()">إضافة</button>
+    <!-- تبويب المبيعات -->
+    <div id="salesTab" style="display:none;">
+      <h3>💸 تسجيل عملية بيع</h3>
+      <div class="sales-row">
+        <select id="saleProductId">
+          <option value="">اختر منتج</option>
+        </select>
+        <input type="number" id="saleQty" placeholder="الكمية المباعة">
+        <button onclick="recordSale()">تسجيل البيع</button>
+      </div>
+      <div id="saleMsg" class="success"></div>
 
-    <h3 style="margin-top:20px;">المنتجات</h3>
-    <div id="products"></div>
+      <h3 style="margin-top:20px;">🕒 سجل المبيعات اليومية</h3>
+      <div id="salesList"></div>
+    </div>
 
-    <button style="margin-top:20px;background:#999" onclick="logout()">تسجيل خروج</button>
+    <!-- تبويب التقارير -->
+    <div id="reportsTab" style="display:none;">
+      <h3>📈 التقارير والإحصائيات</h3>
+      <div id="reportsContent" class="report-stats"></div>
+      <button onclick="refreshReports()" class="btn-secondary" style="margin-top:15px;">تحديث التقارير</button>
+    </div>
 
+    <hr>
+    <button onclick="logout()" class="btn-danger" style="width:auto; padding:10px 20px;">🚪 تسجيل خروج</button>
   </div>
 
 </div>
 
 <script>
-  // Firebase Config
+  // Firebase Config (نفس بياناتك)
   const firebaseConfig = {
     apiKey: "AIzaSyCYh6oC5nM2DZHgdOquHuo1so1DiQ7Gbs0",
     authDomain: "bakkala-system.firebaseapp.com",
@@ -134,93 +277,348 @@
   };
 
   firebase.initializeApp(firebaseConfig);
-
   const auth = firebase.auth();
   const db = firebase.firestore();
 
   let currentUser = null;
+  let allProducts = []; // لتخزين المنتجات محلياً
 
-  // LOGIN
-  function login() {
+  // ---- دوال مساعدة ----
+  function showMessage(elementId, text, isError = false) {
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.innerText = text;
+      el.style.color = isError ? '#f44336' : '#2e7d32';
+      setTimeout(() => { el.innerText = ''; }, 3000);
+    }
+  }
+
+  function showLoading(show) {
+    // يمكن توسيعها لاحقاً
+  }
+
+  // ---- تسجيل الدخول فقط (بدون تسجيل) ----
+  async function login() {
     const id = document.getElementById("userId").value.trim();
     const pass = document.getElementById("password").value;
+    const errorDiv = document.getElementById("errorMsg");
 
-    if (!id || !pass) return;
+    if (!id || !pass) {
+      errorDiv.innerText = "الرجاء إدخال ID وكلمة المرور";
+      return;
+    }
 
-    const email = id + "@bkalla.com";
+    const email = id + "@bkalla.com"; // نفس الطريقة الأصلية
 
-    auth.signInWithEmailAndPassword(email, pass)
-      .then(res => {
-        currentUser = res.user;
-        document.getElementById("loginScreen").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-        loadProducts();
-      })
-      .catch(err => {
-        document.getElementById("error").innerText = "بيانات غلط";
+    try {
+      await auth.signInWithEmailAndPassword(email, pass);
+      // نجاح الدخول - يتم التعامل مع onAuthStateChanged
+    } catch (err) {
+      errorDiv.innerText = "فشل تسجيل الدخول: ID أو كلمة مرور غير صحيحة";
+      console.error(err);
+    }
+  }
+
+  // ---- تسجيل الخروج ----
+  async function logout() {
+    await auth.signOut();
+    location.reload();
+  }
+
+  // ---- عمليات المنتجات ----
+  async function addProduct() {
+    if (!currentUser) return;
+    const name = document.getElementById("pname").value.trim();
+    const price = parseFloat(document.getElementById("pprice").value);
+    const qty = parseInt(document.getElementById("pqty").value);
+
+    if (!name) {
+      showMessage("productMsg", "اسم المنتج مطلوب", true);
+      return;
+    }
+    if (isNaN(price) || price <= 0) {
+      showMessage("productMsg", "سعر البيع يجب أن يكون رقماً موجباً", true);
+      return;
+    }
+    if (isNaN(qty) || qty < 0) {
+      showMessage("productMsg", "الكمية يجب أن تكون رقماً صحيحاً غير سالب", true);
+      return;
+    }
+
+    try {
+      await db.collection("products").add({
+        name,
+        price,
+        qty,
+        userId: currentUser.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      showMessage("productMsg", "✅ تم إضافة المنتج بنجاح");
+      document.getElementById("pname").value = "";
+      document.getElementById("pprice").value = "";
+      document.getElementById("pqty").value = "";
+      await loadProducts();
+    } catch (err) {
+      showMessage("productMsg", "حدث خطأ أثناء الإضافة", true);
+      console.error(err);
+    }
   }
 
-  // LOGOUT
-  function logout() {
-    auth.signOut().then(() => {
-      location.reload();
-    });
-  }
+  async function loadProducts() {
+    if (!currentUser) return;
+    try {
+      const snapshot = await db.collection("products")
+        .where("userId", "==", currentUser.uid)
+        .orderBy("createdAt", "desc")
+        .get();
 
-  // ADD PRODUCT
-  function addProduct() {
-    const name = document.getElementById("pname").value;
-    const price = document.getElementById("pprice").value;
-    const qty = document.getElementById("pqty").value;
-
-    if (!name) return;
-
-    db.collection("products").add({
-      name,
-      price,
-      qty,
-      userId: currentUser.uid,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    loadProducts();
-  }
-
-  // LOAD PRODUCTS
-  function loadProducts() {
-    db.collection("products")
-      .where("userId", "==", currentUser.uid)
-      .get()
-      .then(snapshot => {
-        let html = "";
-
-        snapshot.forEach(doc => {
-          const p = doc.data();
-
-          html += `
-            <div class="card">
-              <h4>${p.name}</h4>
-              <p>💰 ${p.price}</p>
-              <p>📦 ${p.qty}</p>
+      allProducts = [];
+      let html = "";
+      snapshot.forEach(doc => {
+        const p = { id: doc.id, ...doc.data() };
+        allProducts.push(p);
+        html += `
+          <div class="card">
+            <div class="product-info">
+              <strong>${escapeHtml(p.name)}</strong><br>
+              💰 السعر: ${p.price} ج.م | 📦 الكمية: ${p.qty}
             </div>
-          `;
-        });
-
-        document.getElementById("products").innerHTML = html;
+            <div class="product-actions">
+              <button class="btn-small" onclick="editProduct('${doc.id}', '${escapeHtml(p.name)}', ${p.price}, ${p.qty})">✏️ تعديل</button>
+              <button class="btn-small btn-danger" onclick="deleteProduct('${doc.id}')">🗑️ حذف</button>
+            </div>
+          </div>
+        `;
       });
+      if (snapshot.empty) html = "<p>لا توجد منتجات مسجلة. أضف منتجك الأول.</p>";
+      document.getElementById("productsList").innerHTML = html;
+
+      // تحديث قائمة المنتجات في تبويب المبيعات
+      const saleSelect = document.getElementById("saleProductId");
+      saleSelect.innerHTML = '<option value="">اختر منتج</option>';
+      allProducts.forEach(p => {
+        if (p.qty > 0) {
+          saleSelect.innerHTML += `<option value="${p.id}" data-price="${p.price}" data-qty="${p.qty}">${p.name} (متوفر: ${p.qty}) - ${p.price} ج.م</option>`;
+        } else {
+          saleSelect.innerHTML += `<option value="${p.id}" data-price="${p.price}" data-qty="${p.qty}" disabled style="color:gray">${p.name} (نفذ) - ${p.price} ج.م</option>`;
+        }
+      });
+    } catch (err) {
+      console.error("خطأ في تحميل المنتجات:", err);
+    }
   }
 
-  // AUTO LOGIN CHECK
-  auth.onAuthStateChanged(user => {
+  async function deleteProduct(productId) {
+    if (!confirm("هل أنت متأكد من حذف هذا المنتج؟")) return;
+    try {
+      await db.collection("products").doc(productId).delete();
+      showMessage("productMsg", "تم الحذف بنجاح");
+      await loadProducts();
+    } catch (err) {
+      showMessage("productMsg", "خطأ في الحذف", true);
+    }
+  }
+
+  function editProduct(id, oldName, oldPrice, oldQty) {
+    const newName = prompt("اسم المنتج الجديد:", oldName);
+    if (!newName) return;
+    const newPrice = parseFloat(prompt("السعر الجديد:", oldPrice));
+    if (isNaN(newPrice)) return;
+    const newQty = parseInt(prompt("الكمية الجديدة:", oldQty));
+    if (isNaN(newQty)) return;
+
+    db.collection("products").doc(id).update({
+      name: newName,
+      price: newPrice,
+      qty: newQty
+    }).then(() => {
+      showMessage("productMsg", "تم التحديث");
+      loadProducts();
+    }).catch(err => showMessage("productMsg", "خطأ في التحديث", true));
+  }
+
+  // ---- عمليات المبيعات ----
+  async function recordSale() {
+    const productId = document.getElementById("saleProductId").value;
+    const qtySold = parseInt(document.getElementById("saleQty").value);
+
+    if (!productId) {
+      showMessage("saleMsg", "اختر منتجاً أولاً", true);
+      return;
+    }
+    if (isNaN(qtySold) || qtySold <= 0) {
+      showMessage("saleMsg", "أدخل كمية صحيحة أكبر من صفر", true);
+      return;
+    }
+
+    const product = allProducts.find(p => p.id === productId);
+    if (!product) {
+      showMessage("saleMsg", "المنتج غير موجود", true);
+      return;
+    }
+    if (qtySold > product.qty) {
+      showMessage("saleMsg", `الكمية المتاحة فقط ${product.qty}`, true);
+      return;
+    }
+
+    const totalPrice = qtySold * product.price;
+
+    try {
+      // تقليل الكمية في المنتج
+      await db.collection("products").doc(productId).update({
+        qty: product.qty - qtySold
+      });
+
+      // تسجيل عملية البيع في مجموعة "sales"
+      await db.collection("sales").add({
+        productId,
+        productName: product.name,
+        priceAtSale: product.price,
+        quantity: qtySold,
+        total: totalPrice,
+        userId: currentUser.uid,
+        date: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      showMessage("saleMsg", `✅ تم تسجيل بيع ${qtySold} من ${product.name} بمبلغ ${totalPrice} ج.م`);
+      document.getElementById("saleQty").value = "";
+      await loadProducts();   // تحديث الكميات المعروضة
+      await loadSales();      // تحديث سجل المبيعات
+      if (document.querySelector('[data-tab="reports"].active')) refreshReports();
+    } catch (err) {
+      showMessage("saleMsg", "خطأ أثناء تسجيل البيع", true);
+      console.error(err);
+    }
+  }
+
+  async function loadSales() {
+    if (!currentUser) return;
+    try {
+      const snapshot = await db.collection("sales")
+        .where("userId", "==", currentUser.uid)
+        .orderBy("date", "desc")
+        .limit(50)
+        .get();
+
+      let html = "";
+      snapshot.forEach(doc => {
+        const s = doc.data();
+        const dateStr = s.date ? new Date(s.date.toDate()).toLocaleString('ar-EG') : "الآن";
+        html += `
+          <div class="card">
+            <strong>${s.productName}</strong><br>
+            الكمية: ${s.quantity} | السعر: ${s.priceAtSale} ج.م | الإجمالي: ${s.total} ج.م<br>
+            <small>${dateStr}</small>
+          </div>
+        `;
+      });
+      if (snapshot.empty) html = "<p>لا توجد مبيعات مسجلة بعد.</p>";
+      document.getElementById("salesList").innerHTML = html;
+    } catch (err) {
+      console.error("خطأ في تحميل المبيعات", err);
+    }
+  }
+
+  // ---- التقارير ----
+  async function refreshReports() {
+    if (!currentUser) return;
+    try {
+      // جلب جميع المنتجات
+      const prodSnap = await db.collection("products").where("userId", "==", currentUser.uid).get();
+      let totalProducts = prodSnap.size;
+      let totalStockValue = 0;
+      prodSnap.forEach(doc => {
+        const p = doc.data();
+        totalStockValue += (p.price * p.qty);
+      });
+
+      // جلب المبيعات لآخر 30 يوماً (أو كلها)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const salesSnap = await db.collection("sales")
+        .where("userId", "==", currentUser.uid)
+        .where("date", ">=", firebase.firestore.Timestamp.fromDate(thirtyDaysAgo))
+        .get();
+
+      let totalSalesAmount = 0;
+      let totalItemsSold = 0;
+      const productSales = {}; // لمعرفة أفضل المنتجات
+      salesSnap.forEach(doc => {
+        const s = doc.data();
+        totalSalesAmount += s.total;
+        totalItemsSold += s.quantity;
+        productSales[s.productName] = (productSales[s.productName] || 0) + s.quantity;
+      });
+
+      let bestProduct = "لا يوجد";
+      let maxQty = 0;
+      for (const [name, qty] of Object.entries(productSales)) {
+        if (qty > maxQty) {
+          maxQty = qty;
+          bestProduct = name;
+        }
+      }
+
+      const reportsHtml = `
+        <div class="stat-card"><strong>📦 إجمالي المنتجات</strong><br>${totalProducts}</div>
+        <div class="stat-card"><strong>💰 قيمة المخزون</strong><br>${totalStockValue.toFixed(2)} ج.م</div>
+        <div class="stat-card"><strong>💵 إجمالي المبيعات (آخر 30 يوم)</strong><br>${totalSalesAmount.toFixed(2)} ج.م</div>
+        <div class="stat-card"><strong>🧾 عدد الوحدات المباعة</strong><br>${totalItemsSold}</div>
+        <div class="stat-card"><strong>🏆 أفضل منتج مبيعاً</strong><br>${bestProduct} (${maxQty} وحدة)</div>
+      `;
+      document.getElementById("reportsContent").innerHTML = reportsHtml;
+    } catch (err) {
+      console.error("خطأ في التقارير", err);
+    }
+  }
+
+  // ---- تبويب Dashboard ----
+  function switchTab(tabId) {
+    document.getElementById("productsTab").style.display = tabId === "products" ? "block" : "none";
+    document.getElementById("salesTab").style.display = tabId === "sales" ? "block" : "none";
+    document.getElementById("reportsTab").style.display = tabId === "reports" ? "block" : "none";
+    document.querySelectorAll(".nav-btn").forEach(btn => {
+      if (btn.getAttribute("data-tab") === tabId) btn.classList.add("active");
+      else btn.classList.remove("active");
+    });
+    if (tabId === "sales") loadSales();
+    if (tabId === "reports") refreshReports();
+  }
+
+  // ---- حماية من XSS ----
+  function escapeHtml(str) {
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  // ---- مراقبة حالة تسجيل الدخول ----
+  auth.onAuthStateChanged(async (user) => {
     if (user) {
       currentUser = user;
       document.getElementById("loginScreen").style.display = "none";
       document.getElementById("dashboard").style.display = "block";
-      loadProducts();
+      await loadProducts();
+      switchTab("products"); // افتح تبويب المنتجات افتراضياً
+      // تحميل المبيعات والتقارير عند الحاجة يتم من التبويبات
+    } else {
+      currentUser = null;
+      document.getElementById("loginScreen").style.display = "flex";
+      document.getElementById("dashboard").style.display = "none";
     }
   });
 
+  // ربط أزرار التبويب
+  document.querySelectorAll(".nav-btn").forEach(btn => {
+    btn.addEventListener("click", () => switchTab(btn.getAttribute("data-tab")));
+  });
+  // التأكد من أن العناصر موجودة في DOM
+  window.addEventListener("load", () => {
+    // إعادة تعيين أي رسائل
+  });
 </script>
 
 </body>
