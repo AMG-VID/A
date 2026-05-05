@@ -287,7 +287,7 @@
             <html dir="rtl"><head><style>body{font-family:Tajawal; padding:20px;}</style></head>
             <body><h2>فاتورة البيع</h2><p>العميل: ${customerName}</p><p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
             <table border="1" width="100%"> competences<th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>
-            ${cartItems.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}
+            ${cartItems.map(i => `</tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></td>`).join('')}
             </table><h3>الإجمالي: ${total.toFixed(2)} ج.م</h3><p>طريقة الدفع: ${method}</p>
             ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
             ${debtMsg}<button onclick="window.print()">🖨️ طباعة</button></body></html>
@@ -471,7 +471,8 @@
             currentUserAuth = cred.user; userData = userInfo; currentStoreId = userInfo.storeId; currentRole = userInfo.role; isAdminGlobal = (currentRole === 'admin');
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('storeTitle').innerHTML = `<i class="fas fa-store"></i> ${userInfo.storeName || 'المحل'} (${currentRole})`;
+            // تم تعديل هذا السطر: إزالة (${currentRole})
+            document.getElementById('storeTitle').innerHTML = `<i class="fas fa-store"></i> ${userInfo.storeName || 'المحل'}`;
             if (!isAdminGlobal) await loadStoreData();
             buildTabs();
         } catch (e) {
