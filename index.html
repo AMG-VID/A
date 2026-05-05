@@ -1,596 +1,636 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>مدير البقالة - النظام المتكامل</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tajawal', sans-serif; }
-    body { background: linear-gradient(145deg, #eef2ff, #e0e7ff); padding: 20px; min-height: 100vh; }
-    .container { max-width: 1400px; margin: auto; background: rgba(255,255,255,0.96); border-radius: 40px; padding: 20px; box-shadow: 0 20px 35px rgba(0,0,0,0.1); }
-    .login-box { text-align: center; padding: 40px 20px; max-width: 420px; margin: auto; }
-    h1, h2, h3 { color: #4c1d95; }
-    input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border-radius: 30px; border: 1px solid #cbd5e1; font-size: 15px; }
-    input:focus, select:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.2); outline: none; }
-    button { width: 100%; padding: 12px; border: none; border-radius: 30px; background: linear-gradient(95deg, #2563eb, #8b5cf6); color: white; font-weight: bold; cursor: pointer; font-size: 16px; transition:0.2s; }
-    button:active { transform: scale(0.97); }
-    .btn-secondary { background: #f97316; }
-    .btn-danger { background: #dc2626; }
-    .btn-sm { width: auto; padding: 6px 14px; margin: 3px; cursor: pointer; }
-    .top-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; background: #f1f5f9; padding: 8px; border-radius: 60px; }
-    .nav-btn { background: transparent; color: #334155; width: auto; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
-    .nav-btn.active { background: #4f46e5; color: white; box-shadow: 0 6px 12px rgba(79,70,229,0.3); }
-    .card { background: white; padding: 15px; border-radius: 24px; margin: 12px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-right: 5px solid #8b5cf6; }
-    .product-info { flex: 1; }
-    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 18px; }
-    .stat-card { background: #f9fafb; padding: 18px; border-radius: 28px; text-align: center; border: 1px solid #e2e8f0; }
-    .low-stock { background: #fee2e2; border-right-color: #ef4444; }
-    .pos-row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin: 12px 0; }
-    .pos-row > * { flex: 1; }
-    .flash { padding: 12px; border-radius: 30px; margin: 10px 0; background: #e6f7e6; color: #166534; }
-    @media (max-width:700px) { .container { padding: 15px; } }
-    img.product-img { width: 45px; height: 45px; object-fit: cover; border-radius: 12px; margin-left: 8px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>نظام إدارة المحلات المتكامل | Multi-Tenant POS</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tajawal', sans-serif; }
+        body { background: linear-gradient(145deg, #eef2ff, #e0e7ff); padding: 20px; min-height: 100vh; }
+        .container { max-width: 1400px; margin: auto; background: rgba(255,255,255,0.96); border-radius: 40px; padding: 20px; box-shadow: 0 20px 35px rgba(0,0,0,0.1); }
+        .login-box { text-align: center; padding: 40px 20px; max-width: 420px; margin: auto; }
+        h1, h2, h3 { color: #4c1d95; }
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border-radius: 30px; border: 1px solid #cbd5e1; font-size: 15px; }
+        input:focus, select:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.2); outline: none; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 30px; background: linear-gradient(95deg, #2563eb, #8b5cf6); color: white; font-weight: bold; cursor: pointer; font-size: 16px; transition:0.2s; }
+        button:active { transform: scale(0.97); }
+        .btn-secondary { background: #f97316; }
+        .btn-danger { background: #dc2626; }
+        .btn-sm { width: auto; padding: 6px 14px; margin: 3px; cursor: pointer; display: inline-block; }
+        .top-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; background: #f1f5f9; padding: 8px; border-radius: 60px; }
+        .nav-btn { background: transparent; color: #334155; width: auto; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+        .nav-btn.active { background: #4f46e5; color: white; box-shadow: 0 6px 12px rgba(79,70,229,0.3); }
+        .card { background: white; padding: 15px; border-radius: 24px; margin: 12px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-right: 5px solid #8b5cf6; gap: 10px; }
+        .card-info { flex: 1; }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 18px; }
+        .stat-card { background: #f9fafb; padding: 18px; border-radius: 28px; text-align: center; border: 1px solid #e2e8f0; }
+        .low-stock { background: #fee2e2; border-right-color: #ef4444; }
+        .pos-row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin: 12px 0; }
+        .pos-row > * { flex: 1; }
+        .flash { padding: 12px; border-radius: 30px; margin: 10px 0; background: #e6f7e6; color: #166534; }
+        @media (max-width:700px) { .container { padding: 15px; } }
+        img.product-img { width: 45px; height: 45px; object-fit: cover; border-radius: 12px; margin-left: 8px; }
+        .btn-icon { background: none; color: #4f46e5; width: auto; font-size: 18px; padding: 4px 8px; }
+    </style>
 </head>
 <body>
 <div class="container" id="app">
-  <div id="loginScreen">
-    <div class="login-box">
-      <h1><i class="fas fa-store"></i> نظام إدارة المحلات</h1>
-      <input type="text" id="loginId" placeholder="اسم المستخدم (ID فقط)" autocomplete="off">
-      <input type="password" id="loginPassword" placeholder="كلمة المرور">
-      <button onclick="loginUser()">دخول</button>
-      <div id="loginError" style="color:#dc2626; margin-top:12px;"></div>
+    <!-- شاشة الدخول -->
+    <div id="loginScreen">
+        <div class="login-box">
+            <h1><i class="fas fa-store"></i> نظام إدارة المحلات</h1>
+            <input type="text" id="loginId" placeholder="اسم المستخدم (ID فقط)" autocomplete="off">
+            <input type="password" id="loginPassword" placeholder="كلمة المرور">
+            <button onclick="loginUser()">دخول</button>
+            <div id="loginError" style="color:#dc2626; margin-top:12px;"></div>
+        </div>
     </div>
-  </div>
-  <div id="dashboard" style="display:none;">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:15px;">
-      <h2 id="storeTitle"><i class="fas fa-store"></i> المتجر</h2>
-      <button onclick="logoutUser()" class="btn-danger btn-sm"><i class="fas fa-sign-out-alt"></i> خروج</button>
+    <!-- لوحة التحكم الرئيسية -->
+    <div id="dashboard" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:15px;">
+            <h2 id="storeTitle"><i class="fas fa-store"></i> المتجر</h2>
+            <button onclick="logoutUser()" class="btn-danger btn-sm"><i class="fas fa-sign-out-alt"></i> خروج</button>
+        </div>
+        <div class="top-nav" id="navTabs"></div>
+        <div id="tabContent"></div>
     </div>
-    <div class="top-nav" id="navTabs"></div>
-    <div id="tabContent"></div>
-  </div>
 </div>
 
 <script>
-  // Firebase Config (بياناتك)
-  const firebaseConfig = {
-    apiKey: "AIzaSyCYh6oC5nM2DZHgdOquHuo1so1DiQ7Gbs0",
-    authDomain: "bakkala-system.firebaseapp.com",
-    projectId: "bakkala-system",
-    storageBucket: "bakkala-system.firebasestorage.app",
-    messagingSenderId: "807660158854",
-    appId: "1:807660158854:web:c3690293a27185f07fb607"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-
-  let currentUserAuth = null, userData = null, currentStoreId = null, currentRole = null, isAdminGlobal = false;
-  let allProducts = [], allCustomers = [], allSuppliers = [];
-
-  function showFlash(containerId, text, isError = false) {
-    let el = document.getElementById(containerId);
-    if(!el) {
-      el = document.createElement('div'); el.className = 'flash';
-      const target = document.getElementById('tabContent');
-      if(target) target.prepend(el);
-      else document.getElementById('dashboard')?.prepend(el);
-    }
-    el.innerText = text;
-    el.style.backgroundColor = isError ? '#ffe0e0' : '#e0f2fe';
-    el.style.color = isError ? '#b91c1c' : '#065f46';
-    setTimeout(() => el.remove(), 3500);
-  }
-  function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
-
-  // إنشاء وثيقة المستخدم تلقائياً
-  async function ensureUserDocument(uid, email) {
-    const userRef = db.collection('users').doc(uid);
-    const doc = await userRef.get();
-    if (doc.exists) {
-      if (doc.data().isActive === false) throw new Error('الحساب معطل');
-      return doc.data();
-    }
-    const newStoreId = `store_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-    const newUser = {
-      email, role: 'owner', storeId: newStoreId,
-      storeName: `محل ${email.split('@')[0]}`, isActive: true,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    // ====================== Firebase Configuration ======================
+    const firebaseConfig = {
+        apiKey: "AIzaSyCYh6oC5nM2DZHgdOquHuo1so1DiQ7Gbs0",
+        authDomain: "bakkala-system.firebaseapp.com",
+        projectId: "bakkala-system",
+        storageBucket: "bakkala-system.firebasestorage.app",
+        messagingSenderId: "807660158854",
+        appId: "1:807660158854:web:c3690293a27185f07fb607"
     };
-    await userRef.set(newUser);
-    return newUser;
-  }
-
-  async function loadStoreData() {
-    if (isAdminGlobal || !currentStoreId) return;
-    const [prodSnap, custSnap, suppSnap] = await Promise.all([
-      db.collection('products').where('storeId', '==', currentStoreId).get(),
-      db.collection('customers').where('storeId', '==', currentStoreId).get(),
-      db.collection('suppliers').where('storeId', '==', currentStoreId).get()
-    ]);
-    allProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    allCustomers = custSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    allSuppliers = suppSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  }
-
-  function buildTabs() {
-    const tabsContainer = document.getElementById('navTabs');
-    let tabs = isAdminGlobal ?
-      [{id:'adminPanel',name:'📊 لوحة التحكم'}] :
-      [{id:'pos',name:'💰 نقطة البيع'},{id:'products',name:'📦 المنتجات'},{id:'customers',name:'👥 العملاء'},{id:'suppliers',name:'🏭 الموردين'},{id:'purchaseInvoices',name:'📥 فواتير الشراء'},{id:'inventory',name:'📦 المخزون'},{id:'reports',name:'📈 التقارير'}];
-    tabsContainer.innerHTML = tabs.map(t => `<button class="nav-btn" data-tab="${t.id}">${t.name}</button>`).join('');
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
-    if(tabs.length) switchTab(tabs[0].id);
-  }
-
-  async function switchTab(tabId) {
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-    const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
-    if(activeBtn) activeBtn.classList.add('active');
-    const container = document.getElementById('tabContent');
-    if (isAdminGlobal) {
-      container.innerHTML = '<div class="flash">لوحة تحكم المشرف قيد التطوير</div>';
-    } else {
-      await loadStoreData();
-      if(tabId === 'pos') await renderPosTab(container);
-      else if(tabId === 'products') await renderProductsTab(container);
-      else if(tabId === 'customers') await renderCustomersTab(container);
-      else if(tabId === 'suppliers') await renderSuppliersTab(container);
-      else if(tabId === 'purchaseInvoices') await renderPurchaseInvoicesTab(container);
-      else if(tabId === 'inventory') await renderInventoryTab(container);
-      else if(tabId === 'reports') await renderReportsTab(container);
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    
+    // ====================== Global Variables ======================
+    let currentUserAuth = null, userData = null, currentStoreId = null, currentRole = null, isAdminGlobal = false;
+    let allProducts = [], allCustomers = [], allSuppliers = [];
+    
+    // ====================== Helper Functions ======================
+    function showFlash(containerId, text, isError = false) {
+        let el = document.getElementById(containerId);
+        if (!el) {
+            el = document.createElement('div'); el.className = 'flash';
+            const target = document.getElementById('tabContent') || document.getElementById('dashboard');
+            if (target) target.prepend(el);
+            else document.getElementById('app')?.prepend(el);
+        }
+        el.innerText = text;
+        el.style.backgroundColor = isError ? '#ffe0e0' : '#e0f2fe';
+        el.style.color = isError ? '#b91c1c' : '#065f46';
+        setTimeout(() => el.remove(), 3500);
     }
-  }
-
-  // ================== نقطة البيع (POS) - تم إصلاح الـ Transaction بالكامل ==================
-  let cart = [];
-  async function renderPosTab(container) {
-    cart = [];
-    let customersOpt = `<option value="">بدون عميل</option>` + allCustomers.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (دين: ${c.debt||0})</option>`).join('');
-    container.innerHTML = `
-      <div style="background:#f8fafc; border-radius:32px; padding:20px;">
-        <h3>💰 نقطة البيع السريعة</h3>
-        <div class="pos-row">
-          <input type="text" id="searchProductInput" placeholder="🔍 باركود أو اسم المنتج" oninput="searchProductLive(this.value)">
-          <select id="productSelect"><option>اختر منتج</option></select>
-          <input type="number" id="cartQuantity" placeholder="الكمية" value="1">
-          <button onclick="addToCart()" class="btn-sm">➕ أضف للسلة</button>
-        </div>
-        <div id="cartItems"></div>
-        <div class="pos-row">
-          <select id="customerId">${customersOpt}</select>
-          <select id="paymentMethod"><option value="cash">كاش</option><option value="visa">فيزا</option><option value="credit">آجل</option></select>
-          <input type="number" id="paidAmount" placeholder="المدفوع" oninput="calculateChangeTotal()">
-          <input type="text" id="changeAmount" placeholder="الباقي" readonly>
-        </div>
-        <div style="font-size:24px; font-weight:bold;" id="totalAmount">الإجمالي: 0 ج.م</div>
-        <button onclick="confirmSale()" style="background:#10b981;">إتمام البيع</button>
-        <div id="posFlash"></div>
-      </div>`;
-    window.searchProductLive = (val) => {
-      const filtered = allProducts.filter(p => (p.barcode && p.barcode.includes(val)) || p.name.includes(val));
-      const select = document.getElementById('productSelect');
-      select.innerHTML = filtered.map(p => `<option value="${p.id}" data-price="${p.priceRetail||p.price}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('');
-      if(filtered.length===0) select.innerHTML = '<option>لا يوجد</option>';
+    function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+    function formatDate(timestamp) { return timestamp?.toDate().toLocaleString('ar-EG') || 'غير محدد'; }
+    
+    // ====================== Ensure User Document ======================
+    async function ensureUserDocument(uid, email) {
+        const userRef = db.collection('users').doc(uid);
+        const doc = await userRef.get();
+        if (doc.exists) {
+            if (doc.data().isActive === false) throw new Error('الحساب معطل');
+            return doc.data();
+        }
+        const newStoreId = `store_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+        const newUser = {
+            email, role: 'owner', storeId: newStoreId,
+            storeName: `محل ${email.split('@')[0]}`, isActive: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await userRef.set(newUser);
+        return newUser;
+    }
+    
+    // ====================== Load Store Data ======================
+    async function loadStoreData() {
+        if (isAdminGlobal || !currentStoreId) return;
+        const [prodSnap, custSnap, suppSnap] = await Promise.all([
+            db.collection('products').where('storeId', '==', currentStoreId).get(),
+            db.collection('customers').where('storeId', '==', currentStoreId).get(),
+            db.collection('suppliers').where('storeId', '==', currentStoreId).get()
+        ]);
+        allProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        allCustomers = custSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        allSuppliers = suppSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    
+    // ====================== Build Tabs ======================
+    function buildTabs() {
+        const tabsContainer = document.getElementById('navTabs');
+        let tabs = isAdminGlobal ? [{ id: 'adminPanel', name: '📊 لوحة التحكم' }] : [
+            { id: 'pos', name: '💰 نقطة البيع' }, { id: 'products', name: '📦 المنتجات' },
+            { id: 'customers', name: '👥 العملاء' }, { id: 'suppliers', name: '🏭 الموردين' },
+            { id: 'purchases', name: '📥 فواتير الشراء' }, { id: 'inventory', name: '📦 المخزون' },
+            { id: 'reports', name: '📈 التقارير' }
+        ];
+        tabsContainer.innerHTML = tabs.map(t => `<button class="nav-btn" data-tab="${t.id}">${t.name}</button>`).join('');
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+        if (tabs.length) switchTab(tabs[0].id);
+    }
+    
+    async function switchTab(tabId) {
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
+        const container = document.getElementById('tabContent');
+        if (isAdminGlobal) { container.innerHTML = '<div class="flash">لوحة المشرف قيد التطوير</div>'; return; }
+        await loadStoreData();
+        if (tabId === 'pos') await renderPosTab(container);
+        else if (tabId === 'products') await renderProductsTab(container);
+        else if (tabId === 'customers') await renderCustomersTab(container);
+        else if (tabId === 'suppliers') await renderSuppliersTab(container);
+        else if (tabId === 'purchases') await renderPurchasesTab(container);
+        else if (tabId === 'inventory') await renderInventoryTab(container);
+        else if (tabId === 'reports') await renderReportsTab(container);
+    }
+    
+    // ====================== نقطة البيع (POS) ======================
+    let cart = [];
+    async function renderPosTab(container) {
+        cart = [];
+        let customersOpt = `<option value="">بدون عميل</option>` + allCustomers.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (دين: ${c.debt||0})</option>`).join('');
+        container.innerHTML = `
+            <div style="background:#f8fafc; border-radius:32px; padding:20px;">
+                <h3>💰 نقطة البيع السريعة</h3>
+                <div class="pos-row">
+                    <input type="text" id="searchProduct" placeholder="🔍 باركود أو اسم المنتج" oninput="searchProductLive()">
+                    <select id="productSelect"><option>اختر منتج</option></select>
+                    <input type="number" id="cartQty" placeholder="الكمية" value="1">
+                    <button onclick="addToCart()" class="btn-sm">➕ أضف للسلة</button>
+                </div>
+                <div id="cartItems"></div>
+                <div class="pos-row">
+                    <select id="customerId">${customersOpt}</select>
+                    <select id="paymentMethod"><option value="cash">كاش</option><option value="visa">فيزا</option><option value="credit">آجل</option></select>
+                    <input type="number" id="paidAmount" placeholder="المدفوع" oninput="updateChange()">
+                    <input type="text" id="changeAmount" placeholder="الباقي" readonly>
+                </div>
+                <div style="font-size:24px; font-weight:bold;" id="totalAmount">الإجمالي: 0 ج.م</div>
+                <button onclick="confirmSale()" style="background:#10b981;">إتمام البيع</button>
+                <div id="posFlash"></div>
+            </div>`;
+        window.searchProductLive = () => {
+            let val = document.getElementById('searchProduct').value;
+            let filtered = allProducts.filter(p => (p.barcode && p.barcode.includes(val)) || p.name.includes(val));
+            let select = document.getElementById('productSelect');
+            select.innerHTML = filtered.map(p => `<option value="${p.id}" data-price="${p.priceRetail||p.price}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('');
+            if (filtered.length === 0) select.innerHTML = '<option>لا يوجد</option>';
+        };
+        window.addToCart = () => {
+            let select = document.getElementById('productSelect');
+            let prodId = select.value;
+            if (!prodId || prodId === 'لا يوجد') return;
+            let qty = parseInt(document.getElementById('cartQty').value);
+            if (qty <= 0) return;
+            let product = allProducts.find(p => p.id === prodId);
+            if (!product || product.qty < qty) { showFlash('posFlash', 'كمية غير متوفرة', true); return; }
+            let existing = cart.find(item => item.id === prodId);
+            if (existing) existing.qty += qty;
+            else cart.push({ id: prodId, name: product.name, price: product.priceRetail || product.price, qty });
+            renderCart();
+        };
+        window.renderCart = () => {
+            let cartDiv = document.getElementById('cartItems');
+            let total = 0;
+            let html = `<h4>السلة</h4>`;
+            cart.forEach((item, idx) => {
+                total += item.price * item.qty;
+                html += `<div class="card" style="padding:10px;">${item.name} x ${item.qty} = ${(item.price*item.qty).toFixed(2)} ج.م <button class="btn-sm btn-danger" onclick="removeFromCart(${idx})">حذف</button></div>`;
+            });
+            cartDiv.innerHTML = html;
+            document.getElementById('totalAmount').innerHTML = `الإجمالي: ${total.toFixed(2)} ج.م`;
+            updateChange();
+        };
+        window.removeFromCart = (idx) => { cart.splice(idx, 1); renderCart(); };
+        window.updateChange = () => {
+            let total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            let paid = parseFloat(document.getElementById('paidAmount').value) || 0;
+            document.getElementById('changeAmount').value = (paid > total) ? (paid - total).toFixed(2) : 0;
+        };
+        renderCart();
+    }
+    
+    // عملية البيع النهائية مع إصلاح الـ Transaction بالكامل
+    async function confirmSale() {
+        if (cart.length === 0) return showFlash('posFlash', 'السلة فارغة', true);
+        let customerId = document.getElementById('customerId').value || null;
+        let paymentMethod = document.getElementById('paymentMethod').value;
+        let paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
+        let totalAmount = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+        let finalMethod = paymentMethod;
+        let change = 0;
+        let debtAdded = 0;
+        
+        // التعامل مع حالة العميل والدفع الأقل
+        if (customerId && paidAmount < totalAmount) {
+            finalMethod = 'credit';
+            debtAdded = totalAmount - paidAmount;
+            paidAmount = totalAmount; // للتسجيل فقط، لكن الباقي يصبح ديناً
+            change = 0;
+            showFlash('posFlash', `سيتم إضافة ${debtAdded} ج.م كدين على العميل`, false);
+        } else if (finalMethod !== 'credit' && paidAmount < totalAmount) {
+            return showFlash('posFlash', 'المدفوع أقل من الإجمالي', true);
+        } else if (finalMethod !== 'credit') {
+            change = paidAmount - totalAmount;
+            if (change < 0) return showFlash('posFlash', 'المدفوع أقل من الإجمالي', true);
+        }
+        
+        try {
+            // ========== أسلوب جديد لتجنب خطأ Transaction: نقوم بالتحديثات بدون transaction أو باستخدام Batched Writes ==========
+            // بما أننا نحتاج إلى قراءة كل منتج أولاً ثم التحديث، سنستخدم Batch بدلاً من Transaction لتجنب خطأ "reads before writes"
+            // ولكننا سنقوم بالتحقق من الكميات أولاً.
+            const productRefs = cart.map(item => db.collection('products').doc(item.id));
+            // قراءة المنتجات للتحقق من الكميات
+            const productSnaps = await Promise.all(productRefs.map(ref => ref.get()));
+            for (let i = 0; i < cart.length; i++) {
+                if (productSnaps[i].data().qty < cart[i].qty) throw new Error(`المنتج ${cart[i].name} غير متوفر بالكمية`);
+            }
+            // استخدام Batch (معاملة مجمعة) لأننا لا نحتاج إلى قراءة إضافية داخل المعاملة
+            const batch = db.batch();
+            // 1. تحديث كميات المنتجات
+            for (let i = 0; i < cart.length; i++) {
+                batch.update(productRefs[i], { qty: productSnaps[i].data().qty - cart[i].qty });
+            }
+            // 2. تسجيل المبيعات
+            for (let item of cart) {
+                const saleRef = db.collection('sales').doc();
+                batch.set(saleRef, {
+                    productId: item.id, productName: item.name, quantity: item.qty,
+                    unitPrice: item.price, total: item.price * item.qty,
+                    paymentMethod: finalMethod, customerId, paidAmount, changeAmount: change,
+                    storeId: currentStoreId, userId: currentUserAuth.uid,
+                    date: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                const invRef = db.collection('inventoryTransactions').doc();
+                batch.set(invRef, {
+                    type: 'sale', productId: item.id, productName: item.name,
+                    quantity: -item.qty, storeId: currentStoreId,
+                    date: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+            // 3. تحديث دين العميل (إذا وجد)
+            if (customerId && debtAdded > 0) {
+                const custRef = db.collection('customers').doc(customerId);
+                const custSnap = await custRef.get();
+                const currentDebt = custSnap.data()?.debt || 0;
+                batch.update(custRef, { debt: currentDebt + debtAdded });
+            }
+            await batch.commit();
+            showFlash('posFlash', `✅ بيع ناجح بقيمة ${totalAmount} ج.م`, false);
+            printReceipt(cart, totalAmount, finalMethod, customerId, change, debtAdded);
+            await loadStoreData();
+            renderPosTab(document.getElementById('tabContent'));
+        } catch (err) {
+            showFlash('posFlash', err.message, true);
+        }
+    }
+    
+    function printReceipt(cartItems, total, method, customerId, change, debtAdded) {
+        let win = window.open();
+        let customerName = customerId ? (allCustomers.find(c => c.id === customerId)?.name || 'عميل') : 'نقدي';
+        let debtMsg = debtAdded > 0 ? `<p>تم إضافة مبلغ ${debtAdded} ج.م كدين على العميل</p>` : '';
+        win.document.write(`
+            <html dir="rtl"><head><style>body{font-family:Tajawal; padding:20px;}</style></head>
+            <body><h2>فاتورة البيع</h2><p>العميل: ${customerName}</p><p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
+            <table border="1" width="100%"><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>
+            ${cartItems.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}
+            </table><h3>الإجمالي: ${total.toFixed(2)} ج.م</h3><p>طريقة الدفع: ${method}</p>
+            ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
+            ${debtMsg}<button onclick="window.print()">🖨️ طباعة</button></body></html>
+        `);
+    }
+    
+    // ====================== إدارة المنتجات ======================
+    async function renderProductsTab(container) {
+        await loadStoreData();
+        container.innerHTML = `
+            <h3>➕ إضافة منتج جديد</h3>
+            <div class="grid-2">
+                <input id="prodName" placeholder="اسم المنتج*"> <input id="prodBarcode" placeholder="باركود">
+                <input id="prodPriceRetail" type="number" placeholder="سعر القطاعي"> <input id="prodPriceWholesale" type="number" placeholder="سعر الجملة">
+                <input id="prodCost" type="number" placeholder="سعر الشراء"> <select id="prodUnit"><option>قطعة</option><option>كيلو</option></select>
+                <input id="prodQty" type="number" placeholder="الكمية"> <input id="prodLowStock" type="number" placeholder="حد التنبيه">
+                <input id="prodImage" placeholder="رابط الصورة"> <button onclick="addNewProduct()">إضافة منتج</button>
+            </div>
+            <h3>📋 قائمة المنتجات</h3><div id="productsListArea"></div>`;
+        renderProductsList();
+    }
+    async function renderProductsList() {
+        const area = document.getElementById('productsListArea');
+        if (!area) return;
+        let html = '';
+        for (let p of allProducts) {
+            let lowClass = (p.qty <= (p.lowStockAlert || 0)) ? 'low-stock' : '';
+            html += `<div class="card ${lowClass}">
+                <div class="card-info">
+                    ${p.imageUrl ? `<img class="product-img" src="${p.imageUrl}">` : ''}
+                    <strong>${escapeHtml(p.name)}</strong> (باركود: ${p.barcode || '-'})<br>
+                    قطاعي: ${p.priceRetail} | جملة: ${p.priceWholesale} | الشراء: ${p.cost || 0}<br>
+                    الكمية: ${p.qty} ${p.unit} | التنبيه: ${p.lowStockAlert || 0}
+                </div>
+                <div>
+                    <button class="btn-sm" onclick="editProduct('${p.id}')">✏️</button>
+                    <button class="btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button>
+                </div>
+            </div>`;
+        }
+        area.innerHTML = html || '<p>لا توجد منتجات</p>';
+    }
+    window.addNewProduct = async () => {
+        let name = document.getElementById('prodName').value.trim();
+        if (!name) return showFlash('productsListArea', 'الاسم مطلوب', true);
+        await db.collection('products').add({
+            name, barcode: document.getElementById('prodBarcode').value, storeId: currentStoreId,
+            priceRetail: parseFloat(document.getElementById('prodPriceRetail').value) || 0,
+            priceWholesale: parseFloat(document.getElementById('prodPriceWholesale').value) || 0,
+            cost: parseFloat(document.getElementById('prodCost').value) || 0,
+            unit: document.getElementById('prodUnit').value, qty: parseInt(document.getElementById('prodQty').value) || 0,
+            lowStockAlert: parseInt(document.getElementById('prodLowStock').value) || 0,
+            imageUrl: document.getElementById('prodImage').value, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showFlash('productsListArea', 'تمت الإضافة');
+        renderProductsTab(document.getElementById('tabContent'));
     };
-    window.addToCart = () => {
-      const select = document.getElementById('productSelect');
-      const prodId = select.value;
-      if(!prodId || prodId === 'لا يوجد') return;
-      const qty = parseInt(document.getElementById('cartQuantity').value);
-      if(qty<=0) return;
-      const product = allProducts.find(p=>p.id===prodId);
-      if(!product || product.qty < qty) { showFlash('posFlash', 'كمية غير متوفرة', true); return; }
-      const existing = cart.find(item => item.id === prodId);
-      if(existing) existing.qty += qty;
-      else cart.push({ id: prodId, name: product.name, price: product.priceRetail||product.price, qty });
-      renderCart();
+    window.deleteProduct = async (id) => { if (confirm('حذف المنتج نهائياً؟')) { await db.collection('products').doc(id).delete(); renderProductsTab(document.getElementById('tabContent')); } };
+    window.editProduct = async (id) => {
+        let newName = prompt('اسم جديد'); if (!newName) return;
+        let newPrice = parseFloat(prompt('سعر قطاعي جديد'));
+        let newQty = parseInt(prompt('كمية جديدة'));
+        await db.collection('products').doc(id).update({ name: newName, priceRetail: newPrice, qty: newQty });
+        renderProductsTab(document.getElementById('tabContent'));
     };
-    window.renderCart = () => {
-      const cartDiv = document.getElementById('cartItems');
-      let total = 0;
-      let html = `<h4>السلة</h4>`;
-      cart.forEach((item, idx) => {
-        total += item.price * item.qty;
-        html += `<div class="card" style="padding:10px;">${item.name} x ${item.qty} = ${(item.price*item.qty).toFixed(2)} ج.م <button class="btn-sm btn-danger" onclick="removeFromCart(${idx})">حذف</button></div>`;
-      });
-      cartDiv.innerHTML = html;
-      document.getElementById('totalAmount').innerHTML = `الإجمالي: ${total.toFixed(2)} ج.م`;
-      calculateChangeTotal();
+    
+    // ====================== العملاء (مع تعديل وحذف) ======================
+    async function renderCustomersTab(container) {
+        await loadStoreData();
+        container.innerHTML = `
+            <h3>👤 إضافة عميل جديد</h3>
+            <div class="pos-row"><input id="custName" placeholder="الاسم"><input id="custPhone" placeholder="الهاتف"><button onclick="addCustomer()">إضافة</button></div>
+            <h3>📋 قائمة العملاء</h3><div id="customersListDiv"></div>`;
+        const listDiv = document.getElementById('customersListDiv');
+        listDiv.innerHTML = allCustomers.map(c => `
+            <div class="card">
+                <div class="card-info"><strong>${escapeHtml(c.name)}</strong> - هاتف: ${c.phone || '-'} | دين: ${c.debt || 0} ج.م</div>
+                <div>
+                    <button class="btn-sm" onclick="editCustomer('${c.id}')">✏️</button>
+                    <button class="btn-sm btn-danger" onclick="deleteCustomer('${c.id}')">🗑️</button>
+                    <button class="btn-sm" onclick="recordPayment('${c.id}')">تسديد</button>
+                </div>
+            </div>`).join('');
+    }
+    window.addCustomer = async () => {
+        let name = document.getElementById('custName').value.trim();
+        if (!name) return;
+        await db.collection('customers').add({ name, phone: document.getElementById('custPhone').value, storeId: currentStoreId, debt: 0 });
+        renderCustomersTab(document.getElementById('tabContent'));
     };
-    window.removeFromCart = (idx) => { cart.splice(idx,1); renderCart(); };
-    window.calculateChangeTotal = () => {
-      let total = cart.reduce((s,i)=> s + (i.price*i.qty),0);
-      let paid = parseFloat(document.getElementById('paidAmount').value) || 0;
-      document.getElementById('changeAmount').value = paid > total ? (paid-total).toFixed(2) : 0;
+    window.editCustomer = async (id) => {
+        let newName = prompt('اسم العميل الجديد');
+        if (!newName) return;
+        let newPhone = prompt('رقم الهاتف الجديد');
+        await db.collection('customers').doc(id).update({ name: newName, phone: newPhone });
+        renderCustomersTab(document.getElementById('tabContent'));
     };
-    renderCart();
-  }
-
-  async function confirmSale() {
-    if(cart.length === 0) return showFlash('posFlash', 'السلة فارغة', true);
-    const paymentMethodSelect = document.getElementById('paymentMethod');
-    const customerId = document.getElementById('customerId').value || null;
-    let paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
-    let totalAmount = cart.reduce((s,i)=> s + (i.price*i.qty),0);
-    let finalPaymentMethod = paymentMethodSelect.value;
-    let change = 0;
-    let debtAdded = 0;
-
-    // التعامل مع حالة العميل والدفع الأقل
-    if (customerId && paidAmount < totalAmount) {
-      finalPaymentMethod = 'credit';
-      debtAdded = totalAmount - paidAmount;
-      paidAmount = totalAmount; // نسجل كأنه دفع كامل ولكن نضيف الدين
-      change = 0;
-      showFlash('posFlash', `⚠️ سيتم إضافة مبلغ ${debtAdded} ج.م كدين على العميل`, false);
-    } else if (finalPaymentMethod !== 'credit' && paidAmount < totalAmount && !customerId) {
-      return showFlash('posFlash', 'المدفوع أقل من الإجمالي ولا يوجد عميل لتسجيل الدين', true);
-    } else if (finalPaymentMethod !== 'credit') {
-      change = paidAmount - totalAmount;
-      if (change < 0) return showFlash('posFlash', 'المدفوع أقل من الإجمالي', true);
+    window.deleteCustomer = async (id) => { if (confirm('حذف العميل؟')) { await db.collection('customers').doc(id).delete(); renderCustomersTab(document.getElementById('tabContent')); } };
+    window.recordPayment = async (custId) => {
+        let amount = parseFloat(prompt('المبلغ المسدد'));
+        if (isNaN(amount)) return;
+        const custRef = db.collection('customers').doc(custId);
+        const doc = await custRef.get();
+        let newDebt = (doc.data().debt || 0) - amount;
+        await custRef.update({ debt: newDebt < 0 ? 0 : newDebt });
+        renderCustomersTab(document.getElementById('tabContent'));
+    };
+    
+    // ====================== الموردين (مع تعديل وحذف) ======================
+    async function renderSuppliersTab(container) {
+        await loadStoreData();
+        container.innerHTML = `
+            <h3>🏭 إدارة الموردين</h3>
+            <div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="الهاتف"><button onclick="addSupplier()">إضافة مورد</button></div>
+            <div id="suppliersList"></div>`;
+        const listDiv = document.getElementById('suppliersList');
+        listDiv.innerHTML = allSuppliers.map(s => `
+            <div class="card">
+                <div class="card-info"><strong>${escapeHtml(s.name)}</strong> - هاتف: ${s.phone || '-'} | مديونية: ${s.debt || 0} ج.م</div>
+                <div>
+                    <button class="btn-sm" onclick="editSupplier('${s.id}')">✏️</button>
+                    <button class="btn-sm btn-danger" onclick="deleteSupplier('${s.id}')">🗑️</button>
+                    <button class="btn-sm" onclick="paySupplier('${s.id}')">تسديد</button>
+                </div>
+            </div>`).join('');
     }
-
-    // إصلاح الـ Transaction: تجميع القراءات أولاً ثم الكتابة
-    try {
-      // 1. الحصول على مراجع المنتجات
-      const productRefs = cart.map(item => db.collection('products').doc(item.id));
-      // 2. قراءة جميع المنتجات خارج المعاملة للتأكد من توفر الكميات (اختياري لكنه يساعد)
-      const productSnaps = await Promise.all(productRefs.map(ref => ref.get()));
-      for (let i = 0; i < cart.length; i++) {
-        const prodData = productSnaps[i].data();
-        if (!prodData || prodData.qty < cart[i].qty) {
-          throw new Error(`المنتج ${cart[i].name} غير متوفر بالكمية المطلوبة`);
+    window.addSupplier = async () => {
+        let name = document.getElementById('supName').value.trim();
+        if (!name) return;
+        await db.collection('suppliers').add({ name, phone: document.getElementById('supPhone').value, storeId: currentStoreId, debt: 0 });
+        renderSuppliersTab(document.getElementById('tabContent'));
+    };
+    window.editSupplier = async (id) => {
+        let newName = prompt('اسم المورد الجديد');
+        if (!newName) return;
+        let newPhone = prompt('رقم الهاتف الجديد');
+        await db.collection('suppliers').doc(id).update({ name: newName, phone: newPhone });
+        renderSuppliersTab(document.getElementById('tabContent'));
+    };
+    window.deleteSupplier = async (id) => { if (confirm('حذف المورد؟')) { await db.collection('suppliers').doc(id).delete(); renderSuppliersTab(document.getElementById('tabContent')); } };
+    window.paySupplier = async (supId) => {
+        let amount = parseFloat(prompt('المبلغ المدفوع للمورد'));
+        if (!amount) return;
+        const supRef = db.collection('suppliers').doc(supId);
+        const doc = await supRef.get();
+        let newDebt = (doc.data().debt || 0) - amount;
+        await supRef.update({ debt: newDebt < 0 ? 0 : newDebt });
+        renderSuppliersTab(document.getElementById('tabContent'));
+    };
+    
+    // ====================== فواتير الشراء (وظيفة كاملة) ======================
+    let purchaseItems = [];
+    async function renderPurchasesTab(container) {
+        await loadStoreData();
+        // عرض الفواتير السابقة
+        const invoicesSnap = await db.collection('purchaseInvoices').where('storeId', '==', currentStoreId).orderBy('date', 'desc').get();
+        let invoicesHtml = `<h3>📑 فواتير الشراء السابقة</h3>`;
+        if (invoicesSnap.empty) invoicesHtml += '<p>لا توجد فواتير شراء</p>';
+        for (const doc of invoicesSnap.docs) {
+            const inv = doc.data();
+            const supplier = allSuppliers.find(s => s.id === inv.supplierId);
+            invoicesHtml += `<div class="card">
+                <div class="card-info"><strong>المورد:</strong> ${supplier ? escapeHtml(supplier.name) : 'غير معروف'}<br>
+                <strong>الإجمالي:</strong> ${inv.total} ج.م<br><strong>التاريخ:</strong> ${formatDate(inv.date)}</div>
+                <button class="btn-sm" onclick="printPurchaseInvoice('${doc.id}')">🖨️ طباعة</button>
+            </div>`;
         }
-      }
-      // 3. تنفيذ المعاملة مع قراءة كل منتج مجدداً (للأمان) ثم التحديث
-      await db.runTransaction(async (t) => {
-        // أولاً: قراءة جميع المنتجات داخل المعاملة (لضمان عدم تغيرها)
-        const txnProductSnaps = [];
-        for (let i = 0; i < cart.length; i++) {
-          const snap = await t.get(productRefs[i]);
-          txnProductSnaps.push(snap);
-          if (snap.data().qty < cart[i].qty) throw new Error(`المنتج ${cart[i].name} غير متوفر`);
-        }
-        // ثانياً: تحديث الكميات
-        for (let i = 0; i < cart.length; i++) {
-          const newQty = txnProductSnaps[i].data().qty - cart[i].qty;
-          t.update(productRefs[i], { qty: newQty });
-        }
-        // ثالثاً: تسجيل المبيعات
-        for (let item of cart) {
-          const saleRef = db.collection('sales').doc();
-          t.set(saleRef, {
-            productId: item.id, productName: item.name, quantity: item.qty, unitPrice: item.price,
-            total: item.price * item.qty, paymentMethod: finalPaymentMethod, customerId,
-            paidAmount: paidAmount, changeAmount: change, storeId: currentStoreId,
-            userId: currentUserAuth.uid, date: firebase.firestore.FieldValue.serverTimestamp()
-          });
-          // حركة مخزنية
-          t.set(db.collection('inventoryTransactions').doc(), {
-            type: 'sale', productId: item.id, productName: item.name, quantity: -item.qty,
-            storeId: currentStoreId, date: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-        // رابعاً: تحديث دين العميل
-        if (customerId && debtAdded > 0) {
-          const custRef = db.collection('customers').doc(customerId);
-          const custSnap = await t.get(custRef);
-          t.update(custRef, { debt: (custSnap.data().debt || 0) + debtAdded });
-        }
-      });
-      showFlash('posFlash', `✅ بيع ناجح بقيمة ${totalAmount} ج.م`, false);
-      printReceipt(cart, totalAmount, finalPaymentMethod, customerId, change, debtAdded);
-      await loadStoreData();
-      renderPosTab(document.getElementById('tabContent'));
-    } catch(e) {
-      showFlash('posFlash', e.message, true);
+        // نموذج إضافة فاتورة جديدة
+        container.innerHTML = `
+            ${invoicesHtml}
+            <hr><h3>➕ إضافة فاتورة شراء جديدة</h3>
+            <div class="pos-row"><select id="supplierSelect"><option value="">اختر مورد</option>${allSuppliers.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}</select></div>
+            <div id="purchaseItemsList"></div>
+            <div class="pos-row">
+                <input type="text" id="itemName" placeholder="اسم المنتج">
+                <input type="number" id="itemQty" placeholder="الكمية">
+                <input type="number" id="itemPrice" placeholder="سعر الشراء">
+                <button onclick="addPurchaseItem()" class="btn-sm">➕ أضف منتج</button>
+            </div>
+            <button onclick="savePurchaseInvoice()" class="btn-secondary">حفظ الفاتورة</button>
+            <div id="purchaseFlash"></div>`;
+        purchaseItems = [];
+        refreshPurchaseList();
     }
-  }
-
-  function printReceipt(cartItems, total, method, customerId, change, debtAdded) {
-    let win = window.open();
-    let customerName = customerId ? (allCustomers.find(c=>c.id===customerId)?.name || 'عميل') : 'نقدي';
-    let debtMsg = debtAdded > 0 ? `<p>تم إضافة مبلغ ${debtAdded} ج.م كدين على العميل</p>` : '';
-    win.document.write(`
-      <html dir="rtl"><head><style>body{font-family:Tajawal; padding:20px;}</style></head>
-      <body><h2>فاتورة البيع</h2><p>العميل: ${customerName}</p><p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
-      <table border="1" width="100%"><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>
-      ${cartItems.map(i=>`<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}
-    </table><h3>الإجمالي: ${total.toFixed(2)} ج.م</h3><p>طريقة الدفع: ${method}</p>
-      ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
-      ${debtMsg}<button onclick="window.print()">🖨️ طباعة</button></body></html>
-    `);
-  }
-
-  // ================== المنتجات ==================
-  async function renderProductsTab(container) {
-    await loadStoreData();
-    container.innerHTML = `
-      <h3>➕ إضافة منتج</h3>
-      <div class="grid-2">
-        <input id="prodName" placeholder="اسم المنتج*"> <input id="prodBarcode" placeholder="باركود">
-        <input id="prodPriceRetail" type="number" placeholder="سعر القطاعي"> <input id="prodPriceWholesale" type="number" placeholder="سعر الجملة">
-        <input id="prodCost" type="number" placeholder="سعر الشراء"> <select id="prodUnit"><option>قطعة</option><option>كيلو</option></select>
-        <input id="prodQty" type="number" placeholder="الكمية"> <input id="prodLowStock" type="number" placeholder="حد التنبيه">
-        <input id="prodImage" placeholder="رابط الصورة"> <button onclick="addNewProduct()">إضافة</button>
-      </div>
-      <h3>📋 المنتجات</h3><div id="productsListArea"></div>`;
-    renderProductsList();
-  }
-  async function renderProductsList() {
-    const area = document.getElementById('productsListArea');
-    if(!area) return;
-    let html = '';
-    for(let p of allProducts) {
-      let lowClass = (p.qty <= (p.lowStockAlert||0)) ? 'low-stock' : '';
-      html += `<div class="card ${lowClass}">
-        <div class="product-info">
-          ${p.imageUrl ? `<img class="product-img" src="${p.imageUrl}">` : ''}
-          <strong>${escapeHtml(p.name)}</strong> (باركود: ${p.barcode||'-'})<br>
-          قطاعي: ${p.priceRetail} | جملة: ${p.priceWholesale} | الشراء: ${p.cost||0}<br>
-          الكمية: ${p.qty} ${p.unit} | التنبيه: ${p.lowStockAlert||0}
-        </div>
-        <div>
-          <button class="btn-sm" onclick="editProduct('${p.id}')">✏️</button>
-          <button class="btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button>
-        </div>
-      </div>`;
-    }
-    area.innerHTML = html || '<p>لا توجد منتجات</p>';
-  }
-  window.addNewProduct = async () => {
-    let name = document.getElementById('prodName').value.trim();
-    if(!name) return showFlash('productsListArea','الاسم مطلوب',true);
-    await db.collection('products').add({
-      name, barcode: document.getElementById('prodBarcode').value, storeId: currentStoreId,
-      priceRetail: parseFloat(document.getElementById('prodPriceRetail').value)||0,
-      priceWholesale: parseFloat(document.getElementById('prodPriceWholesale').value)||0,
-      cost: parseFloat(document.getElementById('prodCost').value)||0,
-      unit: document.getElementById('prodUnit').value, qty: parseInt(document.getElementById('prodQty').value)||0,
-      lowStockAlert: parseInt(document.getElementById('prodLowStock').value)||0,
-      imageUrl: document.getElementById('prodImage').value,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    showFlash('productsListArea','تمت الإضافة');
-    renderProductsTab(document.getElementById('tabContent'));
-  };
-  window.deleteProduct = async (id) => { if(confirm('حذف المنتج؟')) { await db.collection('products').doc(id).delete(); renderProductsTab(document.getElementById('tabContent')); } };
-  window.editProduct = async (id) => {
-    let newName = prompt('اسم جديد'); if(!newName) return;
-    let newPrice = parseFloat(prompt('سعر قطاعي جديد'));
-    let newQty = parseInt(prompt('كمية جديدة'));
-    await db.collection('products').doc(id).update({ name: newName, priceRetail: newPrice, qty: newQty });
-    renderProductsTab(document.getElementById('tabContent'));
-  };
-
-  // ================== العملاء (مع تعديل وحذف) ==================
-  async function renderCustomersTab(container) {
-    await loadStoreData();
-    container.innerHTML = `
-      <h3>👤 إضافة عميل</h3>
-      <div class="pos-row"><input id="custName" placeholder="الاسم"><input id="custPhone" placeholder="الهاتف"><button onclick="addCustomer()">إضافة</button></div>
-      <h3>📋 العملاء</h3><div id="customersListDiv"></div>`;
-    const listDiv = document.getElementById('customersListDiv');
-    listDiv.innerHTML = allCustomers.map(c => `<div class="card">
-      <div><strong>${escapeHtml(c.name)}</strong> - هاتف: ${c.phone||'-'} | دين: ${c.debt||0} ج.م</div>
-      <div>
-        <button class="btn-sm" onclick="editCustomer('${c.id}')">✏️</button>
-        <button class="btn-sm btn-danger" onclick="deleteCustomer('${c.id}')">🗑️</button>
-        <button class="btn-sm" onclick="recordPayment('${c.id}')">تسديد</button>
-      </div>
-    </div>`).join('');
-  }
-  window.addCustomer = async () => {
-    let name = document.getElementById('custName').value.trim();
-    if(!name) return;
-    await db.collection('customers').add({ name, phone: document.getElementById('custPhone').value, storeId: currentStoreId, debt: 0 });
-    renderCustomersTab(document.getElementById('tabContent'));
-  };
-  window.editCustomer = async (id) => {
-    let newName = prompt('اسم العميل الجديد');
-    if(!newName) return;
-    let newPhone = prompt('رقم الهاتف الجديد');
-    await db.collection('customers').doc(id).update({ name: newName, phone: newPhone });
-    renderCustomersTab(document.getElementById('tabContent'));
-  };
-  window.deleteCustomer = async (id) => {
-    if(confirm('حذف العميل؟')) { await db.collection('customers').doc(id).delete(); renderCustomersTab(document.getElementById('tabContent')); }
-  };
-  window.recordPayment = async (custId) => {
-    let amount = parseFloat(prompt('المبلغ المسدد'));
-    if(isNaN(amount)) return;
-    const custRef = db.collection('customers').doc(custId);
-    const doc = await custRef.get();
-    let newDebt = (doc.data().debt||0) - amount;
-    await custRef.update({ debt: newDebt < 0 ? 0 : newDebt });
-    renderCustomersTab(document.getElementById('tabContent'));
-  };
-
-  // ================== الموردين (مع تعديل وحذف) ==================
-  async function renderSuppliersTab(container) {
-    await loadStoreData();
-    container.innerHTML = `
-      <h3>🏭 إدارة الموردين</h3>
-      <div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="الهاتف"><button onclick="addSupplier()">إضافة مورد</button></div>
-      <div id="suppliersList"></div>`;
-    const listDiv = document.getElementById('suppliersList');
-    listDiv.innerHTML = allSuppliers.map(s => `<div class="card">
-      <div><strong>${escapeHtml(s.name)}</strong> - هاتف: ${s.phone||'-'} | مديونية: ${s.debt||0} ج.م</div>
-      <div>
-        <button class="btn-sm" onclick="editSupplier('${s.id}')">✏️</button>
-        <button class="btn-sm btn-danger" onclick="deleteSupplier('${s.id}')">🗑️</button>
-        <button class="btn-sm" onclick="paySupplier('${s.id}')">تسديد</button>
-      </div>
-    </div>`).join('');
-  }
-  window.addSupplier = async () => {
-    let name = document.getElementById('supName').value.trim();
-    if(!name) return;
-    await db.collection('suppliers').add({ name, phone: document.getElementById('supPhone').value, storeId: currentStoreId, debt: 0 });
-    renderSuppliersTab(document.getElementById('tabContent'));
-  };
-  window.editSupplier = async (id) => {
-    let newName = prompt('اسم المورد الجديد');
-    if(!newName) return;
-    let newPhone = prompt('رقم الهاتف الجديد');
-    await db.collection('suppliers').doc(id).update({ name: newName, phone: newPhone });
-    renderSuppliersTab(document.getElementById('tabContent'));
-  };
-  window.deleteSupplier = async (id) => {
-    if(confirm('حذف المورد؟')) { await db.collection('suppliers').doc(id).delete(); renderSuppliersTab(document.getElementById('tabContent')); }
-  };
-  window.paySupplier = async (supId) => {
-    let amount = parseFloat(prompt('المبلغ المدفوع للمورد'));
-    if(!amount) return;
-    const supRef = db.collection('suppliers').doc(supId);
-    const doc = await supRef.get();
-    let newDebt = (doc.data().debt||0) - amount;
-    await supRef.update({ debt: newDebt<0?0:newDebt });
-    renderSuppliersTab(document.getElementById('tabContent'));
-  };
-
-  // ================== فواتير الشراء (مع عرض وطباعة) ==================
-  async function renderPurchaseInvoicesTab(container) {
-    await loadStoreData();
-    const invoicesSnap = await db.collection('purchaseInvoices').where('storeId','==',currentStoreId).orderBy('date','desc').get();
-    let html = `<h3>📑 فواتير الشراء المسجلة</h3>`;
-    if(invoicesSnap.empty) html += '<p>لا توجد فواتير شراء</p>';
-    for(const doc of invoicesSnap.docs) {
-      const inv = doc.data();
-      const supplier = allSuppliers.find(s => s.id === inv.supplierId);
-      html += `<div class="card">
-        <div><strong>المورد:</strong> ${supplier ? escapeHtml(supplier.name) : 'غير معروف'}<br>
-        <strong>الإجمالي:</strong> ${inv.total} ج.م<br>
-        <strong>التاريخ:</strong> ${inv.date?.toDate().toLocaleString()}</div>
-        <button class="btn-sm" onclick="printPurchaseInvoice('${doc.id}')">🖨️ طباعة</button>
-      </div>`;
-    }
-    html += `<hr><h3>➕ إضافة فاتورة شراء جديدة</h3>
-      <div class="pos-row"><select id="supplierSelect"><option value="">اختر مورد</option>${allSuppliers.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}</select></div>
-      <div id="purchaseItemsList"></div>
-      <div class="pos-row"><input id="itemName" placeholder="اسم المنتج"><input id="itemQty" type="number" placeholder="الكمية"><input id="itemPrice" type="number" placeholder="سعر الشراء"><button onclick="addPurchaseItem()">➕ أضف منتج</button></div>
-      <button onclick="savePurchaseInvoice()" class="btn-secondary">حفظ الفاتورة</button>
-      <div id="purchaseFlash"></div>`;
-    container.innerHTML = html;
-    window.purchaseTempItems = [];
     window.addPurchaseItem = () => {
-      let name = document.getElementById('itemName').value.trim();
-      let qty = parseInt(document.getElementById('itemQty').value);
-      let price = parseFloat(document.getElementById('itemPrice').value);
-      if(!name || qty<=0 || price<=0) return showFlash('purchaseFlash','بيانات غير صحيحة',true);
-      purchaseTempItems.push({ name, qty, price });
-      refreshPurchaseList();
-      document.getElementById('itemName').value=''; document.getElementById('itemQty').value=''; document.getElementById('itemPrice').value='';
+        let name = document.getElementById('itemName').value.trim();
+        let qty = parseInt(document.getElementById('itemQty').value);
+        let price = parseFloat(document.getElementById('itemPrice').value);
+        if (!name || qty <= 0 || price <= 0) return showFlash('purchaseFlash', 'بيانات غير صحيحة', true);
+        purchaseItems.push({ name, qty, price });
+        refreshPurchaseList();
+        document.getElementById('itemName').value = '';
+        document.getElementById('itemQty').value = '';
+        document.getElementById('itemPrice').value = '';
     };
     window.refreshPurchaseList = () => {
-      const listDiv = document.getElementById('purchaseItemsList');
-      if(listDiv) listDiv.innerHTML = purchaseTempItems.map((it,i)=>`<div class="card">${it.name} x ${it.qty} بسعر ${it.price} = ${(it.qty*it.price).toFixed(2)} <button class="btn-sm" onclick="removePurchaseItem(${i})">❌</button></div>`).join('');
+        const listDiv = document.getElementById('purchaseItemsList');
+        if (listDiv) listDiv.innerHTML = purchaseItems.map((it, i) => `
+            <div class="card">${it.name} x ${it.qty} بسعر ${it.price} = ${(it.qty * it.price).toFixed(2)} 
+            <button class="btn-sm btn-danger" onclick="removePurchaseItem(${i})">❌</button></div>`).join('');
     };
-    window.removePurchaseItem = (idx) => { purchaseTempItems.splice(idx,1); refreshPurchaseList(); };
+    window.removePurchaseItem = (idx) => { purchaseItems.splice(idx, 1); refreshPurchaseList(); };
     window.savePurchaseInvoice = async () => {
-      const supplierId = document.getElementById('supplierSelect').value;
-      if(!supplierId || purchaseTempItems.length===0) return showFlash('purchaseFlash','اختر مورد وأضف منتجات',true);
-      let total = purchaseTempItems.reduce((s,i)=> s + (i.qty*i.price),0);
-      await db.runTransaction(async (t) => {
-        const invoiceRef = db.collection('purchaseInvoices').doc();
-        t.set(invoiceRef, { supplierId, items: purchaseTempItems, total, storeId: currentStoreId, date: firebase.firestore.FieldValue.serverTimestamp() });
-        for(let item of purchaseTempItems) {
-          let existing = allProducts.find(p => p.name === item.name);
-          if(existing) {
-            const newQty = existing.qty + item.qty;
-            const newCost = (existing.cost*existing.qty + item.price*item.qty) / (existing.qty+item.qty);
-            t.update(db.collection('products').doc(existing.id), { qty: newQty, cost: newCost });
-          } else {
-            const newProdRef = db.collection('products').doc();
-            t.set(newProdRef, { name: item.name, qty: item.qty, cost: item.price, priceRetail: item.price*1.3, priceWholesale: item.price*1.1, storeId: currentStoreId, unit: 'قطعة' });
-          }
-          t.set(db.collection('inventoryTransactions').doc(), { type: 'purchase', productName: item.name, quantity: item.qty, storeId: currentStoreId, date: firebase.firestore.FieldValue.serverTimestamp() });
+        const supplierId = document.getElementById('supplierSelect').value;
+        if (!supplierId || purchaseItems.length === 0) return showFlash('purchaseFlash', 'اختر مورد وأضف منتجات', true);
+        let total = purchaseItems.reduce((s, i) => s + (i.qty * i.price), 0);
+        try {
+            const batch = db.batch();
+            // إنشاء الفاتورة
+            const invoiceRef = db.collection('purchaseInvoices').doc();
+            batch.set(invoiceRef, {
+                supplierId, items: purchaseItems, total, storeId: currentStoreId,
+                date: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            // تحديث المنتجات والمخزون
+            for (let item of purchaseItems) {
+                let existing = allProducts.find(p => p.name === item.name);
+                if (existing) {
+                    const newQty = existing.qty + item.qty;
+                    const newCost = (existing.cost * existing.qty + item.price * item.qty) / (existing.qty + item.qty);
+                    batch.update(db.collection('products').doc(existing.id), { qty: newQty, cost: newCost });
+                } else {
+                    const newProdRef = db.collection('products').doc();
+                    batch.set(newProdRef, {
+                        name: item.name, qty: item.qty, cost: item.price,
+                        priceRetail: item.price * 1.3, priceWholesale: item.price * 1.1,
+                        storeId: currentStoreId, unit: 'قطعة'
+                    });
+                }
+                // تسجيل حركة مخزنية (وارد)
+                const invRef = db.collection('inventoryTransactions').doc();
+                batch.set(invRef, {
+                    type: 'purchase', productName: item.name, quantity: item.qty,
+                    storeId: currentStoreId, date: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+            // تحديث دين المورد
+            const supRef = db.collection('suppliers').doc(supplierId);
+            const supSnap = await supRef.get();
+            const currentDebt = supSnap.data()?.debt || 0;
+            batch.update(supRef, { debt: currentDebt + total });
+            
+            await batch.commit();
+            showFlash('purchaseFlash', 'تمت إضافة فاتورة الشراء بنجاح', false);
+            renderPurchasesTab(document.getElementById('tabContent'));
+        } catch (err) {
+            showFlash('purchaseFlash', err.message, true);
         }
-        const supRef = db.collection('suppliers').doc(supplierId);
-        const supSnap = await t.get(supRef);
-        t.update(supRef, { debt: (supSnap.data().debt||0) + total });
-      });
-      showFlash('purchaseFlash','تمت إضافة الفاتورة');
-      renderPurchaseInvoicesTab(document.getElementById('tabContent'));
     };
-  }
-  window.printPurchaseInvoice = async (invoiceId) => {
-    const doc = await db.collection('purchaseInvoices').doc(invoiceId).get();
-    if(!doc.exists) return;
-    const inv = doc.data();
-    const supplier = allSuppliers.find(s => s.id === inv.supplierId);
-    let win = window.open();
-    win.document.write(`
-      <html dir="rtl"><head><style>body{font-family:Tajawal; padding:20px;}</style></head>
-      <body><h2>فاتورة شراء</h2><p>المورد: ${supplier ? supplier.name : 'غير معروف'}</p><p>التاريخ: ${inv.date?.toDate().toLocaleString()}</p>
-      <table border="1"><tr><th>المنتج</th><th>الكمية</th><th>سعر الشراء</th><th>الإجمالي</th></tr>
-      ${inv.items.map(it=>`<tr><td>${it.name}</td><td>${it.qty}</td><td>${it.price}</td><td>${(it.qty*it.price).toFixed(2)}</td></tr>`).join('')}
-    </table><h3>الإجمالي: ${inv.total} ج.م</h3><button onclick="window.print()">طباعة</button></body></html>
-    `);
-  };
-
-  // ================== المخزون ==================
-  async function renderInventoryTab(container) {
-    const invSnap = await db.collection('inventoryTransactions').where('storeId','==',currentStoreId).orderBy('date','desc').limit(100).get();
-    let html = `<h3>📦 حركات المخزون</h3>`;
-    if(invSnap.empty) html += '<p>لا توجد حركات بعد</p>';
-    invSnap.docs.forEach(d => {
-      let t = d.data();
-      html += `<div class="card">${t.type === 'purchase' ? '➕ شراء' : '➖ بيع'} | المنتج: ${t.productName||t.productId} | الكمية: ${t.quantity} | ${t.date?.toDate().toLocaleString()}</div>`;
-    });
-    container.innerHTML = html;
-  }
-
-  // ================== التقارير ==================
-  async function renderReportsTab(container) {
-    await loadStoreData();
-    const salesSnap = await db.collection('sales').where('storeId','==',currentStoreId).get();
-    let totalProfit = 0, productSales = {};
-    for(const doc of salesSnap.docs) {
-      let sale = doc.data();
-      let product = allProducts.find(p=>p.id===sale.productId);
-      let cost = product?.cost || 0;
-      totalProfit += sale.total - (cost * sale.quantity);
-      productSales[sale.productName] = (productSales[sale.productName]||0) + sale.quantity;
+    window.printPurchaseInvoice = async (invoiceId) => {
+        const doc = await db.collection('purchaseInvoices').doc(invoiceId).get();
+        if (!doc.exists) return;
+        const inv = doc.data();
+        const supplier = allSuppliers.find(s => s.id === inv.supplierId);
+        let win = window.open();
+        win.document.write(`
+            <html dir="rtl"><head><style>body{font-family:Tajawal; padding:20px;}</style></head>
+            <body><h2>فاتورة شراء</h2><p>المورد: ${supplier ? supplier.name : 'غير معروف'}</p>
+            <p>التاريخ: ${formatDate(inv.date)}</p>
+            <table border="1">
+                <tr><th>المنتج</th><th>الكمية</th><th>سعر الشراء</th><th>الإجمالي</th></tr>
+                ${inv.items.map(it => `<tr><td>${it.name}</td><td>${it.qty}</td><td>${it.price}</td><td>${(it.qty * it.price).toFixed(2)}</td></tr>`).join('')}
+            </table>
+            <h3>الإجمالي: ${inv.total} ج.م</h3>
+            <button onclick="window.print()">🖨️ طباعة</button></body></html>
+        `);
+    };
+    
+    // ====================== المخزون ======================
+    async function renderInventoryTab(container) {
+        const invSnap = await db.collection('inventoryTransactions').where('storeId', '==', currentStoreId).orderBy('date', 'desc').limit(200).get();
+        let html = `<h3>📦 حركات المخزون (وارد/صادر)</h3>`;
+        if (invSnap.empty) html += '<p>لا توجد حركات بعد</p>';
+        invSnap.docs.forEach(d => {
+            let t = d.data();
+            html += `<div class="card">${t.type === 'purchase' ? '➕ شراء' : '➖ بيع'} | المنتج: ${t.productName || t.productId} | الكمية: ${t.quantity} | ${formatDate(t.date)}</div>`;
+        });
+        container.innerHTML = html;
     }
-    let best = Object.keys(productSales).reduce((a,b)=> productSales[a] > productSales[b] ? a : b, 'لا يوجد');
-    let lowStock = allProducts.filter(p=>p.qty <= (p.lowStockAlert||0)).map(p=>p.name).join(', ');
-    container.innerHTML = `<div class="grid-2">
-      <div class="stat-card">💰 إجمالي الأرباح: ${totalProfit.toFixed(2)} ج.م</div>
-      <div class="stat-card">🏆 الأكثر مبيعاً: ${best}</div>
-      <div class="stat-card">⚠️ منتجات منخفضة المخزون: ${lowStock || 'لا يوجد'}</div>
-    </div><button class="btn-secondary" onclick="renderReportsTab(document.getElementById('tabContent'))">تحديث</button>`;
-  }
-
-  // ================== تسجيل الدخول والخروج ==================
-  async function loginUser() {
-    const id = document.getElementById('loginId').value.trim();
-    const pwd = document.getElementById('loginPassword').value;
-    if(!id || !pwd) { document.getElementById('loginError').innerText = 'الرجاء إدخال ID وكلمة المرور'; return; }
-    const email = id + "@bkalla.com";
-    try {
-      const cred = await auth.signInWithEmailAndPassword(email, pwd);
-      const userInfo = await ensureUserDocument(cred.user.uid, cred.user.email);
-      currentUserAuth = cred.user; userData = userInfo; currentStoreId = userInfo.storeId; currentRole = userInfo.role; isAdminGlobal = (currentRole === 'admin');
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('dashboard').style.display = 'block';
-      document.getElementById('storeTitle').innerHTML = `<i class="fas fa-store"></i> ${userInfo.storeName || 'المحل'} (${currentRole})`;
-      if(!isAdminGlobal) await loadStoreData();
-      buildTabs();
-    } catch(e) {
-      document.getElementById('loginError').innerText = 'فشل الدخول: تحقق من ID وكلمة المرور';
+    
+    // ====================== التقارير ======================
+    async function renderReportsTab(container) {
+        await loadStoreData();
+        const salesSnap = await db.collection('sales').where('storeId', '==', currentStoreId).get();
+        let totalProfit = 0, productSales = {};
+        for (const doc of salesSnap.docs) {
+            let sale = doc.data();
+            let product = allProducts.find(p => p.id === sale.productId);
+            let cost = product?.cost || 0;
+            totalProfit += sale.total - (cost * sale.quantity);
+            productSales[sale.productName] = (productSales[sale.productName] || 0) + sale.quantity;
+        }
+        let best = Object.keys(productSales).length ? Object.keys(productSales).reduce((a, b) => productSales[a] > productSales[b] ? a : b) : 'لا يوجد';
+        let lowStock = allProducts.filter(p => p.qty <= (p.lowStockAlert || 0)).map(p => p.name).join(', ') || 'لا يوجد';
+        container.innerHTML = `<div class="grid-2">
+            <div class="stat-card">💰 إجمالي الأرباح: ${totalProfit.toFixed(2)} ج.م</div>
+            <div class="stat-card">🏆 الأكثر مبيعاً: ${best}</div>
+            <div class="stat-card">⚠️ منتجات منخفضة المخزون: ${lowStock}</div>
+        </div><button class="btn-secondary" onclick="renderReportsTab(document.getElementById('tabContent'))">تحديث</button>`;
     }
-  }
-  window.logoutUser = async () => { await auth.signOut(); location.reload(); };
-  auth.onAuthStateChanged(u => { if(!u) { document.getElementById('loginScreen').style.display = 'flex'; document.getElementById('dashboard').style.display = 'none'; } });
+    
+    // ====================== تسجيل الدخول والخروج ======================
+    async function loginUser() {
+        const id = document.getElementById('loginId').value.trim();
+        const pwd = document.getElementById('loginPassword').value;
+        if (!id || !pwd) { document.getElementById('loginError').innerText = 'الرجاء إدخال ID وكلمة المرور'; return; }
+        const email = id + "@bkalla.com";
+        try {
+            const cred = await auth.signInWithEmailAndPassword(email, pwd);
+            const userInfo = await ensureUserDocument(cred.user.uid, cred.user.email);
+            currentUserAuth = cred.user; userData = userInfo; currentStoreId = userInfo.storeId; currentRole = userInfo.role; isAdminGlobal = (currentRole === 'admin');
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('storeTitle').innerHTML = `<i class="fas fa-store"></i> ${userInfo.storeName || 'المحل'} (${currentRole})`;
+            if (!isAdminGlobal) await loadStoreData();
+            buildTabs();
+        } catch (e) {
+            document.getElementById('loginError').innerText = 'فشل الدخول: تحقق من ID وكلمة المرور';
+        }
+    }
+    window.logoutUser = async () => { await auth.signOut(); location.reload(); };
+    auth.onAuthStateChanged(u => { if (!u) { document.getElementById('loginScreen').style.display = 'flex'; document.getElementById('dashboard').style.display = 'none'; } });
 </script>
 </body>
 </html>
