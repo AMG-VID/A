@@ -35,6 +35,27 @@
         .flash { padding: 12px; border-radius: 30px; margin: 10px 0; background: #e6f7e6; color: #166534; }
         @media (max-width:700px) { .container { padding: 15px; } }
         img.product-img { width: 45px; height: 45px; object-fit: cover; border-radius: 12px; margin-left: 8px; }
+        
+        /* تنسيق طباعة فاتورة 57 ملم */
+        @media print {
+            body { margin: 0; padding: 0; background: white; }
+            .container, .top-nav, .nav-btn, .btn-danger, .btn-sm, .flash, button, .pos-row, h2, h3, .grid-2, .stat-card, .btn-secondary {
+                display: none !important;
+            }
+            .print-receipt {
+                display: block !important;
+                width: 57mm;
+                margin: 0;
+                padding: 2mm;
+                font-size: 10px;
+                font-family: 'Tajawal', monospace;
+            }
+            .print-receipt h2 { font-size: 14px; margin: 0; display: block; }
+            .print-receipt p { margin: 2px 0; }
+            .print-receipt table { width: 100%; border-collapse: collapse; }
+            .print-receipt th, .print-receipt td { padding: 2px; text-align: center; border-bottom: 1px dashed #000; }
+            .print-receipt button { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -126,7 +147,8 @@
             { id: 'products', name: '📦 المنتجات' },
             { id: 'customers', name: '👥 العملاء' },
             { id: 'suppliers', name: '🏭 الموردين' },
-            { id: 'reports', name: '📈 التقارير' }
+            { id: 'reports', name: '📈 التقارير' },
+            { id: 'account', name: '👤 حسابي' }
         ];
         tabsContainer.innerHTML = tabs.map(t => `<button class="nav-btn" data-tab="${t.id}">${t.name}</button>`).join('');
         document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
@@ -145,6 +167,7 @@
         else if (tabId === 'customers') await renderCustomersTab(container);
         else if (tabId === 'suppliers') await renderSuppliersTab(container);
         else if (tabId === 'reports') await renderReportsTab(container);
+        else if (tabId === 'account') await renderAccountTab(container);
     }
     
     // ====================== نقطة البيع (POS) ======================
@@ -284,13 +307,35 @@
         let customerName = customerId ? (allCustomers.find(c => c.id === customerId)?.name || 'عميل') : 'نقدي';
         let debtMsg = debtAdded > 0 ? `<p>تم إضافة مبلغ ${debtAdded} ج.م كدين على العميل</p>` : '';
         win.document.write(`
-            <html dir="rtl"><head><style>body{font-family:Tajawal; padding:20px;}</style></head>
-            <body><h2>فاتورة البيع</h2><p>العميل: ${customerName}</p><p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
-            <table border="1" width="100%"> competences<th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>
-            ${cartItems.map(i => `</tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></td>`).join('')}
-            </table><h3>الإجمالي: ${total.toFixed(2)} ج.م</h3><p>طريقة الدفع: ${method}</p>
-            ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
-            ${debtMsg}<button onclick="window.print()">🖨️ طباعة</button></body></html>
+            <html dir="rtl"><head><style>
+                body { font-family: 'Tajawal', monospace; margin: 0; padding: 2mm; width: 57mm; font-size: 10px; }
+                h2 { font-size: 14px; margin: 0 0 5px 0; text-align: center; }
+                p { margin: 2px 0; }
+                table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+                th, td { padding: 3px; text-align: center; border-bottom: 1px dashed #000; }
+                .total { font-size: 12px; font-weight: bold; margin-top: 5px; }
+                hr { margin: 3px 0; }
+            </style></head>
+            <body>
+                <div class="print-receipt">
+                    <h2>فاتورة البيع</h2>
+                    <p>العميل: ${customerName}</p>
+                    <p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
+                    <table>
+                        <tr><th>المنتج</th><th>ك</th><th>س</th><th>الإجمالي</th></tr>
+                        ${cartItems.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}
+                    </table>
+                    <hr>
+                    <p class="total"><strong>الإجمالي: ${total.toFixed(2)} ج.م</strong></p>
+                    <p>طريقة الدفع: ${method}</p>
+                    ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
+                    ${debtMsg}
+                    <p style="text-align:center;">شكراً لتسوقكم</p>
+                    <button onclick="window.print()">طباعة</button>
+                </div>
+                <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }<\/script>
+            </body>
+            </html>
         `);
     }
     
@@ -396,7 +441,7 @@
         renderCustomersTab(document.getElementById('tabContent'));
     };
     
-    // ====================== الموردين ======================
+    // ====================== الموردين (بدون مديونية) ======================
     async function renderSuppliersTab(container) {
         await loadStoreData();
         container.innerHTML = `
@@ -406,18 +451,17 @@
         const listDiv = document.getElementById('suppliersList');
         listDiv.innerHTML = allSuppliers.map(s => `
             <div class="card">
-                <div class="card-info"><strong>${escapeHtml(s.name)}</strong> - هاتف: ${s.phone || '-'} | مديونية: ${s.debt || 0} ج.م</div>
+                <div class="card-info"><strong>${escapeHtml(s.name)}</strong> - هاتف: ${s.phone || '-'}</div>
                 <div>
                     <button class="btn-sm" onclick="editSupplier('${s.id}')">✏️</button>
                     <button class="btn-sm btn-danger" onclick="deleteSupplier('${s.id}')">🗑️</button>
-                    <button class="btn-sm" onclick="paySupplier('${s.id}')">تسديد</button>
                 </div>
             </div>`).join('');
     }
     window.addSupplier = async () => {
         let name = document.getElementById('supName').value.trim();
         if (!name) return;
-        await db.collection('suppliers').add({ name, phone: document.getElementById('supPhone').value, storeId: currentStoreId, debt: 0 });
+        await db.collection('suppliers').add({ name, phone: document.getElementById('supPhone').value, storeId: currentStoreId });
         renderSuppliersTab(document.getElementById('tabContent'));
     };
     window.editSupplier = async (id) => {
@@ -428,15 +472,6 @@
         renderSuppliersTab(document.getElementById('tabContent'));
     };
     window.deleteSupplier = async (id) => { if (confirm('حذف المورد؟')) { await db.collection('suppliers').doc(id).delete(); renderSuppliersTab(document.getElementById('tabContent')); } };
-    window.paySupplier = async (supId) => {
-        let amount = parseFloat(prompt('المبلغ المدفوع للمورد'));
-        if (!amount) return;
-        const supRef = db.collection('suppliers').doc(supId);
-        const doc = await supRef.get();
-        let newDebt = (doc.data().debt || 0) - amount;
-        await supRef.update({ debt: newDebt < 0 ? 0 : newDebt });
-        renderSuppliersTab(document.getElementById('tabContent'));
-    };
     
     // ====================== التقارير ======================
     async function renderReportsTab(container) {
@@ -459,6 +494,92 @@
         </div><button class="btn-secondary" onclick="renderReportsTab(document.getElementById('tabContent'))">تحديث</button>`;
     }
     
+    // ====================== حسابي (معلومات الحساب وتغيير كلمة السر) ======================
+    async function renderAccountTab(container) {
+        const user = currentUserAuth;
+        const email = user?.email || '';
+        const userId = email.replace('@bkalla.com', '');
+        const storeName = userData?.storeName || 'المحل';
+        
+        container.innerHTML = `
+            <div style="max-width: 500px; margin: auto;">
+                <h3><i class="fas fa-user-circle"></i> معلومات الحساب</h3>
+                <div class="card">
+                    <div class="card-info">
+                        <p><strong>🆔 ID:</strong> ${escapeHtml(userId)}</p>
+                        <p><strong>🏪 اسم المحل:</strong> <span id="displayStoreName">${escapeHtml(storeName)}</span></p>
+                        <button class="btn-sm" onclick="editStoreName()">✏️ تعديل اسم المحل</button>
+                    </div>
+                </div>
+                
+                <h3><i class="fas fa-key"></i> تغيير كلمة السر</h3>
+                <div class="card">
+                    <div class="card-info">
+                        <input type="password" id="oldPassword" placeholder="كلمة السر القديمة">
+                        <input type="password" id="newPassword" placeholder="كلمة السر الجديدة">
+                        <input type="password" id="confirmPassword" placeholder="تأكيد كلمة السر الجديدة">
+                        <button onclick="changePassword()" class="btn-secondary">تغيير كلمة السر</button>
+                        <div id="passwordMsg" style="margin-top: 10px;"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        window.editStoreName = async () => {
+            let newName = prompt('أدخل اسم المحل الجديد:', storeName);
+            if (newName && newName.trim()) {
+                await db.collection('users').doc(currentUserAuth.uid).update({ storeName: newName.trim() });
+                userData.storeName = newName.trim();
+                document.getElementById('displayStoreName').innerText = newName.trim();
+                document.getElementById('storeTitle').innerHTML = `<i class="fas fa-store"></i> ${newName.trim()}`;
+                showFlash('tabContent', 'تم تحديث اسم المحل بنجاح', false);
+            }
+        };
+        
+        window.changePassword = async () => {
+            const oldPass = document.getElementById('oldPassword').value;
+            const newPass = document.getElementById('newPassword').value;
+            const confirmPass = document.getElementById('confirmPassword').value;
+            const msgDiv = document.getElementById('passwordMsg');
+            
+            if (!oldPass || !newPass || !confirmPass) {
+                msgDiv.innerHTML = '<span style="color:#dc2626;">الرجاء ملء جميع الحقول</span>';
+                return;
+            }
+            
+            if (newPass !== confirmPass) {
+                msgDiv.innerHTML = '<span style="color:#dc2626;">❌ كلمة السر غير متطابقة</span>';
+                return;
+            }
+            
+            if (newPass.length < 6) {
+                msgDiv.innerHTML = '<span style="color:#dc2626;">❌ كلمة السر الجديدة يجب أن تكون 6 أحرف على الأقل</span>';
+                return;
+            }
+            
+            msgDiv.innerHTML = '<span style="color:#166534;">جاري التحقق...</span>';
+            
+            try {
+                // إعادة المصادقة بكلمة السر القديمة
+                const credential = firebase.auth.EmailAuthProvider.credential(user.email, oldPass);
+                await user.reauthenticateWithCredential(credential);
+                // تغيير كلمة السر
+                await user.updatePassword(newPass);
+                msgDiv.innerHTML = '<span style="color:#166534;">✅ تم تغيير كلمة السر بنجاح</span>';
+                document.getElementById('oldPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+                setTimeout(() => { msgDiv.innerHTML = ''; }, 3000);
+            } catch (err) {
+                if (err.code === 'auth/wrong-password') {
+                    msgDiv.innerHTML = '<span style="color:#dc2626;">❌ كلمة السر القديمة خاطئة</span>';
+                } else {
+                    msgDiv.innerHTML = '<span style="color:#dc2626;">❌ حدث خطأ: ' + err.message + '</span>';
+                }
+            }
+        };
+    }
+    
     // ====================== تسجيل الدخول والخروج ======================
     async function loginUser() {
         const id = document.getElementById('loginId').value.trim();
@@ -471,7 +592,6 @@
             currentUserAuth = cred.user; userData = userInfo; currentStoreId = userInfo.storeId; currentRole = userInfo.role; isAdminGlobal = (currentRole === 'admin');
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
-            // تم تعديل هذا السطر: إزالة (${currentRole})
             document.getElementById('storeTitle').innerHTML = `<i class="fas fa-store"></i> ${userInfo.storeName || 'المحل'}`;
             if (!isAdminGlobal) await loadStoreData();
             buildTabs();
