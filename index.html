@@ -25,7 +25,7 @@
         .top-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; background: #f1f5f9; padding: 8px; border-radius: 60px; }
         .nav-btn { background: transparent; color: #334155; width: auto; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
         .nav-btn.active { background: #4f46e5; color: white; box-shadow: 0 6px 12px rgba(79,70,229,0.3); }
-        .card { background: white; padding: 15px; border-radius: 24px; margin: 12px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-right: 5px solid #8b5cf6; gap: 10px; }
+        .card { background: white; padding: 12px; border-radius: 24px; margin: 10px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-right: 5px solid #8b5cf6; gap: 8px; }
         .card-info { flex: 1; }
         .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 18px; }
         .stat-card { background: #f9fafb; padding: 18px; border-radius: 28px; text-align: center; border: 1px solid #e2e8f0; }
@@ -35,6 +35,7 @@
         .flash { padding: 12px; border-radius: 30px; margin: 10px 0; background: #e6f7e6; color: #166534; }
         @media (max-width:700px) { .container { padding: 15px; } }
         img.product-img { width: 45px; height: 45px; object-fit: cover; border-radius: 12px; margin-left: 8px; }
+        .cancelled { background: #f8d7da; border-right-color: #dc3545; opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -59,7 +60,7 @@
 </div>
 
 <script>
-    // Firebase Configuration
+    // Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyCYh6oC5nM2DZHgdOquHuo1so1DiQ7Gbs0",
         authDomain: "bakkala-system.firebaseapp.com",
@@ -89,6 +90,7 @@
         setTimeout(() => el.remove(), 3500);
     }
     function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+    function formatDate(timestamp) { return timestamp?.toDate().toLocaleString('ar-EG') || 'غير محدد'; }
     
     async function ensureUserDocument(uid, email) {
         const userRef = db.collection('users').doc(uid);
@@ -122,11 +124,9 @@
     function buildTabs() {
         const tabsContainer = document.getElementById('navTabs');
         let tabs = isAdminGlobal ? [{ id: 'adminPanel', name: '📊 لوحة التحكم' }] : [
-            { id: 'pos', name: '💰 نقطة البيع' },
-            { id: 'products', name: '📦 المنتجات' },
-            { id: 'customers', name: '👥 العملاء' },
-            { id: 'suppliers', name: '🏭 الموردين' },
-            { id: 'account', name: 'ℹ️ معلومات الحساب' },
+            { id: 'pos', name: '💰 نقطة البيع' }, { id: 'products', name: '📦 المنتجات' },
+            { id: 'customers', name: '👥 العملاء' }, { id: 'suppliers', name: '🏭 الموردين' },
+            { id: 'salesLog', name: '📋 سجل المبيعات' }, { id: 'account', name: 'ℹ️ معلومات الحساب' },
             { id: 'reports', name: '📈 التقارير' }
         ];
         tabsContainer.innerHTML = tabs.map(t => `<button class="nav-btn" data-tab="${t.id}">${t.name}</button>`).join('');
@@ -145,11 +145,12 @@
         else if (tabId === 'products') await renderProductsTab(container);
         else if (tabId === 'customers') await renderCustomersTab(container);
         else if (tabId === 'suppliers') await renderSuppliersTab(container);
+        else if (tabId === 'salesLog') await renderSalesLogTab(container);
         else if (tabId === 'account') await renderAccountTab(container);
         else if (tabId === 'reports') await renderReportsTab(container);
     }
     
-    // ====================== نقطة البيع (POS) ======================
+    // ====================== نقطة البيع ======================
     let cart = [];
     async function renderPosTab(container) {
         cart = [];
@@ -174,6 +175,10 @@
                 <button onclick="confirmSale()" style="background:#10b981;">إتمام البيع</button>
                 <div id="posFlash"></div>
             </div>`;
+        const select = document.getElementById('productSelect');
+        select.innerHTML = allProducts.map(p => `<option value="${p.id}" data-price="${p.priceRetail||p.price}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('');
+        if (allProducts.length === 0) select.innerHTML = '<option>لا توجد منتجات</option>';
+        
         window.searchProductLive = () => {
             let val = document.getElementById('searchProduct').value;
             let filtered = allProducts.filter(p => (p.barcode && p.barcode.includes(val)) || p.name.includes(val));
@@ -255,21 +260,15 @@
                     unitPrice: item.price, total: item.price * item.qty,
                     paymentMethod: finalMethod, customerId, paidAmount, changeAmount: change,
                     storeId: currentStoreId, userId: currentUserAuth.uid,
-                    date: firebase.firestore.FieldValue.serverTimestamp()
+                    cancelled: false, date: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                // تسجيل حركة مخزنية (صادر)
                 const invRef = db.collection('inventoryTransactions').doc();
-                batch.set(invRef, {
-                    type: 'sale', productId: item.id, productName: item.name,
-                    quantity: -item.qty, storeId: currentStoreId,
-                    date: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                batch.set(invRef, { type: 'sale', productId: item.id, productName: item.name, quantity: -item.qty, storeId: currentStoreId, date: firebase.firestore.FieldValue.serverTimestamp() });
             }
             if (customerId && debtAdded > 0) {
                 const custRef = db.collection('customers').doc(customerId);
                 const custSnap = await custRef.get();
-                const currentDebt = custSnap.data()?.debt || 0;
-                batch.update(custRef, { debt: currentDebt + debtAdded });
+                batch.update(custRef, { debt: (custSnap.data().debt || 0) + debtAdded });
             }
             await batch.commit();
             showFlash('posFlash', `✅ بيع ناجح بقيمة ${totalAmount} ج.م`, false);
@@ -281,47 +280,22 @@
         }
     }
     
-    // دالة الطباعة مع إخفاء زر الطباعة عند الطباعة
     function printReceipt(cartItems, total, method, customerId, change, debtAdded) {
         let win = window.open();
         let customerName = customerId ? (allCustomers.find(c => c.id === customerId)?.name || 'عميل') : 'نقدي';
         let debtMsg = debtAdded > 0 ? `<p>تم إضافة مبلغ ${debtAdded} ج.م كدين على العميل</p>` : '';
         win.document.write(`
-            <html dir="rtl">
-            <head>
-                <style>
-                    body { font-family: 'Tajawal', sans-serif; padding: 20px; }
-                    table { width: 100%; border-collapse: collapse; }
-                    th, td { border-bottom: 1px solid #ccc; padding: 8px; text-align: center; }
-                    h2, h3 { text-align: center; }
-                    @media print {
-                        button { display: none; }
-                    }
-                </style>
-            </head>
-            <body>
-                <h2>فاتورة البيع</h2>
-                <p>العميل: ${customerName}</p>
-                <p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
-                <table>
-                    <thead>
-                        <tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>
-                    </thead>
-                    <tbody>
-                        ${cartItems.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}
-                    </tbody>
-                </table>
-                <h3>الإجمالي: ${total.toFixed(2)} ج.م</h3>
-                <p>طريقة الدفع: ${method}</p>
-                ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
-                ${debtMsg}
-                <button onclick="window.print()">🖨️ طباعة</button>
-            </body>
-            </html>
+            <html dir="rtl"><head><style>body{font-family:Tajawal; padding:20px;} table{width:100%;border-collapse:collapse;} th,td{border-bottom:1px solid #ccc;padding:8px;text-align:center;} h2,h3{text-align:center;} @media print{button{display:none;}}</style></head>
+            <body><h2>فاتورة البيع</h2><p>العميل: ${customerName}</p><p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
+            <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
+            <tbody>${cartItems.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody></table>
+            <h3>الإجمالي: ${total.toFixed(2)} ج.م</h3><p>طريقة الدفع: ${method}</p>
+            ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}${debtMsg}
+            <button onclick="window.print()">🖨️ طباعة</button></body></html>
         `);
     }
     
-    // ====================== إدارة المنتجات ======================
+    // ====================== المنتجات ======================
     async function renderProductsTab(container) {
         await loadStoreData();
         container.innerHTML = `
@@ -342,33 +316,14 @@
         let html = '';
         for (let p of allProducts) {
             let lowClass = (p.qty <= (p.lowStockAlert || 0)) ? 'low-stock' : '';
-            html += `<div class="card ${lowClass}">
-                <div class="card-info">
-                    ${p.imageUrl ? `<img class="product-img" src="${p.imageUrl}">` : ''}
-                    <strong>${escapeHtml(p.name)}</strong> (باركود: ${p.barcode || '-'})<br>
-                    قطاعي: ${p.priceRetail} | جملة: ${p.priceWholesale} | الشراء: ${p.cost || 0}<br>
-                    الكمية: ${p.qty} ${p.unit} | التنبيه: ${p.lowStockAlert || 0}
-                </div>
-                <div>
-                    <button class="btn-sm" onclick="editProduct('${p.id}')">✏️</button>
-                    <button class="btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button>
-                </div>
-            </div>`;
+            html += `<div class="card ${lowClass}"><div class="card-info">${p.imageUrl ? `<img class="product-img" src="${p.imageUrl}">` : ''}<strong>${escapeHtml(p.name)}</strong> (باركود: ${p.barcode || '-'})<br>قطاعي: ${p.priceRetail} | جملة: ${p.priceWholesale} | الشراء: ${p.cost || 0}<br>الكمية: ${p.qty} ${p.unit} | التنبيه: ${p.lowStockAlert || 0}</div><div><button class="btn-sm" onclick="editProduct('${p.id}')">✏️</button><button class="btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button></div></div>`;
         }
         area.innerHTML = html || '<p>لا توجد منتجات</p>';
     }
     window.addNewProduct = async () => {
         let name = document.getElementById('prodName').value.trim();
         if (!name) return showFlash('productsListArea', 'الاسم مطلوب', true);
-        await db.collection('products').add({
-            name, barcode: document.getElementById('prodBarcode').value, storeId: currentStoreId,
-            priceRetail: parseFloat(document.getElementById('prodPriceRetail').value) || 0,
-            priceWholesale: parseFloat(document.getElementById('prodPriceWholesale').value) || 0,
-            cost: parseFloat(document.getElementById('prodCost').value) || 0,
-            unit: document.getElementById('prodUnit').value, qty: parseInt(document.getElementById('prodQty').value) || 0,
-            lowStockAlert: parseInt(document.getElementById('prodLowStock').value) || 0,
-            imageUrl: document.getElementById('prodImage').value, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        await db.collection('products').add({ name, barcode: document.getElementById('prodBarcode').value, storeId: currentStoreId, priceRetail: parseFloat(document.getElementById('prodPriceRetail').value)||0, priceWholesale: parseFloat(document.getElementById('prodPriceWholesale').value)||0, cost: parseFloat(document.getElementById('prodCost').value)||0, unit: document.getElementById('prodUnit').value, qty: parseInt(document.getElementById('prodQty').value)||0, lowStockAlert: parseInt(document.getElementById('prodLowStock').value)||0, imageUrl: document.getElementById('prodImage').value, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
         showFlash('productsListArea', 'تمت الإضافة');
         renderProductsTab(document.getElementById('tabContent'));
     };
@@ -384,20 +339,9 @@
     // ====================== العملاء ======================
     async function renderCustomersTab(container) {
         await loadStoreData();
-        container.innerHTML = `
-            <h3>👤 إضافة عميل جديد</h3>
-            <div class="pos-row"><input id="custName" placeholder="الاسم"><input id="custPhone" placeholder="الهاتف"><button onclick="addCustomer()">إضافة</button></div>
-            <h3>📋 قائمة العملاء</h3><div id="customersListDiv"></div>`;
+        container.innerHTML = `<h3>👤 إضافة عميل جديد</h3><div class="pos-row"><input id="custName" placeholder="الاسم"><input id="custPhone" placeholder="الهاتف"><button onclick="addCustomer()">إضافة</button></div><h3>📋 قائمة العملاء</h3><div id="customersListDiv"></div>`;
         const listDiv = document.getElementById('customersListDiv');
-        listDiv.innerHTML = allCustomers.map(c => `
-            <div class="card">
-                <div class="card-info"><strong>${escapeHtml(c.name)}</strong> - هاتف: ${c.phone || '-'} | دين: ${c.debt || 0} ج.م</div>
-                <div>
-                    <button class="btn-sm" onclick="editCustomer('${c.id}')">✏️</button>
-                    <button class="btn-sm btn-danger" onclick="deleteCustomer('${c.id}')">🗑️</button>
-                    <button class="btn-sm" onclick="recordPayment('${c.id}')">تسديد</button>
-                </div>
-            </div>`).join('');
+        listDiv.innerHTML = allCustomers.map(c => `<div class="card"><div class="card-info"><strong>${escapeHtml(c.name)}</strong> - هاتف: ${c.phone || '-'} | دين: ${c.debt || 0} ج.م</div><div><button class="btn-sm" onclick="editCustomer('${c.id}')">✏️</button><button class="btn-sm btn-danger" onclick="deleteCustomer('${c.id}')">🗑️</button><button class="btn-sm" onclick="recordPayment('${c.id}')">تسديد</button></div></div>`).join('');
     }
     window.addCustomer = async () => {
         let name = document.getElementById('custName').value.trim();
@@ -406,8 +350,7 @@
         renderCustomersTab(document.getElementById('tabContent'));
     };
     window.editCustomer = async (id) => {
-        let newName = prompt('اسم العميل الجديد');
-        if (!newName) return;
+        let newName = prompt('اسم العميل الجديد'); if (!newName) return;
         let newPhone = prompt('رقم الهاتف الجديد');
         await db.collection('customers').doc(id).update({ name: newName, phone: newPhone });
         renderCustomersTab(document.getElementById('tabContent'));
@@ -423,22 +366,12 @@
         renderCustomersTab(document.getElementById('tabContent'));
     };
     
-    // ====================== الموردين (بدون مديونية) ======================
+    // ====================== الموردين ======================
     async function renderSuppliersTab(container) {
         await loadStoreData();
-        container.innerHTML = `
-            <h3>🏭 إدارة الموردين</h3>
-            <div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="رقم الهاتف"><button onclick="addSupplier()">إضافة مورد</button></div>
-            <div id="suppliersList"></div>`;
+        container.innerHTML = `<h3>🏭 إدارة الموردين</h3><div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="رقم الهاتف"><button onclick="addSupplier()">إضافة مورد</button></div><div id="suppliersList"></div>`;
         const listDiv = document.getElementById('suppliersList');
-        listDiv.innerHTML = allSuppliers.map(s => `
-            <div class="card">
-                <div class="card-info"><strong>${escapeHtml(s.name)}</strong> - هاتف: ${s.phone || '-'}</div>
-                <div>
-                    <button class="btn-sm" onclick="editSupplier('${s.id}')">✏️</button>
-                    <button class="btn-sm btn-danger" onclick="deleteSupplier('${s.id}')">🗑️</button>
-                </div>
-            </div>`).join('');
+        listDiv.innerHTML = allSuppliers.map(s => `<div class="card"><div class="card-info"><strong>${escapeHtml(s.name)}</strong> - هاتف: ${s.phone || '-'}</div><div><button class="btn-sm" onclick="editSupplier('${s.id}')">✏️</button><button class="btn-sm btn-danger" onclick="deleteSupplier('${s.id}')">🗑️</button></div></div>`).join('');
     }
     window.addSupplier = async () => {
         let name = document.getElementById('supName').value.trim();
@@ -447,37 +380,137 @@
         renderSuppliersTab(document.getElementById('tabContent'));
     };
     window.editSupplier = async (id) => {
-        let newName = prompt('اسم المورد الجديد');
-        if (!newName) return;
+        let newName = prompt('اسم المورد الجديد'); if (!newName) return;
         let newPhone = prompt('رقم الهاتف الجديد');
         await db.collection('suppliers').doc(id).update({ name: newName, phone: newPhone });
         renderSuppliersTab(document.getElementById('tabContent'));
     };
     window.deleteSupplier = async (id) => { if (confirm('حذف المورد؟')) { await db.collection('suppliers').doc(id).delete(); renderSuppliersTab(document.getElementById('tabContent')); } };
     
-    // ====================== معلومات الحساب وتغيير كلمة السر ======================
+    // ====================== سجل المبيعات (النسخة المستقرة) ======================
+    let salesFilter = 'all';
+    let selectedDate = '';
+    let allSalesCache = [];
+    
+    async function renderSalesLogTab(container) {
+        container.innerHTML = `
+            <h3>📋 سجل المبيعات</h3>
+            <div class="pos-row">
+                <button class="btn-sm ${salesFilter === 'all' ? 'active' : ''}" onclick="setSalesFilter('all')">📋 الكل</button>
+                <button class="btn-sm ${salesFilter === 'today' ? 'active' : ''}" onclick="setSalesFilter('today')">📅 اليوم</button>
+                <button class="btn-sm ${salesFilter === 'yesterday' ? 'active' : ''}" onclick="setSalesFilter('yesterday')">📆 الأمس</button>
+                <button class="btn-sm ${salesFilter === 'custom' ? 'active' : ''}" onclick="setSalesFilter('custom')">📅 تاريخ</button>
+                <input type="date" id="customDatePicker" style="display:${salesFilter === 'custom' ? 'inline-block' : 'none'}" onchange="setCustomDate(this.value)">
+                <button class="btn-sm btn-secondary" onclick="loadSalesLog()">تحديث</button>
+            </div>
+            <div id="salesLogList">جاري التحميل...</div>
+            <hr>
+            <h3>🏆 أكثر 10 منتجات مبيعًا خلال الأسبوع</h3>
+            <div id="topProductsWeek">جاري التحميل...</div>
+        `;
+        await loadAllSalesOnce();
+        filterAndDisplaySales();
+        calculateTopProductsWeek();
+    }
+    
+    async function loadAllSalesOnce() {
+        try {
+            const snapshot = await db.collection('sales').where('storeId', '==', currentStoreId).get();
+            allSalesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("تم تحميل المبيعات:", allSalesCache.length);
+        } catch(e) {
+            console.error("خطأ في جلب المبيعات:", e);
+            allSalesCache = [];
+        }
+    }
+    
+    function filterAndDisplaySales() {
+        const container = document.getElementById('salesLogList');
+        if (!container) return;
+        let filtered = [...allSalesCache];
+        const now = new Date();
+        if (salesFilter === 'today') {
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            filtered = filtered.filter(s => s.date && s.date.toDate() >= start && s.date.toDate() < end);
+        } else if (salesFilter === 'yesterday') {
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            filtered = filtered.filter(s => s.date && s.date.toDate() >= start && s.date.toDate() < end);
+        } else if (salesFilter === 'custom' && selectedDate) {
+            const start = new Date(selectedDate); start.setHours(0,0,0,0);
+            const end = new Date(selectedDate); end.setHours(23,59,59,999);
+            filtered = filtered.filter(s => s.date && s.date.toDate() >= start && s.date.toDate() <= end);
+        }
+        filtered.sort((a,b) => (b.date?.toDate() || 0) - (a.date?.toDate() || 0));
+        if (filtered.length === 0) { container.innerHTML = '<p>⚠️ لا توجد مبيعات في هذا التاريخ</p>'; return; }
+        let html = '';
+        for (const s of filtered) {
+            const isCancelled = s.cancelled === true;
+            const customer = s.customerId ? allCustomers.find(c => c.id === s.customerId) : null;
+            html += `<div class="card ${isCancelled ? 'cancelled' : ''}"><div class="card-info"><strong>${escapeHtml(s.productName)}</strong> - الكمية: ${s.quantity} | الإجمالي: ${s.total} ج.م<br>طريقة الدفع: ${s.paymentMethod} | العميل: ${customer ? customer.name : 'نقدي'}<br>التاريخ: ${formatDate(s.date)} | الحالة: ${isCancelled ? 'ملغاة' : 'ناجحة'}</div><div>${!isCancelled ? `<button class="btn-sm btn-danger" onclick="cancelSale('${s.id}')">إلغاء</button>` : ''}</div></div>`;
+        }
+        container.innerHTML = html;
+    }
+    
+    function calculateTopProductsWeek() {
+        const container = document.getElementById('topProductsWeek');
+        if (!container) return;
+        const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+        const productCount = {};
+        for (const s of allSalesCache) {
+            if (s.cancelled === true) continue;
+            if (!s.productName || !s.date) continue;
+            const saleDate = s.date.toDate();
+            if (saleDate >= weekAgo) {
+                productCount[s.productName] = (productCount[s.productName] || 0) + (s.quantity || 0);
+            }
+        }
+        const sorted = Object.entries(productCount).sort((a,b) => b[1] - a[1]).slice(0,10);
+        if (sorted.length === 0) { container.innerHTML = '<p>لا توجد مبيعات خلال الأسبوع الماضي</p>'; return; }
+        container.innerHTML = sorted.map(([name, qty]) => `<div class="card"><div class="card-info">${escapeHtml(name)} : ${qty} وحدة</div></div>`).join('');
+    }
+    
+    window.setSalesFilter = (filter) => {
+        salesFilter = filter;
+        const picker = document.getElementById('customDatePicker');
+        if (picker) picker.style.display = filter === 'custom' ? 'inline-block' : 'none';
+        if (filter !== 'custom') selectedDate = '';
+        filterAndDisplaySales();
+    };
+    window.setCustomDate = (date) => { selectedDate = date; filterAndDisplaySales(); };
+    window.loadSalesLog = async () => { await loadAllSalesOnce(); filterAndDisplaySales(); calculateTopProductsWeek(); };
+    
+    window.cancelSale = async (saleId) => {
+        if (!confirm('إلغاء هذه العملية؟ سيتم إعادة الكمية للمخزون.')) return;
+        try {
+            const saleRef = db.collection('sales').doc(saleId);
+            const saleDoc = await saleRef.get();
+            if (!saleDoc.exists || saleDoc.data().cancelled) throw new Error('لا يمكن الإلغاء');
+            const sale = saleDoc.data();
+            const productRef = db.collection('products').doc(sale.productId);
+            const productDoc = await productRef.get();
+            const batch = db.batch();
+            batch.update(productRef, { qty: (productDoc.data().qty || 0) + sale.quantity });
+            batch.update(saleRef, { cancelled: true });
+            await batch.commit();
+            // تحديث الكاش
+            const index = allSalesCache.findIndex(s => s.id === saleId);
+            if (index !== -1) allSalesCache[index].cancelled = true;
+            filterAndDisplaySales();
+            calculateTopProductsWeek();
+            showFlash('salesLogList', 'تم إلغاء البيع', false);
+        } catch (err) { showFlash('salesLogList', err.message, true); }
+    };
+    
+    // ====================== معلومات الحساب ======================
     async function renderAccountTab(container) {
         const user = auth.currentUser;
         const userId = user?.email?.replace('@bkalla.com', '') || 'غير متوفر';
         const storeName = userData?.storeName || 'غير متوفر';
         container.innerHTML = `
-            <h3>ℹ️ معلومات الحساب</h3>
-            <div class="card">
-                <div class="card-info">
-                    <p><strong> ID :</strong> ${escapeHtml(userId)}</p>
-                    <p><strong>🏪 اسم المحل:</strong> ${escapeHtml(storeName)}</p>
-                </div>
-            </div>
-            <h3>🔐 تغيير كلمة المرور</h3>
-            <div class="card">
-                <div class="card-info">
-                    <input type="password" id="oldPassword" placeholder="كلمة المرور القديمة">
-                    <input type="password" id="newPassword1" placeholder="كلمة المرور الجديدة">
-                    <input type="password" id="newPassword2" placeholder="تأكيد كلمة المرور الجديدة">
-                    <button onclick="changePassword()" class="btn-secondary">تغيير كلمة المرور</button>
-                    <div id="passwordMsg" class="flash" style="display:none;"></div>
-                </div>
-            </div>
+            <h3>ℹ️ معلومات الحساب</h3><div class="card"><div class="card-info"><p><strong>🆔 الـ ID:</strong> ${escapeHtml(userId)}</p><p><strong>🏪 اسم المحل:</strong> ${escapeHtml(storeName)}</p></div></div>
+            <h3>🔐 تغيير كلمة المرور</h3><div class="card"><div class="card-info"><input type="password" id="oldPassword" placeholder="كلمة المرور القديمة"><input type="password" id="newPassword1" placeholder="كلمة المرور الجديدة"><input type="password" id="newPassword2" placeholder="تأكيد كلمة المرور الجديدة"><button onclick="changePassword()" class="btn-secondary">تغيير كلمة المرور</button><div id="passwordMsg" class="flash" style="display:none;"></div></div></div>
         `;
     }
     
@@ -486,58 +519,28 @@
         const newPwd1 = document.getElementById('newPassword1').value;
         const newPwd2 = document.getElementById('newPassword2').value;
         const msgDiv = document.getElementById('passwordMsg');
-        
-        if (!oldPwd || !newPwd1 || !newPwd2) {
-            msgDiv.style.display = 'block';
-            msgDiv.style.backgroundColor = '#ffe0e0';
-            msgDiv.style.color = '#b91c1c';
-            msgDiv.innerText = 'الرجاء ملء جميع الحقول';
-            setTimeout(() => msgDiv.style.display = 'none', 3000);
-            return;
-        }
-        if (newPwd1 !== newPwd2) {
-            msgDiv.style.display = 'block';
-            msgDiv.style.backgroundColor = '#ffe0e0';
-            msgDiv.style.color = '#b91c1c';
-            msgDiv.innerText = 'كلمة المرور الجديدة غير متطابقة';
-            setTimeout(() => msgDiv.style.display = 'none', 3000);
-            return;
-        }
-        if (newPwd1.length < 6) {
-            msgDiv.style.display = 'block';
-            msgDiv.style.backgroundColor = '#ffe0e0';
-            msgDiv.style.color = '#b91c1c';
-            msgDiv.innerText = 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل';
-            setTimeout(() => msgDiv.style.display = 'none', 3000);
-            return;
-        }
-        
+        if (!oldPwd || !newPwd1 || !newPwd2) { msgDiv.style.display='block'; msgDiv.style.backgroundColor='#ffe0e0'; msgDiv.style.color='#b91c1c'; msgDiv.innerText='الرجاء ملء جميع الحقول'; setTimeout(()=>msgDiv.style.display='none',3000); return; }
+        if (newPwd1 !== newPwd2) { msgDiv.style.display='block'; msgDiv.style.backgroundColor='#ffe0e0'; msgDiv.style.color='#b91c1c'; msgDiv.innerText='كلمة المرور الجديدة غير متطابقة'; setTimeout(()=>msgDiv.style.display='none',3000); return; }
+        if (newPwd1.length < 6) { msgDiv.style.display='block'; msgDiv.style.backgroundColor='#ffe0e0'; msgDiv.style.color='#b91c1c'; msgDiv.innerText='كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل'; setTimeout(()=>msgDiv.style.display='none',3000); return; }
         const user = auth.currentUser;
         const credential = firebase.auth.EmailAuthProvider.credential(user.email, oldPwd);
         try {
             await user.reauthenticateWithCredential(credential);
             await user.updatePassword(newPwd1);
-            msgDiv.style.display = 'block';
-            msgDiv.style.backgroundColor = '#e0f2fe';
-            msgDiv.style.color = '#065f46';
-            msgDiv.innerText = '✅ تم تغيير كلمة المرور بنجاح';
-            document.getElementById('oldPassword').value = '';
-            document.getElementById('newPassword1').value = '';
-            document.getElementById('newPassword2').value = '';
-            setTimeout(() => msgDiv.style.display = 'none', 3000);
+            msgDiv.style.display='block'; msgDiv.style.backgroundColor='#e0f2fe'; msgDiv.style.color='#065f46'; msgDiv.innerText='✅ تم تغيير كلمة المرور بنجاح';
+            document.getElementById('oldPassword').value = ''; document.getElementById('newPassword1').value = ''; document.getElementById('newPassword2').value = '';
+            setTimeout(()=>msgDiv.style.display='none',3000);
         } catch (err) {
-            msgDiv.style.display = 'block';
-            msgDiv.style.backgroundColor = '#ffe0e0';
-            msgDiv.style.color = '#b91c1c';
+            msgDiv.style.display='block'; msgDiv.style.backgroundColor='#ffe0e0'; msgDiv.style.color='#b91c1c';
             msgDiv.innerText = err.code === 'auth/wrong-password' ? 'كلمة المرور القديمة خاطئة' : 'حدث خطأ، حاول مرة أخرى';
-            setTimeout(() => msgDiv.style.display = 'none', 3000);
+            setTimeout(()=>msgDiv.style.display='none',3000);
         }
     };
     
     // ====================== التقارير ======================
     async function renderReportsTab(container) {
         await loadStoreData();
-        const salesSnap = await db.collection('sales').where('storeId', '==', currentStoreId).get();
+        const salesSnap = await db.collection('sales').where('storeId', '==', currentStoreId).where('cancelled', '==', false).get();
         let totalProfit = 0, productSales = {};
         for (const doc of salesSnap.docs) {
             let sale = doc.data();
@@ -548,11 +551,7 @@
         }
         let best = Object.keys(productSales).length ? Object.keys(productSales).reduce((a, b) => productSales[a] > productSales[b] ? a : b) : 'لا يوجد';
         let lowStock = allProducts.filter(p => p.qty <= (p.lowStockAlert || 0)).map(p => p.name).join(', ') || 'لا يوجد';
-        container.innerHTML = `<div class="grid-2">
-            <div class="stat-card">💰 إجمالي الأرباح: ${totalProfit.toFixed(2)} ج.م</div>
-            <div class="stat-card">🏆 الأكثر مبيعاً: ${best}</div>
-            <div class="stat-card">⚠️ منتجات منخفضة المخزون: ${lowStock}</div>
-        </div><button class="btn-secondary" onclick="renderReportsTab(document.getElementById('tabContent'))">تحديث</button>`;
+        container.innerHTML = `<div class="grid-2"><div class="stat-card">💰 إجمالي الأرباح: ${totalProfit.toFixed(2)} ج.م</div><div class="stat-card">🏆 الأكثر مبيعاً: ${best}</div><div class="stat-card">⚠️ منتجات منخفضة المخزون: ${lowStock}</div></div><button class="btn-secondary" onclick="renderReportsTab(document.getElementById('tabContent'))">تحديث</button>`;
     }
     
     // ====================== تسجيل الدخول والخروج ======================
