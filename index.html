@@ -35,27 +35,6 @@
         .flash { padding: 12px; border-radius: 30px; margin: 10px 0; background: #e6f7e6; color: #166534; }
         @media (max-width:700px) { .container { padding: 15px; } }
         img.product-img { width: 45px; height: 45px; object-fit: cover; border-radius: 12px; margin-left: 8px; }
-        
-        /* تنسيق طباعة فاتورة 57 ملم */
-        @media print {
-            body { margin: 0; padding: 0; background: white; }
-            .container, .top-nav, .nav-btn, .btn-danger, .btn-sm, .flash, button, .pos-row, h2, h3, .grid-2, .stat-card, .btn-secondary {
-                display: none !important;
-            }
-            .print-receipt {
-                display: block !important;
-                width: 57mm;
-                margin: 0;
-                padding: 2mm;
-                font-size: 10px;
-                font-family: 'Tajawal', monospace;
-            }
-            .print-receipt h2 { font-size: 14px; margin: 0; display: block; }
-            .print-receipt p { margin: 2px 0; }
-            .print-receipt table { width: 100%; border-collapse: collapse; }
-            .print-receipt th, .print-receipt td { padding: 2px; text-align: center; border-bottom: 1px dashed #000; }
-            .print-receipt button { display: none; }
-        }
     </style>
 </head>
 <body>
@@ -147,8 +126,8 @@
             { id: 'products', name: '📦 المنتجات' },
             { id: 'customers', name: '👥 العملاء' },
             { id: 'suppliers', name: '🏭 الموردين' },
-            { id: 'reports', name: '📈 التقارير' },
-            { id: 'account', name: '👤 حسابي' }
+            { id: 'account', name: 'ℹ️ معلومات الحساب' },
+            { id: 'reports', name: '📈 التقارير' }
         ];
         tabsContainer.innerHTML = tabs.map(t => `<button class="nav-btn" data-tab="${t.id}">${t.name}</button>`).join('');
         document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
@@ -166,8 +145,8 @@
         else if (tabId === 'products') await renderProductsTab(container);
         else if (tabId === 'customers') await renderCustomersTab(container);
         else if (tabId === 'suppliers') await renderSuppliersTab(container);
-        else if (tabId === 'reports') await renderReportsTab(container);
         else if (tabId === 'account') await renderAccountTab(container);
+        else if (tabId === 'reports') await renderReportsTab(container);
     }
     
     // ====================== نقطة البيع (POS) ======================
@@ -302,38 +281,41 @@
         }
     }
     
+    // دالة الطباعة مع إخفاء زر الطباعة عند الطباعة
     function printReceipt(cartItems, total, method, customerId, change, debtAdded) {
         let win = window.open();
         let customerName = customerId ? (allCustomers.find(c => c.id === customerId)?.name || 'عميل') : 'نقدي';
         let debtMsg = debtAdded > 0 ? `<p>تم إضافة مبلغ ${debtAdded} ج.م كدين على العميل</p>` : '';
         win.document.write(`
-            <html dir="rtl"><head><style>
-                body { font-family: 'Tajawal', monospace; margin: 0; padding: 2mm; width: 57mm; font-size: 10px; }
-                h2 { font-size: 14px; margin: 0 0 5px 0; text-align: center; }
-                p { margin: 2px 0; }
-                table { width: 100%; border-collapse: collapse; margin: 5px 0; }
-                th, td { padding: 3px; text-align: center; border-bottom: 1px dashed #000; }
-                .total { font-size: 12px; font-weight: bold; margin-top: 5px; }
-                hr { margin: 3px 0; }
-            </style></head>
+            <html dir="rtl">
+            <head>
+                <style>
+                    body { font-family: 'Tajawal', sans-serif; padding: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border-bottom: 1px solid #ccc; padding: 8px; text-align: center; }
+                    h2, h3 { text-align: center; }
+                    @media print {
+                        button { display: none; }
+                    }
+                </style>
+            </head>
             <body>
-                <div class="print-receipt">
-                    <h2>فاتورة البيع</h2>
-                    <p>العميل: ${customerName}</p>
-                    <p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
-                    <table>
-                        <tr><th>المنتج</th><th>ك</th><th>س</th><th>الإجمالي</th></tr>
+                <h2>فاتورة البيع</h2>
+                <p>العميل: ${customerName}</p>
+                <p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
+                <table>
+                    <thead>
+                        <tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>
+                    </thead>
+                    <tbody>
                         ${cartItems.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}
-                    </table>
-                    <hr>
-                    <p class="total"><strong>الإجمالي: ${total.toFixed(2)} ج.م</strong></p>
-                    <p>طريقة الدفع: ${method}</p>
-                    ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
-                    ${debtMsg}
-                    <p style="text-align:center;">شكراً لتسوقكم</p>
-                    <button onclick="window.print()">طباعة</button>
-                </div>
-                <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); }<\/script>
+                    </tbody>
+                </table>
+                <h3>الإجمالي: ${total.toFixed(2)} ج.م</h3>
+                <p>طريقة الدفع: ${method}</p>
+                ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
+                ${debtMsg}
+                <button onclick="window.print()">🖨️ طباعة</button>
             </body>
             </html>
         `);
@@ -446,7 +428,7 @@
         await loadStoreData();
         container.innerHTML = `
             <h3>🏭 إدارة الموردين</h3>
-            <div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="الهاتف"><button onclick="addSupplier()">إضافة مورد</button></div>
+            <div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="رقم الهاتف"><button onclick="addSupplier()">إضافة مورد</button></div>
             <div id="suppliersList"></div>`;
         const listDiv = document.getElementById('suppliersList');
         listDiv.innerHTML = allSuppliers.map(s => `
@@ -473,6 +455,85 @@
     };
     window.deleteSupplier = async (id) => { if (confirm('حذف المورد؟')) { await db.collection('suppliers').doc(id).delete(); renderSuppliersTab(document.getElementById('tabContent')); } };
     
+    // ====================== معلومات الحساب وتغيير كلمة السر ======================
+    async function renderAccountTab(container) {
+        const user = auth.currentUser;
+        const userId = user?.email?.replace('@bkalla.com', '') || 'غير متوفر';
+        const storeName = userData?.storeName || 'غير متوفر';
+        container.innerHTML = `
+            <h3>ℹ️ معلومات الحساب</h3>
+            <div class="card">
+                <div class="card-info">
+                    <p><strong>🆔 الـ ID:</strong> ${escapeHtml(userId)}</p>
+                    <p><strong>🏪 اسم المحل:</strong> ${escapeHtml(storeName)}</p>
+                </div>
+            </div>
+            <h3>🔐 تغيير كلمة المرور</h3>
+            <div class="card">
+                <div class="card-info">
+                    <input type="password" id="oldPassword" placeholder="كلمة المرور القديمة">
+                    <input type="password" id="newPassword1" placeholder="كلمة المرور الجديدة">
+                    <input type="password" id="newPassword2" placeholder="تأكيد كلمة المرور الجديدة">
+                    <button onclick="changePassword()" class="btn-secondary">تغيير كلمة المرور</button>
+                    <div id="passwordMsg" class="flash" style="display:none;"></div>
+                </div>
+            </div>
+        `;
+    }
+    
+    window.changePassword = async () => {
+        const oldPwd = document.getElementById('oldPassword').value;
+        const newPwd1 = document.getElementById('newPassword1').value;
+        const newPwd2 = document.getElementById('newPassword2').value;
+        const msgDiv = document.getElementById('passwordMsg');
+        
+        if (!oldPwd || !newPwd1 || !newPwd2) {
+            msgDiv.style.display = 'block';
+            msgDiv.style.backgroundColor = '#ffe0e0';
+            msgDiv.style.color = '#b91c1c';
+            msgDiv.innerText = 'الرجاء ملء جميع الحقول';
+            setTimeout(() => msgDiv.style.display = 'none', 3000);
+            return;
+        }
+        if (newPwd1 !== newPwd2) {
+            msgDiv.style.display = 'block';
+            msgDiv.style.backgroundColor = '#ffe0e0';
+            msgDiv.style.color = '#b91c1c';
+            msgDiv.innerText = 'كلمة المرور الجديدة غير متطابقة';
+            setTimeout(() => msgDiv.style.display = 'none', 3000);
+            return;
+        }
+        if (newPwd1.length < 6) {
+            msgDiv.style.display = 'block';
+            msgDiv.style.backgroundColor = '#ffe0e0';
+            msgDiv.style.color = '#b91c1c';
+            msgDiv.innerText = 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل';
+            setTimeout(() => msgDiv.style.display = 'none', 3000);
+            return;
+        }
+        
+        const user = auth.currentUser;
+        const credential = firebase.auth.EmailAuthProvider.credential(user.email, oldPwd);
+        try {
+            await user.reauthenticateWithCredential(credential);
+            await user.updatePassword(newPwd1);
+            msgDiv.style.display = 'block';
+            msgDiv.style.backgroundColor = '#e0f2fe';
+            msgDiv.style.color = '#065f46';
+            msgDiv.innerText = '✅ تم تغيير كلمة المرور بنجاح';
+            document.getElementById('oldPassword').value = '';
+            document.getElementById('newPassword1').value = '';
+            document.getElementById('newPassword2').value = '';
+            setTimeout(() => msgDiv.style.display = 'none', 3000);
+        } catch (err) {
+            msgDiv.style.display = 'block';
+            msgDiv.style.backgroundColor = '#ffe0e0';
+            msgDiv.style.color = '#b91c1c';
+            msgDiv.innerText = err.code === 'auth/wrong-password' ? 'كلمة المرور القديمة خاطئة' : 'حدث خطأ، حاول مرة أخرى';
+            setTimeout(() => msgDiv.style.display = 'none', 3000);
+        }
+    };
+    
     // ====================== التقارير ======================
     async function renderReportsTab(container) {
         await loadStoreData();
@@ -492,92 +553,6 @@
             <div class="stat-card">🏆 الأكثر مبيعاً: ${best}</div>
             <div class="stat-card">⚠️ منتجات منخفضة المخزون: ${lowStock}</div>
         </div><button class="btn-secondary" onclick="renderReportsTab(document.getElementById('tabContent'))">تحديث</button>`;
-    }
-    
-    // ====================== حسابي (معلومات الحساب وتغيير كلمة السر) ======================
-    async function renderAccountTab(container) {
-        const user = currentUserAuth;
-        const email = user?.email || '';
-        const userId = email.replace('@bkalla.com', '');
-        const storeName = userData?.storeName || 'المحل';
-        
-        container.innerHTML = `
-            <div style="max-width: 500px; margin: auto;">
-                <h3><i class="fas fa-user-circle"></i> معلومات الحساب</h3>
-                <div class="card">
-                    <div class="card-info">
-                        <p><strong>🆔 ID:</strong> ${escapeHtml(userId)}</p>
-                        <p><strong>🏪 اسم المحل:</strong> <span id="displayStoreName">${escapeHtml(storeName)}</span></p>
-                        <button class="btn-sm" onclick="editStoreName()">✏️ تعديل اسم المحل</button>
-                    </div>
-                </div>
-                
-                <h3><i class="fas fa-key"></i> تغيير كلمة السر</h3>
-                <div class="card">
-                    <div class="card-info">
-                        <input type="password" id="oldPassword" placeholder="كلمة السر القديمة">
-                        <input type="password" id="newPassword" placeholder="كلمة السر الجديدة">
-                        <input type="password" id="confirmPassword" placeholder="تأكيد كلمة السر الجديدة">
-                        <button onclick="changePassword()" class="btn-secondary">تغيير كلمة السر</button>
-                        <div id="passwordMsg" style="margin-top: 10px;"></div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        window.editStoreName = async () => {
-            let newName = prompt('أدخل اسم المحل الجديد:', storeName);
-            if (newName && newName.trim()) {
-                await db.collection('users').doc(currentUserAuth.uid).update({ storeName: newName.trim() });
-                userData.storeName = newName.trim();
-                document.getElementById('displayStoreName').innerText = newName.trim();
-                document.getElementById('storeTitle').innerHTML = `<i class="fas fa-store"></i> ${newName.trim()}`;
-                showFlash('tabContent', 'تم تحديث اسم المحل بنجاح', false);
-            }
-        };
-        
-        window.changePassword = async () => {
-            const oldPass = document.getElementById('oldPassword').value;
-            const newPass = document.getElementById('newPassword').value;
-            const confirmPass = document.getElementById('confirmPassword').value;
-            const msgDiv = document.getElementById('passwordMsg');
-            
-            if (!oldPass || !newPass || !confirmPass) {
-                msgDiv.innerHTML = '<span style="color:#dc2626;">الرجاء ملء جميع الحقول</span>';
-                return;
-            }
-            
-            if (newPass !== confirmPass) {
-                msgDiv.innerHTML = '<span style="color:#dc2626;">❌ كلمة السر غير متطابقة</span>';
-                return;
-            }
-            
-            if (newPass.length < 6) {
-                msgDiv.innerHTML = '<span style="color:#dc2626;">❌ كلمة السر الجديدة يجب أن تكون 6 أحرف على الأقل</span>';
-                return;
-            }
-            
-            msgDiv.innerHTML = '<span style="color:#166534;">جاري التحقق...</span>';
-            
-            try {
-                // إعادة المصادقة بكلمة السر القديمة
-                const credential = firebase.auth.EmailAuthProvider.credential(user.email, oldPass);
-                await user.reauthenticateWithCredential(credential);
-                // تغيير كلمة السر
-                await user.updatePassword(newPass);
-                msgDiv.innerHTML = '<span style="color:#166534;">✅ تم تغيير كلمة السر بنجاح</span>';
-                document.getElementById('oldPassword').value = '';
-                document.getElementById('newPassword').value = '';
-                document.getElementById('confirmPassword').value = '';
-                setTimeout(() => { msgDiv.innerHTML = ''; }, 3000);
-            } catch (err) {
-                if (err.code === 'auth/wrong-password') {
-                    msgDiv.innerHTML = '<span style="color:#dc2626;">❌ كلمة السر القديمة خاطئة</span>';
-                } else {
-                    msgDiv.innerHTML = '<span style="color:#dc2626;">❌ حدث خطأ: ' + err.message + '</span>';
-                }
-            }
-        };
     }
     
     // ====================== تسجيل الدخول والخروج ======================
