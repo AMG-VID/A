@@ -337,6 +337,7 @@
         }
     }
 
+    // ========== دالة الطباعة المحسنة مع مربع لاسم المتجر ==========
     function printLastReceipt() {
         if (!lastReceiptData) return;
         const { cartItems, total, method, customerId, change, debtAdded } = lastReceiptData;
@@ -346,20 +347,101 @@
         let win = window.open('', '_blank');
         win.document.write(`
             <html dir="rtl">
-            <head><style>body { font-family: 'Tajawal', sans-serif; padding: 20px; } table { width: 100%; border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; padding: 8px; text-align: center; } h2, h3 { text-align: center; } @media print { .no-print { display: none; } }</style></head>
+            <head><style>
+                body {
+                    font-family: 'Tajawal', sans-serif;
+                    padding: 15px;
+                    margin: 0;
+                    background: white;
+                    direction: rtl;
+                }
+                .store-box {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    padding: 10px;
+                    border: 2px solid #4c1d95;
+                    border-radius: 12px;
+                    background: #f8f4ff;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                }
+                .store-name {
+                    font-size: 22px;
+                    font-weight: bold;
+                    color: #4c1d95;
+                    margin: 0;
+                }
+                h3 {
+                    text-align: center;
+                    color: #333;
+                    margin: 10px 0;
+                }
+                .details {
+                    margin: 12px 0;
+                    font-size: 14px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 15px 0;
+                }
+                th, td {
+                    border-bottom: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: center;
+                    font-size: 14px;
+                }
+                th {
+                    background: #f2f2f2;
+                    font-weight: bold;
+                }
+                .total-row {
+                    font-weight: bold;
+                    font-size: 16px;
+                    margin-top: 10px;
+                    text-align: center;
+                }
+                .method {
+                    margin-top: 8px;
+                    font-size: 14px;
+                }
+                .debt-msg {
+                    color: #dc2626;
+                    margin-top: 8px;
+                    font-size: 13px;
+                }
+                .no-print {
+                    display: none;
+                }
+                @media print {
+                    body {
+                        padding: 0;
+                        margin: 0;
+                    }
+                    .no-print {
+                        display: none;
+                    }
+                }
+            </style></head>
             <body>
-                <h2>${escapeHtml(storeName)}</h2>
+                <div class="store-box">
+                    <div class="store-name">🏪 ${escapeHtml(storeName)}</div>
+                </div>
                 <h3>فاتورة البيع</h3>
-                <p>العميل: ${customerName}</p>
-                <p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
-                <table border="1" width="100%"><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
-                <tbody>${cartItems.map(i => `<tr><td>${escapeHtml(i.name)}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody>
+                <div class="details">
+                    <div>العميل: ${customerName}</div>
+                    <div>التاريخ: ${new Date().toLocaleString('ar-EG')}</div>
+                </div>
+                <table>
+                    <thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
+                    <tbody>${cartItems.map(i => `<tr><td>${escapeHtml(i.name)}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody>
                 </table>
-                <h3>الإجمالي: ${total.toFixed(2)} ج.م</h3>
-                <p>طريقة الدفع: ${method}</p>
-                ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
-                ${debtMsg}
-                <div class="no-print" style="text-align:center; margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div>
+                <div class="total-row">الإجمالي: ${total.toFixed(2)} ج.م</div>
+                <div class="method">طريقة الدفع: ${method}</div>
+                ${method !== 'credit' ? `<div class="method">المدفوع: ${(total+change).toFixed(2)} ج.م | الباقي: ${change.toFixed(2)} ج.م</div>` : ''}
+                ${debtMsg ? `<div class="debt-msg">${debtMsg}</div>` : ''}
+                <div class="no-print" style="text-align:center; margin-top:20px;">
+                    <button onclick="window.print()">🖨️ طباعة</button>
+                </div>
             </body></html>
         `);
         win.document.close();
@@ -367,6 +449,7 @@
         win.print();
     }
 
+    // باقي دوال النظام (بدون تغيير) ...
     async function renderProductsTab(container) {
         await loadStoreData();
         container.innerHTML = `
@@ -605,6 +688,7 @@
         container.innerHTML = html;
     }
 
+    // ========== دالة طباعة الفاتورة المحسنة (للفواتير المسجلة) ==========
     window.printInvoice = async (saleId) => {
         const sale = allSalesCache.find(s => s.id === saleId);
         if (!sale) return;
@@ -615,19 +699,95 @@
         let win = window.open('', '_blank');
         win.document.write(`
             <html dir="rtl">
-            <head><style>body { font-family: 'Tajawal', sans-serif; padding: 20px; } table { width: 100%; border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; padding: 8px; text-align: center; } h2, h3 { text-align: center; } @media print { .no-print { display: none; } }</style></head>
+            <head><style>
+                body {
+                    font-family: 'Tajawal', sans-serif;
+                    padding: 15px;
+                    margin: 0;
+                    background: white;
+                    direction: rtl;
+                }
+                .store-box {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    padding: 10px;
+                    border: 2px solid #4c1d95;
+                    border-radius: 12px;
+                    background: #f8f4ff;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                }
+                .store-name {
+                    font-size: 22px;
+                    font-weight: bold;
+                    color: #4c1d95;
+                    margin: 0;
+                }
+                h3 {
+                    text-align: center;
+                    color: #333;
+                    margin: 10px 0;
+                }
+                .details {
+                    margin: 12px 0;
+                    font-size: 14px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 15px 0;
+                }
+                th, td {
+                    border-bottom: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: center;
+                    font-size: 14px;
+                }
+                th {
+                    background: #f2f2f2;
+                    font-weight: bold;
+                }
+                .total-row {
+                    font-weight: bold;
+                    font-size: 16px;
+                    margin-top: 10px;
+                    text-align: center;
+                }
+                .method {
+                    margin-top: 8px;
+                    font-size: 14px;
+                }
+                .no-print {
+                    display: none;
+                }
+                @media print {
+                    body {
+                        padding: 0;
+                        margin: 0;
+                    }
+                    .no-print {
+                        display: none;
+                    }
+                }
+            </style></head>
             <body>
-                <h2>${escapeHtml(storeName)}</h2>
+                <div class="store-box">
+                    <div class="store-name">🏪 ${escapeHtml(storeName)}</div>
+                </div>
                 <h3>فاتورة البيع</h3>
-                <p>العميل: ${customerName}</p>
-                <p>التاريخ: ${formatDate(date)}</p>
-                <table border="1" width="100%"><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
-                <tbody><tr><td>${escapeHtml(productName)}</td><td>${quantity}</td><td>${unitPrice}</td><td>${total.toFixed(2)}</td></tr></tbody>
+                <div class="details">
+                    <div>العميل: ${customerName}</div>
+                    <div>التاريخ: ${formatDate(date)}</div>
+                </div>
+                <table>
+                    <thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
+                    <tbody><tr><td>${escapeHtml(productName)}</td><td>${quantity}</td><td>${unitPrice}</td><td>${total.toFixed(2)}</td></tr></tbody>
                 </table>
-                <h3>الإجمالي: ${total.toFixed(2)} ج.م</h3>
-                <p>طريقة الدفع: ${paymentMethod}</p>
-                ${paymentMethod !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
-                <div class="no-print" style="text-align:center; margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div>
+                <div class="total-row">الإجمالي: ${total.toFixed(2)} ج.م</div>
+                <div class="method">طريقة الدفع: ${paymentMethod}</div>
+                ${paymentMethod !== 'credit' ? `<div class="method">المدفوع: ${(total+change).toFixed(2)} ج.م | الباقي: ${change.toFixed(2)} ج.م</div>` : ''}
+                <div class="no-print" style="text-align:center; margin-top:20px;">
+                    <button onclick="window.print()">🖨️ طباعة</button>
+                </div>
             </body></html>
         `);
         win.document.close();
