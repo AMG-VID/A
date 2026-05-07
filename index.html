@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>مـحـلاتـي</title>
-    <link rel="icon" type="image/jpeg" href="Icon.png">
+    <link rel="icon" type="image/jpeg" href="Icon.jpg">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -77,12 +77,10 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Enable offline persistence
     db.enablePersistence({ synchronizeTabs: true })
         .then(() => console.log("تم تمكين التخزين المحلي"))
         .catch(err => console.error("فشل تمكين persistence", err));
 
-    // Global variables
     let currentUserAuth = null, userData = null, currentStoreId = null, currentRole = null, isAdminGlobal = false;
     let allProducts = [], allCustomers = [], allSuppliers = [], allSalesCache = [];
     let lastReceiptData = null;
@@ -103,7 +101,6 @@
     function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
     function formatDate(timestamp) { return timestamp?.toDate().toLocaleString('ar-EG') || 'غير محدد'; }
 
-    // Sub‑collections per store (multi‑tenant)
     function getStoreRef() { return db.collection('stores').doc(currentStoreId); }
     function getProductsCol() { return getStoreRef().collection('products'); }
     function getCustomersCol() { return getStoreRef().collection('customers'); }
@@ -164,7 +161,6 @@
         return allSalesCache;
     }
 
-    // ---------- Build tabs (added Invoices tab) ----------
     function buildTabs() {
         const tabsContainer = document.getElementById('navTabs');
         let tabs = isAdminGlobal ? [{ id: 'adminPanel', name: '📊 لوحة التحكم' }] : [
@@ -197,7 +193,6 @@
         else if (tabId === 'other') await renderOtherTab(container);
     }
 
-    // ---------- Point of Sale (POS) ----------
     let cart = [];
     async function renderPosTab(container) {
         cart = [];
@@ -336,7 +331,6 @@
             if (select) select.innerHTML = allProducts.map(p => `<option value="${p.id}" data-price="${p.priceRetail||p.price}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('');
             cart = [];
             renderCart();
-            // Refresh caches
             await ensureSalesCache();
         } catch (err) {
             showFlash('posFlash', err.message, true);
@@ -348,23 +342,31 @@
         const { cartItems, total, method, customerId, change, debtAdded } = lastReceiptData;
         let customerName = customerId ? (allCustomers.find(c => c.id === customerId)?.name || 'عميل') : 'نقدي';
         let debtMsg = debtAdded > 0 ? `<p>تم إضافة مبلغ ${debtAdded} ج.م كدين على العميل</p>` : '';
+        let storeName = userData?.storeName || 'متجر';
         let win = window.open('', '_blank');
         win.document.write(`
             <html dir="rtl">
             <head><style>body { font-family: 'Tajawal', sans-serif; padding: 20px; } table { width: 100%; border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; padding: 8px; text-align: center; } h2, h3 { text-align: center; } @media print { .no-print { display: none; } }</style></head>
-            <body><h2>فاتورة البيع</h2><p>العميل: ${customerName}</p><p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
-            <table border="1" width="100%"><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
-            <tbody>${cartItems.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody>
-            </table>
-            <h3>الإجمالي: ${total.toFixed(2)} ج.م</h3><p>طريقة الدفع: ${method}</p>${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}${debtMsg}
-            <div class="no-print" style="text-align:center; margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div></body></html>
+            <body>
+                <h2>${escapeHtml(storeName)}</h2>
+                <h3>فاتورة البيع</h3>
+                <p>العميل: ${customerName}</p>
+                <p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
+                <table border="1" width="100%"><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
+                <tbody>${cartItems.map(i => `<tr><td>${escapeHtml(i.name)}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody>
+                </table>
+                <h3>الإجمالي: ${total.toFixed(2)} ج.م</h3>
+                <p>طريقة الدفع: ${method}</p>
+                ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
+                ${debtMsg}
+                <div class="no-print" style="text-align:center; margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div>
+            </body></html>
         `);
         win.document.close();
         win.focus();
         win.print();
     }
 
-    // ---------- Products ----------
     async function renderProductsTab(container) {
         await loadStoreData();
         container.innerHTML = `
@@ -413,7 +415,6 @@
         renderProductsTab(document.getElementById('tabContent'));
     };
 
-    // ---------- Customers ----------
     async function renderCustomersTab(container) {
         await loadStoreData();
         container.innerHTML = `<h3>👤 إضافة عميل جديد</h3><div class="pos-row"><input id="custName" placeholder="الاسم"><input id="custPhone" placeholder="الهاتف"><button onclick="addCustomer()">إضافة</button></div><h3>📋 قائمة العملاء</h3><div id="customersListDiv"></div>`;
@@ -443,7 +444,6 @@
         renderCustomersTab(document.getElementById('tabContent'));
     };
 
-    // ---------- Suppliers with nested products ----------
     async function renderSuppliersTab(container) {
         await loadStoreData();
         container.innerHTML = `<h3>🏭 إدارة الموردين</h3><div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="رقم الهاتف"><button onclick="addSupplier()">إضافة مورد</button></div><div id="suppliersList"></div>`;
@@ -496,7 +496,6 @@
     };
     window.deleteSupplier = async (id) => { if (confirm('حذف المورد؟')) { await getSuppliersCol().doc(id).delete(); renderSuppliersTab(document.getElementById('tabContent')); } };
 
-    // ---------- Sales Log ----------
     let salesFilter = 'all';
     let selectedDate = '';
     async function renderSalesLogTab(container) {
@@ -569,7 +568,6 @@
     window.setCustomDate = (date) => { selectedDate = date; filterAndDisplaySales(); };
     window.loadSalesLog = async () => { await ensureSalesCache(); filterAndDisplaySales(); calculateTopProductsWeek(); };
 
-    // ---------- Invoices Tab (Today's invoices with return & print) ----------
     async function renderInvoicesTab(container) {
         await ensureSalesCache();
         const now = new Date();
@@ -607,31 +605,36 @@
         container.innerHTML = html;
     }
 
-    // Print a specific invoice
     window.printInvoice = async (saleId) => {
         const sale = allSalesCache.find(s => s.id === saleId);
         if (!sale) return;
         const { productName, quantity, unitPrice, total, paymentMethod, customerId, changeAmount, date } = sale;
         let customerName = customerId ? (allCustomers.find(c => c.id === customerId)?.name || 'عميل') : 'نقدي';
         let change = changeAmount || 0;
+        let storeName = userData?.storeName || 'متجر';
         let win = window.open('', '_blank');
         win.document.write(`
             <html dir="rtl">
             <head><style>body { font-family: 'Tajawal', sans-serif; padding: 20px; } table { width: 100%; border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; padding: 8px; text-align: center; } h2, h3 { text-align: center; } @media print { .no-print { display: none; } }</style></head>
-            <body><h2>فاتورة البيع</h2><p>العميل: ${customerName}</p><p>التاريخ: ${formatDate(date)}</p>
-            <table border="1" width="100%"><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
-            <tbody><tr><td>${escapeHtml(productName)}</td><td>${quantity}</td><td>${unitPrice}</td><td>${total.toFixed(2)}</td></tr></tbody>
-            </table>
-            <h3>الإجمالي: ${total.toFixed(2)} ج.م</h3><p>طريقة الدفع: ${paymentMethod}</p>
-            ${paymentMethod !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
-            <div class="no-print" style="text-align:center; margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div></body></html>
+            <body>
+                <h2>${escapeHtml(storeName)}</h2>
+                <h3>فاتورة البيع</h3>
+                <p>العميل: ${customerName}</p>
+                <p>التاريخ: ${formatDate(date)}</p>
+                <table border="1" width="100%"><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
+                <tbody><tr><td>${escapeHtml(productName)}</td><td>${quantity}</td><td>${unitPrice}</td><td>${total.toFixed(2)}</td></tr></tbody>
+                </table>
+                <h3>الإجمالي: ${total.toFixed(2)} ج.م</h3>
+                <p>طريقة الدفع: ${paymentMethod}</p>
+                ${paymentMethod !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}
+                <div class="no-print" style="text-align:center; margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div>
+            </body></html>
         `);
         win.document.close();
         win.focus();
         win.print();
     };
 
-    // Cancel sale (used both from sales log and invoices)
     window.cancelSale = async (saleId, fromInvoices = false) => {
         if (!confirm('إلغاء هذه العملية؟ سيتم إعادة الكمية للمخزون.')) return;
         try {
@@ -645,7 +648,6 @@
             if (productDoc.exists) batch.update(productRef, { qty: (productDoc.data().qty || 0) + sale.quantity });
             batch.update(saleRef, { cancelled: true });
             await batch.commit();
-            // Update local cache
             const index = allSalesCache.findIndex(s => s.id === saleId);
             if (index !== -1) allSalesCache[index].cancelled = true;
             if (fromInvoices) {
@@ -660,7 +662,6 @@
         }
     };
 
-    // ---------- Other Tab (all sub‑tabs, including invoices) ----------
     let otherSubTab = 'inventory';
     async function renderOtherTab(container) {
         container.innerHTML = `
@@ -798,7 +799,6 @@
         }
     };
 
-    // ---------- Authentication ----------
     async function handleSignedInUser(user) {
         try {
             const userInfo = await ensureUserDocument(user.uid, user.email);
