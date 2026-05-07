@@ -76,10 +76,10 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // ========================== تمكين التخزين المحلي (Persistence) ==========================
+    // تمكين التخزين المحلي للقراءة فقط
     db.enablePersistence({ synchronizeTabs: true })
-        .then(() => console.log("تم تمكين التخزين المحلي وتعدد الألسنة"))
-        .catch((err) => console.error("فشل تمكين persistence", err));
+        .then(() => console.log("تم تمكين التخزين المحلي"))
+        .catch(err => console.error("فشل تمكين persistence", err));
 
     // ========================== المتغيرات العامة ==========================
     let currentUserAuth = null, userData = null, currentStoreId = null, currentRole = null, isAdminGlobal = false;
@@ -303,8 +303,8 @@
             <html dir="rtl"><head><style>body{font-family:Tajawal; padding:20px;} table{width:100%;border-collapse:collapse;} th,td{border-bottom:1px solid #ccc;padding:8px;text-align:center;} h2,h3{text-align:center;} @media print{button{display:none;}}</style></head>
             <body><h2>فاتورة البيع</h2><p>العميل: ${customerName}</p><p>التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
             <table border="1" width="100%"><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
-            <tbody>${cartItems.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody>
-            </table>
+            <tbody>${cartItems.map(i => `<tr><td>${i.name}</td><td>${i.qty}践<td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody>
+            <table>
             <h3>الإجمالي: ${total.toFixed(2)} ج.م</h3><p>طريقة الدفع: ${method}</p>
             ${method !== 'credit' ? `<p>المدفوع: ${(total+change).toFixed(2)} | الباقي: ${change.toFixed(2)}</p>` : ''}${debtMsg}
             <button onclick="window.print()">🖨️ طباعة</button></body></html>
@@ -594,7 +594,6 @@
         }
     }
 
-    // دالة جديدة لعرض مبيعات اليوم والأمس مع إجمالي المبيعات والأرباح
     async function renderDaySalesWithStats(container, dayType) {
         await ensureSalesCache();
         const now = new Date();
@@ -613,13 +612,11 @@
             dayName = dayNames[yesterdayDate.getDay()];
             container.innerHTML = `<h3>📆 مبيعات الأمس (${dayName})</h3><div id="daySalesList"></div><div id="dayStats"></div>`;
         }
-
         const filtered = allSalesCache.filter(s => {
             if (!s.date || s.cancelled === true) return false;
             const saleDate = s.date.toDate();
             return saleDate >= start && saleDate < end;
         });
-
         const listDiv = document.getElementById('daySalesList');
         if (filtered.length === 0) {
             listDiv.innerHTML = '<p>لا توجد مبيعات</p>';
@@ -631,7 +628,6 @@
         let totalProfit = 0;
         for (const sale of filtered) {
             totalSales += sale.total;
-            // حساب الربح: سعر البيع - (سعر الشراء * الكمية)
             const product = allProducts.find(p => p.id === sale.productId);
             const cost = product?.cost || 0;
             totalProfit += sale.total - (cost * sale.quantity);
@@ -699,7 +695,27 @@
         }
     };
 
-    // ====================== تسجيل الدخول والخروج ======================
+    // ====================== تسجيل الدخول والخروج مع استمرار الجلسة ======================
+    async function handleSignedInUser(user) {
+        try {
+            const userInfo = await ensureUserDocument(user.uid, user.email);
+            currentUserAuth = user;
+            userData = userInfo;
+            currentStoreId = userInfo.storeId;
+            currentRole = userInfo.role;
+            isAdminGlobal = (currentRole === 'admin');
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('storeTitle').innerHTML = `<i class="fas fa-store"></i> ${userInfo.storeName || 'المحل'}`;
+            if (!isAdminGlobal) await loadStoreData();
+            buildTabs();
+        } catch (err) {
+            console.error("فشل تحميل بيانات المستخدم:", err);
+            await auth.signOut();
+            location.reload();
+        }
+    }
+
     async function loginUser() {
         const id = document.getElementById('loginId').value.trim();
         const pwd = document.getElementById('loginPassword').value;
@@ -707,19 +723,27 @@
         const email = id + "@bkalla.com";
         try {
             const cred = await auth.signInWithEmailAndPassword(email, pwd);
-            const userInfo = await ensureUserDocument(cred.user.uid, cred.user.email);
-            currentUserAuth = cred.user; userData = userInfo; currentStoreId = userInfo.storeId; currentRole = userInfo.role; isAdminGlobal = (currentRole === 'admin');
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('storeTitle').innerHTML = `<i class="fas fa-store"></i> ${userInfo.storeName || 'المحل'}`;
-            if (!isAdminGlobal) await loadStoreData();
-            buildTabs();
+            await handleSignedInUser(cred.user);
         } catch (e) {
             document.getElementById('loginError').innerText = 'فشل الدخول: تحقق من ID وكلمة المرور';
         }
     }
-    window.logoutUser = async () => { await auth.signOut(); location.reload(); };
-    auth.onAuthStateChanged(u => { if (!u) { document.getElementById('loginScreen').style.display = 'flex'; document.getElementById('dashboard').style.display = 'none'; } });
+
+    window.logoutUser = async () => {
+        await auth.signOut();
+        location.reload();
+    };
+
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            // مستخدم مسجل الدخول بالفعل
+            await handleSignedInUser(user);
+        } else {
+            // لا يوجد مستخدم: عرض شاشة الدخول
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+    });
 </script>
 </body>
 </html>
