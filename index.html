@@ -82,8 +82,9 @@
         .sub-tab.active { background: #4f46e5; color: white; }
         .status-bar { position: fixed; top: 0; left: 0; right: 0; text-align: center; padding: 5px; font-size: 12px; z-index: 1000; background: #f1f5f9; }
         .theme-toggle { background: transparent; width: auto; padding: 5px 10px; margin-left: 10px; color: var(--text-primary); }
-        /* تحسين الأداء: منع إعادة الرسم غير الضرورية */
-        .card, button, input { will-change: transform; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .data-table th, .data-table td { border: 1px solid var(--input-border); padding: 8px; text-align: center; }
+        .data-table th { background: var(--stat-card-bg); }
     </style>
 </head>
 <body>
@@ -128,8 +129,6 @@ if (localStorage.getItem('theme') === 'dark') {
     document.body.classList.add('dark');
     if(document.getElementById('themeToggleBtn')) document.getElementById('themeToggleBtn').innerHTML = '<i class="fas fa-sun"></i> فاتح';
 }
-
-// PWA manifest & service worker
 (function setupPWA() {
     const manifestObj = {
         "name": "فاتورة موسي",
@@ -145,8 +144,7 @@ if (localStorage.getItem('theme') === 'dark') {
     let manifestLink = document.querySelector('link[rel="manifest"]');
     if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
     manifestLink.href = manifestURL;
-    
-    const swCode = `const CACHE_NAME='fatora-v4';const urlsToCache=['./','./index.html','Icon.png','https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap','https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css','https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js','https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js'];self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(urlsToCache))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>{if(k!==CACHE_NAME)return caches.delete(k)})))));`;
+    const swCode = `const CACHE_NAME='fatora-v6';const urlsToCache=['./','./index.html','Icon.png','https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap','https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css','https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js','https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js'];self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(urlsToCache))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>{if(k!==CACHE_NAME)return caches.delete(k)})))));`;
     const swBlob = new Blob([swCode], {type:'application/javascript'});
     const swURL = URL.createObjectURL(swBlob);
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register(swURL).catch(e=>console.warn(e)); }
@@ -156,7 +154,7 @@ let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const btn = document.getElementById('installPwaBtn'); if(btn) btn.style.display = 'inline-block'; });
 function installPwa() { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>{ deferredPrompt=null; const btn=document.getElementById('installPwaBtn'); if(btn) btn.style.display='none'; }); } else alert('المتصفح لا يدعم التثبيت التلقائي'); }
 
-// ======================= Firebase + Offline أولاً (سريع جداً) =======================
+// ======================= Firebase + Offline =======================
 const firebaseConfig = {
     apiKey: "AIzaSyCYh6oC5nM2DZHgdOquHuo1so1DiQ7Gbs0",
     authDomain: "bakkala-system.firebaseapp.com",
@@ -170,12 +168,11 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 db.enablePersistence({ synchronizeTabs: true }).catch(e=>console.warn(e));
 
-// IndexedDB for ultra-fast offline cache
 let idbReady = false;
 let dbCache;
 const openDB = async () => {
     if (!window.idb) return;
-    dbCache = await idb.openDB('FatoraMousaOffline', 2, {
+    dbCache = await idb.openDB('FatoraMousaOffline', 4, {
         upgrade(db) {
             if (!db.objectStoreNames.contains('pending')) db.createObjectStore('pending', { autoIncrement: true });
             if (!db.objectStoreNames.contains('cache')) db.createObjectStore('cache', { keyPath: 'key' });
@@ -192,49 +189,45 @@ async function getPendingOps() { if (idbReady && dbCache) return await dbCache.g
 async function clearPendingOps() { if (idbReady && dbCache) await dbCache.clear('pending'); }
 
 let currentUserAuth=null, userData=null, currentStoreId=null, currentRole=null, isAdminGlobal=false;
-let allProducts=[], allCustomers=[], allSuppliers=[], allInvoicesCache=[];
+let allProducts=[], allCustomers=[], allSuppliers=[], allInvoicesCache=[], allMissingProducts=[];
 let lastReceiptData=null;
 let isSyncing = false;
 
-// تحميل فوري من الكاش أولاً ثم مزامنة خلفية
 async function loadFromCacheThenSync() {
     const cachedProds = await getCachedData('products');
-    if (cachedProds) { allProducts = cachedProds; renderProductsListIfNeeded(); }
+    if (cachedProds) allProducts = cachedProds;
     const cachedCust = await getCachedData('customers');
     if (cachedCust) allCustomers = cachedCust;
     const cachedSupp = await getCachedData('suppliers');
     if (cachedSupp) allSuppliers = cachedSupp;
     const cachedInvoices = await getCachedData('invoices');
-    if (cachedInvoices) { allInvoicesCache = cachedInvoices; renderInvoicesLogIfNeeded(); }
+    if (cachedInvoices) allInvoicesCache = cachedInvoices;
+    const cachedMissing = await getCachedData('missingProducts');
+    if (cachedMissing) allMissingProducts = cachedMissing;
 }
 loadFromCacheThenSync();
 
 async function refreshFromFirestore() {
     if (!currentStoreId || isAdminGlobal) return;
     try {
-        const [prodSnap, custSnap, suppSnap, invSnap] = await Promise.all([
-            getProductsCol().get(), getCustomersCol().get(), getSuppliersCol().get(), getInvoicesCol().get()
+        const [prodSnap, custSnap, suppSnap, invSnap, missingSnap] = await Promise.all([
+            getProductsCol().get(), getCustomersCol().get(), getSuppliersCol().get(),
+            getInvoicesCol().get(), getMissingProductsCol().get()
         ]);
         allProducts = prodSnap.docs.map(d=>({id:d.id,...d.data()}));
         allCustomers = custSnap.docs.map(d=>({id:d.id,...d.data()}));
         allSuppliers = suppSnap.docs.map(d=>({id:d.id,...d.data()}));
         allInvoicesCache = invSnap.docs.map(d=>({id:d.id,...d.data()}));
+        allMissingProducts = missingSnap.docs.map(d=>({id:d.id,...d.data()}));
         await Promise.all([
             cacheData('products', allProducts), cacheData('customers', allCustomers),
-            cacheData('suppliers', allSuppliers), cacheData('invoices', allInvoicesCache)
+            cacheData('suppliers', allSuppliers), cacheData('invoices', allInvoicesCache),
+            cacheData('missingProducts', allMissingProducts)
         ]);
-        renderProductsListIfNeeded();
+        if (document.getElementById('productsListArea')) renderProductsList();
         if (document.getElementById('salesLogList')) filterAndDisplayInvoices();
-        if (document.getElementById('otherContent')) loadOtherSubContent(); // تحديث المخزون وغيرها
+        if (document.getElementById('otherContent')) loadOtherSubContent();
     } catch(e) { console.warn('sync error', e); }
-}
-
-function renderProductsListIfNeeded() {
-    const area = document.getElementById('productsListArea');
-    if (area) renderProductsList();
-}
-function renderInvoicesLogIfNeeded() {
-    if (document.getElementById('salesLogList')) filterAndDisplayInvoices();
 }
 
 function showFlash(id,txt,err=false){
@@ -258,6 +251,7 @@ function getCustomersCol(){ return getStoreRef().collection('customers'); }
 function getSuppliersCol(){ return getStoreRef().collection('suppliers'); }
 function getInvoicesCol(){ return getStoreRef().collection('invoices'); }
 function getCountersCol(){ return getStoreRef().collection('counters'); }
+function getMissingProductsCol(){ return getStoreRef().collection('missingProducts'); }
 
 async function ensureStoreDocument(sid,sname){
     const ref=db.collection('stores').doc(sid);
@@ -282,7 +276,6 @@ async function ensureUserDocument(uid,email){
     return newUser;
 }
 
-// رقم فاتورة يومي متسلسل
 async function getNextInvoiceNumber() {
     const today = new Date();
     today.setHours(0,0,0,0);
@@ -301,11 +294,10 @@ async function getNextInvoiceNumber() {
 
 async function loadStoreData(){
     if(isAdminGlobal||!currentStoreId) return;
-    await refreshFromFirestore(); // سحب أحدث البيانات في الخلفية لكننا نعرض الكاش أولاً
+    await refreshFromFirestore();
 }
 async function ensureInvoicesCache(){ return allInvoicesCache; }
 
-// مزامنة العمليات المعلقة (خلفية)
 async function syncPendingOps() {
     if (!navigator.onLine || isSyncing) return;
     isSyncing = true;
@@ -340,12 +332,17 @@ async function syncPendingOps() {
                     const custDoc = await custRef.get();
                     await custRef.update({ debt: Math.max(0, (custDoc.data().debt || 0) - op.debtRemoved) });
                 }
+            } else if (op.type === 'addMissingProduct') {
+                await getMissingProductsCol().add(op.data);
+            } else if (op.type === 'deleteMissingProduct') {
+                await getMissingProductsCol().doc(op.missingId).delete();
             }
         } catch(e) { console.warn('sync failed', e); }
     }
     await clearPendingOps();
     await refreshFromFirestore();
     if (document.getElementById('salesLogList')) filterAndDisplayInvoices();
+    if (document.getElementById('otherContent')) loadOtherSubContent();
     showFlash('tabContent', '✅ تمت المزامنة مع السحابة', false);
     isSyncing = false;
 }
@@ -380,7 +377,7 @@ async function switchTab(tabId){
     if(ab) ab.classList.add('active');
     const cont=document.getElementById('tabContent');
     if(isAdminGlobal){ cont.innerHTML='<div class="flash">لوحة المشرف قيد التطوير</div>'; return; }
-    await loadStoreData(); // يحدث الكاش في الخلفية
+    await loadStoreData();
     if(tabId==='pos') await renderPosTab(cont);
     else if(tabId==='products') await renderProductsTab(cont);
     else if(tabId==='customers') await renderCustomersTab(cont);
@@ -390,7 +387,7 @@ async function switchTab(tabId){
     else if(tabId==='other') await renderOtherTab(cont);
 }
 
-// ======================= نقطة البيع (سريعة مع كاش) =======================
+// ======================= نقطة البيع =======================
 let cart=[];
 async function renderPosTab(container){
     cart=[]; lastReceiptData=null;
@@ -535,18 +532,14 @@ function printLastReceipt(){
     win.document.write(`<!DOCTYPE html><html dir="rtl"><head><style>body{font-family:'Tajawal',sans-serif;padding:15px;margin:0;background:white;direction:rtl;}.store-box{text-align:center;margin-bottom:20px;padding:10px;border:2px solid #4c1d95;border-radius:12px;background:#f8f4ff;box-shadow:0 2px 5px rgba(0,0,0,0.1);}.store-name{font-size:22px;font-weight:bold;color:#4c1d95;margin:0;}h3{text-align:center;color:#333;margin:10px 0;}.details{margin:12px 0;font-size:14px;}table{width:100%;border-collapse:collapse;margin:15px 0;}th,td{border-bottom:1px solid #ddd;padding:8px;text-align:center;font-size:14px;}th{background:#f2f2f2;font-weight:bold;}.total-row{font-weight:bold;font-size:16px;margin-top:10px;text-align:center;}.method{margin-top:8px;font-size:14px;}.debt-msg{color:#dc2626;margin-top:8px;font-size:13px;}.no-print{display:none;}@media print{body{padding:0;margin:0;}.no-print{display:none;}}</style></head><body>
     <div class="store-box"><div class="store-name">🏪 ${escapeHtml(storeName)}</div></div>
     <h3>فاتورة البيع</h3><div class="details"><div>رقم الفاتورة: ${invoiceNumber} - ${dayName}</div><div>العميل: ${custName}</div><div>التاريخ: ${new Date().toLocaleString('ar-EG')}</div></div>
-    <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${cartItems.map(i=>`<tr><td>${escapeHtml(i.name)}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody></table>
+    <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></td></thead><tbody>${cartItems.map(i=>`<tr><td>${escapeHtml(i.name)}</td><td>${i.qty}践<td>${i.price}践<td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody></table>
     <div class="total-row">الإجمالي: ${total.toFixed(2)} ج.م</div><div class="method">طريقة الدفع: ${paymentMethodArabic}</div>
     ${method!=='credit'?`<div class="method">المدفوع: ${(total+change).toFixed(2)} ج.م | الباقي: ${change.toFixed(2)} ج.م</div>`:''}${debtMsg}
     <div class="no-print" style="text-align:center;margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div></body></html>`);
     win.document.close(); win.focus(); win.print();
 }
 
-// باقي الدوال (المنتجات، العملاء، الموردين، الفواتير) مشابهة للنسخة السابقة مع تحسينات الأداء.
-// نظراً للطول تم اختصارها ولكنها موجودة في الكود الكامل الذي أرسلته سابقاً وهي تعمل بنفس الكفاءة.
-// سأضمنها كاملة في الرد النهائي (الكود الكامل مرفق في هذه الرسالة).
-
-// ======================= دوال المنتجات والعملاء والموردين (نفس السابق) =======================
+// ======================= المنتجات =======================
 async function renderProductsTab(container){
     await loadStoreData();
     container.innerHTML=`<h3>➕ إضافة منتج جديد</h3><div class="grid-2"><input id="prodName" placeholder="اسم المنتج*"> <input id="prodBarcode" placeholder="باركود"><input id="prodPriceRetail" type="number" placeholder="سعر القطاعي"> <input id="prodPriceWholesale" type="number" placeholder="سعر الجملة"><input id="prodCost" type="number" placeholder="سعر الشراء"> <select id="prodUnit"><option>قطعة</option><option>كيلو</option></select><input id="prodQty" type="number" placeholder="الكمية"> <input id="prodLowStock" type="number" placeholder="حد التنبيه"><input id="prodImage" placeholder="رابط الصورة"> <button onclick="addNewProduct()">إضافة منتج</button></div><h3>📋 قائمة المنتجات</h3><div id="productsListArea"></div>`;
@@ -579,7 +572,7 @@ window.addNewProduct=async()=>{
 window.deleteProduct=async(id)=>{ if(currentRole!=='owner'){ showFlash('productsListArea','غير مسموح، فقط المالك يمكنه الحذف',true); return; } if(confirm('حذف المنتج نهائياً؟')){ await getProductsCol().doc(id).delete(); refreshFromFirestore(); renderProductsTab(document.getElementById('tabContent')); } };
 window.editProduct=async(id)=>{ let newName=prompt('اسم جديد'); if(!newName) return; let newPrice=parseFloat(prompt('سعر قطاعي جديد')); let newQty=parseInt(prompt('كمية جديدة')); await getProductsCol().doc(id).update({name:newName, priceRetail:newPrice, qty:newQty}); refreshFromFirestore(); renderProductsTab(document.getElementById('tabContent')); };
 
-// العملاء والموردين (بنفس المنطق السابق، مع التخزين المحلي)
+// ======================= العملاء =======================
 async function renderCustomersTab(container){
     await loadStoreData();
     container.innerHTML=`<h3>👤 إضافة عميل جديد</h3><div class="pos-row"><input id="custName" placeholder="الاسم"><input id="custPhone" placeholder="الهاتف"><button onclick="addCustomer()">إضافة</button></div><h3>📋 قائمة العملاء</h3><div id="customersListDiv"></div>`;
@@ -591,7 +584,7 @@ window.editCustomer=async(id)=>{ let newName=prompt('اسم العميل الج�
 window.deleteCustomer=async(id)=>{ if(currentRole!=='owner'){ showFlash('customersListDiv','غير مسموح، فقط المالك يمكنه الحذف',true); return; } if(confirm('حذف العميل؟')){ await getCustomersCol().doc(id).delete(); refreshFromFirestore(); renderCustomersTab(document.getElementById('tabContent')); } };
 window.recordPayment=async(custId)=>{ let amt=parseFloat(prompt('المبلغ المسدد')); if(isNaN(amt)) return; const ref=getCustomersCol().doc(custId); const doc=await ref.get(); let newDebt=(doc.data().debt||0)-amt; await ref.update({debt:newDebt<0?0:newDebt}); refreshFromFirestore(); renderCustomersTab(document.getElementById('tabContent')); };
 
-// الموردين (مختصر)
+// ======================= الموردين (منتجات بدون سعر، جدول منظم) =======================
 async function renderSuppliersTab(container){
     await loadStoreData();
     container.innerHTML=`<h3>🏭 إدارة الموردين</h3><div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="رقم الهاتف"><button onclick="addSupplier()">إضافة مورد</button></div><div id="suppliersList"></div>`;
@@ -602,14 +595,62 @@ async function renderSuppliersTab(container){
     }
     listDiv.innerHTML=html||'<p>لا يوجد موردون</p>';
 }
-window.showSupplierProducts=async(sid,sname)=>{ const cont=document.getElementById('tabContent'); const snap=await getSuppliersCol().doc(sid).collection('products').get(); let prods=snap.docs.map(d=>`<div class="card"><div class="card-info">${escapeHtml(d.data().name)} - سعر: ${d.data().price||0} ج.م</div><div><button class="btn-sm" onclick="deleteSupplierProduct('${sid}','${d.id}')">🗑️</button></div></div>`).join(''); if(snap.empty) prods='<p>لا توجد منتجات لهذا المورد</p>'; cont.innerHTML=`<h3>📦 منتجات المورد: ${sname}</h3><div class="pos-row"><input id="productName" placeholder="اسم المنتج"><input id="productPrice" type="number" placeholder="السعر"><button onclick="addSupplierProduct('${sid}')">➕ إضافة منتج</button></div><div id="supplierProductsList">${prods}</div><button class="btn-sm" onclick="renderSuppliersTab(document.getElementById('tabContent'))">🔙 رجوع</button>`; };
-window.addSupplierProduct=async(sid)=>{ let name=document.getElementById('productName').value.trim(); let price=parseFloat(document.getElementById('productPrice').value); if(!name||isNaN(price)) return showFlash('supplierProductsList','بيانات غير صحيحة',true); await getSuppliersCol().doc(sid).collection('products').add({name,price}); showFlash('supplierProductsList','تمت الإضافة'); window.showSupplierProducts(sid,''); };
-window.deleteSupplierProduct=async(sid,pid)=>{ if(!confirm('حذف المنتج؟')) return; await getSuppliersCol().doc(sid).collection('products').doc(pid).delete(); showFlash('supplierProductsList','تم الحذف'); window.showSupplierProducts(sid,''); };
+window.showSupplierProducts=async(sid,sname)=>{
+    const cont=document.getElementById('tabContent');
+    const snap=await getSuppliersCol().doc(sid).collection('products').get();
+    let products = snap.docs.map(d=>({id:d.id, name:d.data().name}));
+    cont.innerHTML=`
+        <h3>📦 منتجات المورد: ${escapeHtml(sname)}</h3>
+        <div style="margin-bottom:15px;">
+            <button class="btn-sm btn-secondary" onclick="showAddProductForm('${sid}')">➕ إضافة منتج</button>
+            <button class="btn-sm" onclick="renderSuppliersTab(document.getElementById('tabContent'))">🔙 رجوع إلى الموردين</button>
+        </div>
+        <div id="supplierProductAdd" style="display:none; margin-bottom:15px;">
+            <div class="pos-row"><input type="text" id="supplierProductName" placeholder="اسم المنتج"><button onclick="addSupplierProductItem('${sid}')">إضافة منتج</button></div>
+        </div>
+        <div id="supplierProductsList"></div>
+        <div style="margin-top:10px;"><button class="btn-sm" onclick="renderSuppliersTab(document.getElementById('tabContent'))">🔙 رجوع</button></div>
+    `;
+    renderSupplierProductsTable(sid, products);
+    window.showAddProductForm = (sid) => {
+        document.getElementById('supplierProductAdd').style.display = 'block';
+    };
+    window.addSupplierProductItem = async (sid) => {
+        let name = document.getElementById('supplierProductName').value.trim();
+        if(!name) return showFlash('supplierProductsList','الاسم مطلوب',true);
+        await getSuppliersCol().doc(sid).collection('products').add({ name });
+        showFlash('supplierProductsList','تمت إضافة المنتج');
+        window.showSupplierProducts(sid, sname);
+    };
+};
+async function renderSupplierProductsTable(sid, products){
+    const container = document.getElementById('supplierProductsList');
+    if(!container) return;
+    if(products.length === 0){
+        container.innerHTML = '<p>لا توجد منتجات لهذا المورد</p>';
+        return;
+    }
+    let html = `<table class="data-table"><thead><tr><th>اسم المنتج</th><th></th></tr></thead><tbody>`;
+    for(let p of products){
+        html += `<tr>
+            <td>${escapeHtml(p.name)}</td>
+            <td><button class="btn-sm btn-danger" onclick="deleteSupplierProduct('${sid}', '${p.id}')">🗑️</button></td>
+        </tr>`;
+    }
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+}
+window.deleteSupplierProduct=async(sid,pid)=>{
+    if(!confirm('حذف المنتج؟')) return;
+    await getSuppliersCol().doc(sid).collection('products').doc(pid).delete();
+    showFlash('supplierProductsList','تم الحذف');
+    window.showSupplierProducts(sid, '');
+};
 window.addSupplier=async()=>{ let name=document.getElementById('supName').value.trim(); if(!name) return; await getSuppliersCol().add({name, phone:document.getElementById('supPhone').value}); refreshFromFirestore(); renderSuppliersTab(document.getElementById('tabContent')); };
 window.editSupplier=async(id)=>{ let newName=prompt('اسم المورد الجديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف الجديد'); await getSuppliersCol().doc(id).update({name:newName, phone:newPhone}); refreshFromFirestore(); renderSuppliersTab(document.getElementById('tabContent')); };
 window.deleteSupplier=async(id)=>{ if(currentRole!=='owner'){ showFlash('suppliersList','غير مسموح، فقط المالك يمكنه الحذف',true); return; } if(confirm('حذف المورد؟')){ await getSuppliersCol().doc(id).delete(); refreshFromFirestore(); renderSuppliersTab(document.getElementById('tabContent')); } };
 
-// ======================= سجل المبيعات وعرض الفواتير =======================
+// ======================= سجل المبيعات و الفواتير =======================
 let invoicesFilter='all', invSelectedDate='';
 async function renderSalesLogTab(container){
     container.innerHTML=`<h3>📋 سجل المبيعات</h3><div class="pos-row"><button class="btn-sm ${invoicesFilter==='all'?'active':''}" onclick="setInvoicesFilter('all')">📋 الكل</button><button class="btn-sm ${invoicesFilter==='today'?'active':''}" onclick="setInvoicesFilter('today')">📅 اليوم</button><button class="btn-sm ${invoicesFilter==='yesterday'?'active':''}" onclick="setInvoicesFilter('yesterday')">📆 الأمس</button><button class="btn-sm ${invoicesFilter==='custom'?'active':''}" onclick="setInvoicesFilter('custom')">📅 تاريخ</button><input type="date" id="invCustomDatePicker" style="display:${invoicesFilter==='custom'?'inline-block':'none'}" onchange="setInvCustomDate(this.value)"><button class="btn-sm btn-secondary" onclick="loadInvoicesLog()">تحديث</button></div><div id="salesLogList">جاري التحميل...</div><hr><h3>🏆 أكثر 10 منتجات مبيعًا خلال الأسبوع</h3><div id="topProductsWeek">جاري التحميل...</div>`;
@@ -654,7 +695,6 @@ function calculateTopProductsWeekFromInvoices(){
 window.setInvoicesFilter=(f)=>{ invoicesFilter=f; const p=document.getElementById('invCustomDatePicker'); if(p) p.style.display=f==='custom'?'inline-block':'none'; if(f!=='custom') invSelectedDate=''; filterAndDisplayInvoices(); };
 window.setInvCustomDate=(d)=>{ invSelectedDate=d; filterAndDisplayInvoices(); };
 window.loadInvoicesLog=async()=>{ await ensureInvoicesCache(); filterAndDisplayInvoices(); calculateTopProductsWeekFromInvoices(); };
-
 window.cancelInvoice=async(invoiceId)=>{
     if(!confirm('إلغاء هذه الفاتورة؟ سيتم إعادة جميع الكميات للمخزون وخصم الدين إن وجد.')) return;
     try{
@@ -721,16 +761,30 @@ window.printInvoice=async(invoiceId)=>{
     let win=window.open('','_blank');
     win.document.write(`<!DOCTYPE html><html dir="rtl"><head><style>body{font-family:'Tajawal',sans-serif;padding:15px;margin:0;background:white;direction:rtl;}.store-box{text-align:center;margin-bottom:20px;padding:10px;border:2px solid #4c1d95;border-radius:12px;background:#f8f4ff;box-shadow:0 2px 5px rgba(0,0,0,0.1);}.store-name{font-size:22px;font-weight:bold;color:#4c1d95;margin:0;}h3{text-align:center;color:#333;margin:10px 0;}.details{margin:12px 0;font-size:14px;}table{width:100%;border-collapse:collapse;margin:15px 0;}th,td{border-bottom:1px solid #ddd;padding:8px;text-align:center;font-size:14px;}th{background:#f2f2f2;font-weight:bold;}.total-row{font-weight:bold;font-size:16px;margin-top:10px;text-align:center;}.method{margin-top:8px;font-size:14px;}.no-print{display:none;}@media print{body{padding:0;margin:0;}.no-print{display:none;}}</style></head><body>
     <div class="store-box"><div class="store-name">🏪 ${escapeHtml(storeName)}</div></div><h3>فاتورة البيع</h3><div class="details"><div>رقم الفاتورة: ${inv.invoiceNumber} - ${dayName}</div><div>العميل: ${custName}</div><div>التاريخ: ${formatDate(inv.date)}</div></div>
-    <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${inv.items.map(it=>`<tr><td>${escapeHtml(it.productName)}</td><td>${it.quantity}</td><td>${it.unitPrice}</td><td>${it.total.toFixed(2)}</td></tr>`).join('')}</tbody></table>
+    <table><thead><table><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${inv.items.map(it=>`<tr><td>${escapeHtml(it.productName)}</td><td>${it.quantity}</td><td>${it.unitPrice}</td><td>${it.total.toFixed(2)}</td></tr>`).join('')}</tbody></table>
     <div class="total-row">الإجمالي: ${inv.total.toFixed(2)} ج.م</div><div class="method">طريقة الدفع: ${getPaymentMethodArabic(inv.paymentMethod)}</div>${inv.paymentMethod!=='credit'?`<div class="method">المدفوع: ${(inv.total+(inv.changeAmount||0)).toFixed(2)} ج.م | الباقي: ${(inv.changeAmount||0).toFixed(2)} ج.م</div>`:''}
     <div class="no-print" style="text-align:center;margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div></body></html>`);
     win.document.close(); win.focus(); win.print();
 };
 
-// ======================= تبويب "أخرى" =======================
+// ======================= تبويب "أخرى" مع قسم المنتجات الناقصة =======================
 let otherSubTab='inventory';
 async function renderOtherTab(container){
-    container.innerHTML=`<h3>📦 القائمة الإضافية</h3><div class="sub-tabs"><div class="sub-tab ${otherSubTab==='inventory'?'active':''}" onclick="setOtherSubTab('inventory')">📦 المخزون</div><div class="sub-tab ${otherSubTab==='hottest'?'active':''}" onclick="setOtherSubTab('hottest')">🔥 الأكثر مبيعاً (نطاق زمني)</div><div class="sub-tab ${otherSubTab==='account'?'active':''}" onclick="setOtherSubTab('account')">ℹ️ معلومات الحساب</div><div class="sub-tab ${otherSubTab==='reports'?'active':''}" onclick="setOtherSubTab('reports')">📊 التقارير</div><div class="sub-tab ${otherSubTab==='todaySales'?'active':''}" onclick="setOtherSubTab('todaySales')">📆 مبيعات اليوم</div><div class="sub-tab ${otherSubTab==='yesterdaySales'?'active':''}" onclick="setOtherSubTab('yesterdaySales')">📆 مبيعات الأمس</div><div class="sub-tab ${otherSubTab==='invoices'?'active':''}" onclick="setOtherSubTab('invoices')">📄 الفواتير</div><div class="sub-tab ${otherSubTab==='install'?'active':''}" onclick="setOtherSubTab('install')">📱 تثبيت التطبيق</div><div class="sub-tab ${otherSubTab==='contact'?'active':''}" onclick="setOtherSubTab('contact')">📱 تواصل معنا</div></div><div id="otherContent"></div>`;
+    container.innerHTML=`
+        <h3>📦 القائمة الإضافية</h3>
+        <div class="sub-tabs">
+            <div class="sub-tab ${otherSubTab==='inventory'?'active':''}" onclick="setOtherSubTab('inventory')">📦 المخزون</div>
+            <div class="sub-tab ${otherSubTab==='missing'?'active':''}" onclick="setOtherSubTab('missing')">⚠️ المنتجات الناقصة</div>
+            <div class="sub-tab ${otherSubTab==='hottest'?'active':''}" onclick="setOtherSubTab('hottest')">🔥 الأكثر مبيعاً (نطاق زمني)</div>
+            <div class="sub-tab ${otherSubTab==='account'?'active':''}" onclick="setOtherSubTab('account')">ℹ️ معلومات الحساب</div>
+            <div class="sub-tab ${otherSubTab==='reports'?'active':''}" onclick="setOtherSubTab('reports')">📊 التقارير</div>
+            <div class="sub-tab ${otherSubTab==='todaySales'?'active':''}" onclick="setOtherSubTab('todaySales')">📆 مبيعات اليوم</div>
+            <div class="sub-tab ${otherSubTab==='yesterdaySales'?'active':''}" onclick="setOtherSubTab('yesterdaySales')">📆 مبيعات الأمس</div>
+            <div class="sub-tab ${otherSubTab==='invoices'?'active':''}" onclick="setOtherSubTab('invoices')">📄 الفواتير</div>
+            <div class="sub-tab ${otherSubTab==='install'?'active':''}" onclick="setOtherSubTab('install')">📱 تثبيت التطبيق</div>
+            <div class="sub-tab ${otherSubTab==='contact'?'active':''}" onclick="setOtherSubTab('contact')">📱 تواصل معنا</div>
+        </div>
+        <div id="otherContent"></div>`;
     await loadOtherSubContent();
 }
 window.setOtherSubTab=(tab)=>{ otherSubTab=tab; renderOtherTab(document.getElementById('tabContent')); };
@@ -742,6 +796,8 @@ async function loadOtherSubContent(){
         let html='';
         for(let p of allProducts) html+=`<div class="card"><div class="card-info"><strong>${escapeHtml(p.name)}</strong> - الكمية: ${p.qty} ${p.unit} | سعر القطاعي: ${p.priceRetail} | سعر الجملة: ${p.priceWholesale}</div></div>`;
         listDiv.innerHTML=html||'<p>لا توجد منتجات</p>';
+    } else if(otherSubTab==='missing'){
+        await renderMissingProducts(div);
     } else if(otherSubTab==='hottest'){
         div.innerHTML=`<h3>🔥 أكثر 5 منتجات مبيعاً في نطاق زمني</h3><div class="pos-row"><input type="datetime-local" id="startTime" placeholder="من"><input type="datetime-local" id="endTime" placeholder="إلى"><button onclick="calculateHottestProductsFromInvoices()">عرض</button></div><div id="hottestResult"></div>`;
     } else if(otherSubTab==='account'){
@@ -764,6 +820,90 @@ async function loadOtherSubContent(){
         div.innerHTML=`<div class="card"><div class="card-info"><a href="https://t.me/amgadmousa1000" target="_blank"><button class="btn-secondary">📱 تواصل معنا عبر تليجرام</button></a></div></div>`;
     }
 }
+// قسم المنتجات الناقصة (جدول منظم)
+async function renderMissingProducts(container){
+    await ensureMissingProductsCache();
+    container.innerHTML=`
+        <h3>⚠️ المنتجات الناقصة (التي تحتاج إلى طلب)</h3>
+        <div class="pos-row">
+            <input type="text" id="missingProductName" placeholder="اسم المنتج">
+            <input type="number" id="missingProductQty" placeholder="الكمية (اختياري)" step="1" min="0">
+            <button onclick="addMissingProduct()" class="btn-sm btn-secondary">➕ إضافة منتج ناقص</button>
+        </div>
+        <div id="missingProductsList">جاري التحميل...</div>
+    `;
+    await refreshMissingProductsTable();
+}
+async function ensureMissingProductsCache(){
+    if(allMissingProducts.length===0 && currentStoreId){
+        const snap = await getMissingProductsCol().get();
+        allMissingProducts = snap.docs.map(d=>({id:d.id, ...d.data()}));
+        await cacheData('missingProducts', allMissingProducts);
+    }
+}
+async function refreshMissingProductsTable(){
+    const div = document.getElementById('missingProductsList');
+    if(!div) return;
+    await ensureMissingProductsCache();
+    if(allMissingProducts.length === 0){
+        div.innerHTML = '<p>لا توجد منتجات ناقصة مسجلة</p>';
+        return;
+    }
+    let html = `<table class="data-table"><thead><tr><th>اسم المنتج</th><th>الكمية المطلوبة</th><th></th></tr></thead><tbody>`;
+    for(let p of allMissingProducts){
+        let qtyDisplay = p.quantity ? p.quantity : 'ــ';
+        html += `<tr>
+            <td>${escapeHtml(p.name)}</td>
+            <td>${qtyDisplay}</td>
+            <td><button class="btn-sm btn-danger" onclick="deleteMissingProduct('${p.id}')">🗑️</button></td>
+        </tr>`;
+    }
+    html += `</tbody></table>`;
+    div.innerHTML = html;
+}
+window.addMissingProduct = async () => {
+    let name = document.getElementById('missingProductName').value.trim();
+    if(!name) return showFlash('missingProductsList','الاسم مطلوب',true);
+    let qtyRaw = document.getElementById('missingProductQty').value.trim();
+    let quantity = qtyRaw === '' ? null : parseInt(qtyRaw);
+    if(quantity !== null && (isNaN(quantity) || quantity <= 0)) quantity = null;
+    const data = { name, quantity, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if(!isOnline()){
+        await addPendingOp({ type: 'addMissingProduct', data });
+        allMissingProducts.push({ id: 'temp_'+Date.now(), ...data });
+        await cacheData('missingProducts', allMissingProducts);
+        refreshMissingProductsTable();
+        showFlash('missingProductsList','تمت إضافة المنتج محلياً (سيتم المزامنة لاحقاً)',false);
+        document.getElementById('missingProductName').value = '';
+        document.getElementById('missingProductQty').value = '';
+        return;
+    }
+    await getMissingProductsCol().add(data);
+    await refreshFromFirestore();
+    await ensureMissingProductsCache();
+    refreshMissingProductsTable();
+    document.getElementById('missingProductName').value = '';
+    document.getElementById('missingProductQty').value = '';
+    showFlash('missingProductsList','تمت إضافة المنتج الناقص',false);
+};
+window.deleteMissingProduct = async (id) => {
+    if(!confirm('حذف المنتج الناقص؟')) return;
+    if(!isOnline()){
+        await addPendingOp({ type: 'deleteMissingProduct', missingId: id });
+        allMissingProducts = allMissingProducts.filter(p => p.id !== id);
+        await cacheData('missingProducts', allMissingProducts);
+        refreshMissingProductsTable();
+        showFlash('missingProductsList','تم الحذف محلياً (سيتم المزامنة لاحقاً)',false);
+        return;
+    }
+    await getMissingProductsCol().doc(id).delete();
+    await refreshFromFirestore();
+    await ensureMissingProductsCache();
+    refreshMissingProductsTable();
+    showFlash('missingProductsList','تم حذف المنتج',false);
+};
+
+// ======================= بقية التوابع (مختصرة) =======================
 async function renderDaySalesWithStatsFromInvoices(container, dayType){
     await ensureInvoicesCache();
     const now=new Date();
@@ -848,7 +988,7 @@ window.changePassword=async()=>{
     }
 };
 
-// ======================= تسجيل الدخول =======================
+// ======================= تسجيل الدخول والخروج =======================
 async function handleSignedInUser(user){
     try{
         const info=await ensureUserDocument(user.uid,user.email);
@@ -858,10 +998,10 @@ async function handleSignedInUser(user){
         document.getElementById('storeTitle').innerHTML=`<i class="fas fa-store"></i> ${info.storeName||'المحل'}`;
         if(!isAdminGlobal) await loadStoreData();
         await ensureInvoicesCache();
+        await ensureMissingProductsCache();
         buildTabs();
-        if(!navigator.onLine) document.getElementById('statusBar').innerHTML='';
-        else document.getElementById('statusBar').innerHTML='';
-        // مزامنة العمليات المعلقة في الخلفية
+        if(!navigator.onLine) document.getElementById('statusBar').innerHTML='📡 غير متصل - سيتم حفظ البيانات محلياً';
+        else document.getElementById('statusBar').innerHTML='🌐 متصل';
         setTimeout(()=>syncPendingOps(), 1000);
     }catch(e){ console.error(e); await auth.signOut(); location.reload(); }
 }
