@@ -13,7 +13,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <!-- idb library for IndexedDB offline storage -->
     <script src="https://cdn.jsdelivr.net/npm/idb@8.0.0/build/umd.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -125,7 +124,7 @@ function toggleTheme() {
 }
 if (localStorage.getItem('theme') === 'dark') {
     document.body.classList.add('dark');
-    document.getElementById('themeToggleBtn') && (document.getElementById('themeToggleBtn').innerHTML = '<i class="fas fa-sun"></i> فاتح');
+    if(document.getElementById('themeToggleBtn')) document.getElementById('themeToggleBtn').innerHTML = '<i class="fas fa-sun"></i> فاتح';
 }
 
 // ======================= PWA Setup =======================
@@ -184,7 +183,6 @@ const openDB = async () => {
 };
 openDB();
 
-// Cache data locally for offline view
 async function cacheData(key, data) { if (idbReady) await pendingOpsDB.put('cache', { key, data, timestamp: Date.now() }); }
 async function getCachedData(key) { if (idbReady) { const res = await pendingOpsDB.get('cache', key); return res?.data; } return null; }
 async function addPendingOp(op) { if (idbReady) await pendingOpsDB.add('pending', op); }
@@ -192,10 +190,9 @@ async function getPendingOps() { if (idbReady) return await pendingOpsDB.getAll(
 async function clearPendingOps() { if (idbReady) await pendingOpsDB.clear('pending'); }
 
 let currentUserAuth=null, userData=null, currentStoreId=null, currentRole=null, isAdminGlobal=false;
-let allProducts=[], allCustomers=[], allSuppliers=[], allInvoicesCache=[]; // مخزون الفواتير كاملة
+let allProducts=[], allCustomers=[], allSuppliers=[], allInvoicesCache=[];
 let lastReceiptData=null;
 
-// تحميل البيانات المخزنة محلياً أولاً
 async function loadLocalCache() {
     const cachedProds = await getCachedData('products');
     if (cachedProds) allProducts = cachedProds;
@@ -221,8 +218,8 @@ function getStoreRef(){ return db.collection('stores').doc(currentStoreId); }
 function getProductsCol(){ return getStoreRef().collection('products'); }
 function getCustomersCol(){ return getStoreRef().collection('customers'); }
 function getSuppliersCol(){ return getStoreRef().collection('suppliers'); }
-function getInvoicesCol(){ return getStoreRef().collection('invoices'); }  // استخدام مجموعة الفواتير بدلاً من sales
-function getInventoryCol(){ return getStoreRef().collection('inventoryTransactions'); }
+function getInvoicesCol(){ return getStoreRef().collection('invoices'); }
+function getCountersCol(){ return getStoreRef().collection('counters'); }
 
 async function ensureStoreDocument(sid,sname){
     const ref=db.collection('stores').doc(sid);
@@ -246,6 +243,24 @@ async function ensureUserDocument(uid,email){
     await userRef.set(newUser);
     return newUser;
 }
+
+// دالة لجلب رقم الفاتورة اليومي المتسلسل
+async function getNextInvoiceNumber() {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const counterDocId = `daily_${today.toISOString().split('T')[0]}`;
+    const counterRef = getCountersCol().doc(counterDocId);
+    const counterSnap = await counterRef.get();
+    let nextNum = 1;
+    if (counterSnap.exists) {
+        nextNum = counterSnap.data().current + 1;
+        await counterRef.update({ current: firebase.firestore.FieldValue.increment(1) });
+    } else {
+        await counterRef.set({ current: 1, date: firebase.firestore.Timestamp.fromDate(today) });
+    }
+    return nextNum;
+}
+
 async function loadStoreData(){
     if(isAdminGlobal||!currentStoreId) return;
     const [p,c,s] = await Promise.all([getProductsCol().get(), getCustomersCol().get(), getSuppliersCol().get()]);
@@ -265,7 +280,6 @@ async function ensureInvoicesCache(){
     return allInvoicesCache;
 }
 
-// مزامنة العمليات المعلقة عند العودة للاتصال
 async function syncPendingOps() {
     if (!navigator.onLine) return;
     const pending = await getPendingOps();
@@ -274,7 +288,6 @@ async function syncPendingOps() {
         try {
             if (op.type === 'addInvoice') {
                 await getInvoicesCol().add(op.data);
-                // تحديث المخزون لكل منتج (تم تحديثه محلياً بالفعل، لكن للتأكد نعيده)
                 for (let item of op.data.items) {
                     const prodRef = getProductsCol().doc(item.productId);
                     const prodDoc = await prodRef.get();
@@ -439,13 +452,14 @@ async function confirmSale(){
     else if(finalMethod!=='credit' && paid<total) return showFlash('posFlash','المدفوع أقل من الإجمالي',true);
     else if(finalMethod!=='credit'){ change=paid-total; if(change<0) return showFlash('posFlash','المدفوع أقل من الإجمالي',true); }
     try{
-        // التحقق من الكميات
         for(let item of cart){
             let prodRef=getProductsCol().doc(item.id);
             let prodSnap=await prodRef.get();
             if(!prodSnap.exists || prodSnap.data().qty < item.qty) throw new Error(`المنتج ${item.name} غير متوفر`);
         }
+        const invoiceNumber = await getNextInvoiceNumber();
         const invoiceData = {
+            invoiceNumber: invoiceNumber,
             items: cart.map(item=>({ productId: item.id, productName: item.name, quantity: item.qty, unitPrice: item.price, total: item.price*item.qty })),
             total: total,
             paymentMethod: finalMethod,
@@ -459,7 +473,6 @@ async function confirmSale(){
         };
         if(!isOnline()){
             await addPendingOp({ type: 'addInvoice', data: invoiceData });
-            // تحديث الكميات محلياً
             for(let item of cart){
                 let prod=allProducts.find(p=>p.id===item.id);
                 if(prod) prod.qty -= item.qty;
@@ -471,7 +484,7 @@ async function confirmSale(){
             await cacheData('products', allProducts);
             await cacheData('customers', allCustomers);
             showFlash('posFlash','تم حفظ البيع محلياً (غير متصل) - سيتم المزامنة لاحقاً',false);
-            lastReceiptData = { cartItems: [...cart], total, method: finalMethod, customerId: cid, change, debtAdded };
+            lastReceiptData = { cartItems: [...cart], total, method: finalMethod, customerId: cid, change, debtAdded, invoiceNumber };
             document.getElementById('printReceiptArea').style.display='block';
             cart=[]; renderCart();
             return;
@@ -489,7 +502,7 @@ async function confirmSale(){
         }
         await batch.commit();
         showFlash('posFlash',`✅ بيع ناجح بقيمة ${total} ج.م`,false);
-        lastReceiptData = { cartItems: [...cart], total, method: finalMethod, customerId: cid, change, debtAdded };
+        lastReceiptData = { cartItems: [...cart], total, method: finalMethod, customerId: cid, change, debtAdded, invoiceNumber };
         document.getElementById('printReceiptArea').style.display='block';
         await loadStoreData();
         await ensureInvoicesCache();
@@ -498,12 +511,23 @@ async function confirmSale(){
     }catch(err){ showFlash('posFlash',err.message,true); }
 }
 
+function getPaymentMethodArabic(method) {
+    if (method === 'cash') return 'كاش';
+    if (method === 'visa') return 'فيزا';
+    if (method === 'credit') return 'آجل';
+    return method;
+}
+
 function printLastReceipt(){
     if(!lastReceiptData) return;
-    let {cartItems,total,method,customerId,change,debtAdded}=lastReceiptData;
+    let {cartItems,total,method,customerId,change,debtAdded,invoiceNumber}=lastReceiptData;
     let custName=customerId?(allCustomers.find(c=>c.id===customerId)?.name||'عميل'):'نقدي';
     let debtMsg=debtAdded>0?`<p>تم إضافة مبلغ ${debtAdded} ج.م كدين على العميل</p>`:'';
     let storeName=userData?.storeName||'متجر';
+    let paymentMethodArabic = getPaymentMethodArabic(method);
+    let dayNames = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    let today = new Date();
+    let dayName = dayNames[today.getDay()];
     let win=window.open('','_blank');
     win.document.write(`<!DOCTYPE html><html dir="rtl"><head><style>
         body{font-family:'Tajawal',sans-serif;padding:15px;margin:0;background:white;direction:rtl;}
@@ -522,11 +546,11 @@ function printLastReceipt(){
     </style></head><body>
     <div class="store-box"><div class="store-name">🏪 ${escapeHtml(storeName)}</div></div>
     <h3>فاتورة البيع</h3>
-    <div class="details"><div>العميل: ${custName}</div><div>التاريخ: ${new Date().toLocaleString('ar-EG')}</div></div>
+    <div class="details"><div>رقم الفاتورة: ${invoiceNumber} - ${dayName}</div><div>العميل: ${custName}</div><div>التاريخ: ${new Date().toLocaleString('ar-EG')}</div></div>
     <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
     <tbody>${cartItems.map(i=>`<tr><td>${escapeHtml(i.name)}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody></table>
     <div class="total-row">الإجمالي: ${total.toFixed(2)} ج.م</div>
-    <div class="method">طريقة الدفع: ${method}</div>
+    <div class="method">طريقة الدفع: ${paymentMethodArabic}</div>
     ${method!=='credit'?`<div class="method">المدفوع: ${(total+change).toFixed(2)} ج.م | الباقي: ${change.toFixed(2)} ج.م</div>`:''}
     ${debtMsg}
     <div class="no-print" style="text-align:center;margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div>
@@ -534,7 +558,7 @@ function printLastReceipt(){
     win.document.close(); win.focus(); win.print();
 }
 
-// ======================= المنتجات (نفس الكود الأصلي مع صلاحيات) =======================
+// ======================= المنتجات =======================
 async function renderProductsTab(container){
     await loadStoreData();
     container.innerHTML=`<h3>➕ إضافة منتج جديد</h3><div class="grid-2"><input id="prodName" placeholder="اسم المنتج*"> <input id="prodBarcode" placeholder="باركود"><input id="prodPriceRetail" type="number" placeholder="سعر القطاعي"> <input id="prodPriceWholesale" type="number" placeholder="سعر الجملة"><input id="prodCost" type="number" placeholder="سعر الشراء"> <select id="prodUnit"><option>قطعة</option><option>كيلو</option></select><input id="prodQty" type="number" placeholder="الكمية"> <input id="prodLowStock" type="number" placeholder="حد التنبيه"><input id="prodImage" placeholder="رابط الصورة"> <button onclick="addNewProduct()">إضافة منتج</button></div><h3>📋 قائمة المنتجات</h3><div id="productsListArea"></div>`;
@@ -571,7 +595,7 @@ window.deleteProduct=async(id)=>{
 };
 window.editProduct=async(id)=>{ let newName=prompt('اسم جديد'); if(!newName) return; let newPrice=parseFloat(prompt('سعر قطاعي جديد')); let newQty=parseInt(prompt('كمية جديدة')); await getProductsCol().doc(id).update({name:newName, priceRetail:newPrice, qty:newQty}); renderProductsTab(document.getElementById('tabContent')); };
 
-// ======================= العملاء (نفس الأصلي مع تعديل بسيط) =======================
+// ======================= العملاء =======================
 async function renderCustomersTab(container){
     await loadStoreData();
     container.innerHTML=`<h3>👤 إضافة عميل جديد</h3><div class="pos-row"><input id="custName" placeholder="الاسم"><input id="custPhone" placeholder="الهاتف"><button onclick="addCustomer()">إضافة</button></div><h3>📋 قائمة العملاء</h3><div id="customersListDiv"></div>`;
@@ -607,7 +631,7 @@ window.addSupplier=async()=>{ let name=document.getElementById('supName').value.
 window.editSupplier=async(id)=>{ let newName=prompt('اسم المورد الجديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف الجديد'); await getSuppliersCol().doc(id).update({name:newName, phone:newPhone}); renderSuppliersTab(document.getElementById('tabContent')); };
 window.deleteSupplier=async(id)=>{ if(currentRole!=='owner'){ showFlash('suppliersList','غير مسموح، فقط المالك يمكنه الحذف',true); return; } if(confirm('حذف المورد؟')){ await getSuppliersCol().doc(id).delete(); renderSuppliersTab(document.getElementById('tabContent')); } };
 
-// ======================= سجل المبيعات (عرض الفواتير المجمعة) =======================
+// ======================= سجل المبيعات =======================
 let invoicesFilter='all', invSelectedDate='';
 async function renderSalesLogTab(container){
     container.innerHTML=`<h3>📋 سجل المبيعات</h3><div class="pos-row"><button class="btn-sm ${invoicesFilter==='all'?'active':''}" onclick="setInvoicesFilter('all')">📋 الكل</button><button class="btn-sm ${invoicesFilter==='today'?'active':''}" onclick="setInvoicesFilter('today')">📅 اليوم</button><button class="btn-sm ${invoicesFilter==='yesterday'?'active':''}" onclick="setInvoicesFilter('yesterday')">📆 الأمس</button><button class="btn-sm ${invoicesFilter==='custom'?'active':''}" onclick="setInvoicesFilter('custom')">📅 تاريخ</button><input type="date" id="invCustomDatePicker" style="display:${invoicesFilter==='custom'?'inline-block':'none'}" onchange="setInvCustomDate(this.value)"><button class="btn-sm btn-secondary" onclick="loadInvoicesLog()">تحديث</button></div><div id="salesLogList">جاري التحميل...</div><hr><h3>🏆 أكثر 10 منتجات مبيعًا خلال الأسبوع</h3><div id="topProductsWeek">جاري التحميل...</div>`;
@@ -623,11 +647,14 @@ function filterAndDisplayInvoices(){
     filtered.sort((a,b)=>(b.date?.toDate()||0)-(a.date?.toDate()||0));
     if(filtered.length===0){ cont.innerHTML='<p>⚠️ لا توجد فواتير في هذا التاريخ</p>'; return; }
     let html='';
+    let dayNames = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
     for(let inv of filtered){
         let canc=inv.cancelled===true;
         let cust=inv.customerId?allCustomers.find(c=>c.id===inv.customerId):null;
+        let invDate = inv.date.toDate();
+        let dayName = dayNames[invDate.getDay()];
         let itemsList = inv.items.map(it=>`${it.productName} (${it.quantity})`).join(', ');
-        html+=`<div class="card ${canc?'cancelled':''}"><div class="card-info"><strong>فاتورة رقم: ${inv.id.slice(-6)}</strong><br>المنتجات: ${itemsList}<br>الإجمالي: ${inv.total} ج.م<br>طريقة الدفع: ${inv.paymentMethod} | العميل: ${cust?cust.name:'نقدي'}<br>التاريخ: ${formatDate(inv.date)} | الحالة: ${canc?'ملغاة':'ناجحة'}</div><div>${!canc?`<button class="btn-sm btn-danger" onclick="cancelInvoice('${inv.id}')">إلغاء الفاتورة</button>`:''}</div></div>`;
+        html+=`<div class="card ${canc?'cancelled':''}"><div class="card-info"><strong>فاتورة رقم: ${inv.invoiceNumber} - ${dayName}</strong><br>المنتجات: ${itemsList}<br>الإجمالي: ${inv.total} ج.م<br>طريقة الدفع: ${getPaymentMethodArabic(inv.paymentMethod)} | العميل: ${cust?cust.name:'نقدي'}<br>التاريخ: ${formatDate(inv.date)} | الحالة: ${canc?'ملغاة':'ناجحة'}</div><div>${!canc?`<button class="btn-sm btn-danger" onclick="cancelInvoice('${inv.id}')">إلغاء الفاتورة</button>`:''}</div></div>`;
     }
     cont.innerHTML=html;
 }
@@ -680,7 +707,7 @@ window.cancelInvoice=async(invoiceId)=>{
     }catch(err){ showFlash('salesLogList',err.message,true); }
 };
 
-// ======================= فواتير اليوم (عرض الفواتير المجمعة) =======================
+// ======================= فواتير اليوم =======================
 async function renderInvoicesTab(container){
     await ensureInvoicesCache();
     const now=new Date();
@@ -695,7 +722,7 @@ async function renderInvoicesTab(container){
         let canc=inv.cancelled===true;
         let cust=inv.customerId?allCustomers.find(c=>c.id===inv.customerId):null;
         let itemsList = inv.items.map(it=>`${it.productName} (${it.quantity})`).join(', ');
-        html+=`<div class="card ${canc?'cancelled':''}"><div class="card-info"><strong>فاتورة رقم: ${inv.id.slice(-6)}</strong><br>المنتجات: ${itemsList}<br>الإجمالي: ${inv.total} ج.م<br>طريقة الدفع: ${inv.paymentMethod}<br>العميل: ${cust?cust.name:'نقدي'}<br>الوقت: ${inv.date?.toDate().toLocaleTimeString('ar-EG')}</div><div>${!canc?`<button class="btn-sm btn-danger" onclick="cancelInvoice('${inv.id}')">🔄 إرجاع</button>`:'<span class="btn-sm">ملغاة</span>'} <button class="btn-sm" onclick="printInvoice('${inv.id}')">🖨️ طباعة</button></div></div>`;
+        html+=`<div class="card ${canc?'cancelled':''}"><div class="card-info"><strong>فاتورة رقم: ${inv.invoiceNumber} - ${dayName}</strong><br>المنتجات: ${itemsList}<br>الإجمالي: ${inv.total} ج.م<br>طريقة الدفع: ${getPaymentMethodArabic(inv.paymentMethod)}<br>العميل: ${cust?cust.name:'نقدי'}<br>الوقت: ${inv.date?.toDate().toLocaleTimeString('ar-EG')}</div><div>${!canc?`<button class="btn-sm btn-danger" onclick="cancelInvoice('${inv.id}')">🔄 إرجاع</button>`:'<span class="btn-sm">ملغاة</span>'} <button class="btn-sm" onclick="printInvoice('${inv.id}')">🖨️ طباعة</button></div></div>`;
     }
     container.innerHTML=html;
 }
@@ -704,20 +731,26 @@ window.printInvoice=async(invoiceId)=>{
     if(!inv) return;
     let custName=inv.customerId?(allCustomers.find(c=>c.id===inv.customerId)?.name||'عميل'):'نقدي';
     let storeName=userData?.storeName||'متجر';
+    let dayNames = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    let invDate = inv.date.toDate();
+    let dayName = dayNames[invDate.getDay()];
+    let paymentMethodArabic = getPaymentMethodArabic(inv.paymentMethod);
     let win=window.open('','_blank');
     win.document.write(`<!DOCTYPE html><html dir="rtl"><head><style>body{font-family:'Tajawal',sans-serif;padding:15px;margin:0;background:white;direction:rtl;} .store-box{text-align:center;margin-bottom:20px;padding:10px;border:2px solid #4c1d95;border-radius:12px;background:#f8f4ff;box-shadow:0 2px 5px rgba(0,0,0,0.1);} .store-name{font-size:22px;font-weight:bold;color:#4c1d95;margin:0;} h3{text-align:center;color:#333;margin:10px 0;} .details{margin:12px 0;font-size:14px;} table{width:100%;border-collapse:collapse;margin:15px 0;} th,td{border-bottom:1px solid #ddd;padding:8px;text-align:center;font-size:14px;} th{background:#f2f2f2;font-weight:bold;} .total-row{font-weight:bold;font-size:16px;margin-top:10px;text-align:center;} .method{margin-top:8px;font-size:14px;} .no-print{display:none;} @media print{body{padding:0;margin:0;} .no-print{display:none;}}</style></head><body>
     <div class="store-box"><div class="store-name">🏪 ${escapeHtml(storeName)}</div></div>
     <h3>فاتورة البيع</h3>
-    <div class="details"><div>العميل: ${custName}</div><div>التاريخ: ${formatDate(inv.date)}</div></div>
-    <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><tr></thead>
-    <tbody>${inv.items.map(it=>`<tr><td>${escapeHtml(it.productName)}</td><td>${it.quantity}</td><td>${it.unitPrice}</td><td>${it.total.toFixed(2)}</td></tr>`).join('')}</tbody></table>
+    <div class="details"><div>رقم الفاتورة: ${inv.invoiceNumber} - ${dayName}</div><div>العميل: ${custName}</div><div>التاريخ: ${formatDate(inv.date)}</div></div>
+    <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
+    <tbody>${inv.items.map(it=>`<tr><td>${escapeHtml(it.productName)}</td><td>${it.quantity}</td><td>${it.unitPrice}</td><td>${it.total.toFixed(2)}</td></tr>`).join('')}</tbody>
+    </table>
     <div class="total-row">الإجمالي: ${inv.total.toFixed(2)} ج.م</div>
-    <div class="method">طريقة الدفع: ${inv.paymentMethod}</div>${inv.paymentMethod!=='credit'?`<div class="method">المدفوع: ${(inv.total+(inv.changeAmount||0)).toFixed(2)} ج.م | الباقي: ${(inv.changeAmount||0).toFixed(2)} ج.م</div>`:''}
+    <div class="method">طريقة الدفع: ${paymentMethodArabic}</div>
+    ${inv.paymentMethod!=='credit'?`<div class="method">المدفوع: ${(inv.total+(inv.changeAmount||0)).toFixed(2)} ج.م | الباقي: ${(inv.changeAmount||0).toFixed(2)} ج.م</div>`:''}
     <div class="no-print" style="text-align:center;margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div></body></html>`);
     win.document.close(); win.focus(); win.print();
 };
 
-// ======================= تبويب "أخرى" (نفس الأصلي مع تعديل لحساب الأرباح من الفواتير) =======================
+// ======================= تبويب "أخرى" =======================
 let otherSubTab='inventory';
 async function renderOtherTab(container){
     container.innerHTML=`
@@ -797,7 +830,7 @@ async function renderDaySalesWithStatsFromInvoices(container, dayType){
             const cost=prod?.cost||0;
             totalProfit+=it.total-(cost*it.quantity);
         }
-        html+=`<div class="card"><div class="card-info">فاتورة ${inv.id.slice(-6)} - الإجمالي: ${inv.total} ج.م (${inv.items.length} منتج)</div></div>`;
+        html+=`<div class="card"><div class="card-info">فاتورة رقم ${inv.invoiceNumber} - ${dayName} - الإجمالي: ${inv.total} ج.م (${inv.items.length} منتج)</div></div>`;
     }
     listDiv.innerHTML=html;
     document.getElementById('dayStats').innerHTML=`<div class="card" style="background:#e0f2fe;"><div class="card-info"><strong>📊 إجمالي المبيعات: ${totalSales.toFixed(2)} ج.م</strong><br><strong>💰 إجمالي الأرباح: ${totalProfit.toFixed(2)} ج.م</strong></div></div>`;
@@ -871,7 +904,6 @@ async function handleSignedInUser(user){
         if(!isAdminGlobal) await loadStoreData();
         await ensureInvoicesCache();
         buildTabs();
-        // عرض حالة الاتصال
         if(!navigator.onLine) document.getElementById('statusBar').innerHTML = '📡 غير متصل - سيتم حفظ البيانات محلياً';
         else document.getElementById('statusBar').innerHTML = '🌐 متصل';
     }catch(e){ console.error(e); await auth.signOut(); location.reload(); }
