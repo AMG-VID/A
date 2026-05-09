@@ -13,41 +13,80 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <!-- idb library for IndexedDB offline storage -->
+    <script src="https://cdn.jsdelivr.net/npm/idb@8.0.0/build/umd.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        :root {
+            --bg-gradient-start: #eef2ff;
+            --bg-gradient-end: #e0e7ff;
+            --container-bg: rgba(255,255,255,0.96);
+            --text-primary: #4c1d95;
+            --input-border: #cbd5e1;
+            --input-focus: #7c3aed;
+            --card-bg: white;
+            --card-border: #8b5cf6;
+            --stat-card-bg: #f9fafb;
+            --stat-card-border: #e2e8f0;
+            --nav-bg: #f1f5f9;
+            --nav-text: #334155;
+            --nav-active: #4f46e5;
+            --flash-bg: #e6f7e6;
+            --flash-color: #166534;
+        }
+        body.dark {
+            --bg-gradient-start: #1e1e2f;
+            --bg-gradient-end: #2a2a3b;
+            --container-bg: rgba(30,30,40,0.96);
+            --text-primary: #a78bfa;
+            --input-border: #4b5563;
+            --input-focus: #8b5cf6;
+            --card-bg: #2d2d3a;
+            --card-border: #a78bfa;
+            --stat-card-bg: #3a3a4a;
+            --stat-card-border: #4b5563;
+            --nav-bg: #2a2a3b;
+            --nav-text: #cbd5e1;
+            --nav-active: #8b5cf6;
+            --flash-bg: #2e5a3a;
+            --flash-color: #a7f3d0;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tajawal', sans-serif; }
-        body { background: linear-gradient(145deg, #eef2ff, #e0e7ff); padding: 20px; min-height: 100vh; }
-        .container { max-width: 1400px; margin: auto; background: rgba(255,255,255,0.96); border-radius: 40px; padding: 20px; box-shadow: 0 20px 35px rgba(0,0,0,0.1); }
+        body { background: linear-gradient(145deg, var(--bg-gradient-start), var(--bg-gradient-end)); padding: 20px; min-height: 100vh; transition: background 0.3s, color 0.2s; }
+        .container { max-width: 1400px; margin: auto; background: var(--container-bg); border-radius: 40px; padding: 20px; box-shadow: 0 20px 35px rgba(0,0,0,0.1); transition: background 0.3s; }
         .login-box { text-align: center; padding: 40px 20px; max-width: 420px; margin: auto; }
-        h1, h2, h3 { color: #4c1d95; }
-        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border-radius: 30px; border: 1px solid #cbd5e1; font-size: 15px; }
-        input:focus, select:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.2); outline: none; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 30px; background: linear-gradient(95deg, #2563eb, #8b5cf6); color: white; font-weight: bold; cursor: pointer; font-size: 16px; transition:0.2s; }
-        button:active { transform: scale(0.97); }
+        h1, h2, h3 { color: var(--text-primary); }
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border-radius: 30px; border: 1px solid var(--input-border); font-size: 15px; background: var(--card-bg); color: inherit; transition: 0.2s; }
+        input:focus, select:focus { border-color: var(--input-focus); box-shadow: 0 0 0 3px rgba(124,58,237,0.2); outline: none; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 30px; background: linear-gradient(95deg, #2563eb, #8b5cf6); color: white; font-weight: bold; cursor: pointer; font-size: 16px; transition:0.2s; will-change: transform; }
+        button:active { transform: scale(0.98); }
         .btn-secondary { background: #f97316; }
         .btn-danger { background: #dc2626; }
         .btn-sm { width: auto; padding: 6px 14px; margin: 3px; cursor: pointer; display: inline-block; }
-        .top-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; background: #f1f5f9; padding: 8px; border-radius: 60px; }
-        .nav-btn { background: transparent; color: #334155; width: auto; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
-        .nav-btn.active { background: #4f46e5; color: white; box-shadow: 0 6px 12px rgba(79,70,229,0.3); }
-        .card { background: white; padding: 12px; border-radius: 24px; margin: 10px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-right: 5px solid #8b5cf6; gap: 8px; }
+        .top-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; background: var(--nav-bg); padding: 8px; border-radius: 60px; }
+        .nav-btn { background: transparent; color: var(--nav-text); width: auto; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+        .nav-btn.active { background: var(--nav-active); color: white; box-shadow: 0 6px 12px rgba(79,70,229,0.3); }
+        .card { background: var(--card-bg); padding: 12px; border-radius: 24px; margin: 10px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-right: 5px solid var(--card-border); gap: 8px; transition: background 0.2s; }
         .card-info { flex: 1; }
         .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 18px; }
-        .stat-card { background: #f9fafb; padding: 18px; border-radius: 28px; text-align: center; border: 1px solid #e2e8f0; }
+        .stat-card { background: var(--stat-card-bg); padding: 18px; border-radius: 28px; text-align: center; border: 1px solid var(--stat-card-border); }
         .low-stock { background: #fee2e2; border-right-color: #ef4444; }
         .pos-row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin: 12px 0; }
         .pos-row > * { flex: 1; }
-        .flash { padding: 12px; border-radius: 30px; margin: 10px 0; background: #e6f7e6; color: #166534; }
+        .flash { padding: 12px; border-radius: 30px; margin: 10px 0; background: var(--flash-bg); color: var(--flash-color); }
         @media (max-width:700px) { .container { padding: 15px; } }
         img.product-img { width: 45px; height: 45px; object-fit: cover; border-radius: 12px; margin-left: 8px; }
         .cancelled { background: #f8d7da; border-right-color: #dc3545; opacity: 0.8; }
         .sub-tabs { display: flex; gap: 8px; margin: 15px 0; flex-wrap: wrap; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
         .sub-tab { background: #eef2ff; padding: 8px 16px; border-radius: 30px; cursor: pointer; }
         .sub-tab.active { background: #4f46e5; color: white; }
+        .status-bar { position: fixed; top: 0; left: 0; right: 0; text-align: center; padding: 5px; font-size: 12px; z-index: 1000; background: #f1f5f9; }
+        .theme-toggle { background: transparent; width: auto; padding: 5px 10px; margin-left: 10px; color: var(--text-primary); }
     </style>
 </head>
 <body>
+<div class="status-bar" id="statusBar">🔄 جاري التحميل...</div>
 <div class="container" id="app">
     <div id="loginScreen">
         <div class="login-box">
@@ -61,7 +100,10 @@
     <div id="dashboard" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:15px;">
             <h2 id="storeTitle"><i class="fas fa-store"></i> المتجر</h2>
-            <button onclick="logoutUser()" class="btn-danger btn-sm"><i class="fas fa-sign-out-alt"></i> خروج</button>
+            <div>
+                <button onclick="toggleTheme()" class="btn-sm theme-toggle" id="themeToggleBtn"><i class="fas fa-moon"></i> داكن</button>
+                <button onclick="logoutUser()" class="btn-danger btn-sm"><i class="fas fa-sign-out-alt"></i> خروج</button>
+            </div>
         </div>
         <div class="top-nav" id="navTabs"></div>
         <div id="tabContent"></div>
@@ -69,607 +111,781 @@
 </div>
 
 <script>
-    // ======================= PWA Setup =======================
-    (function setupPWA() {
-        const manifestObj = {
-            "name": "فاتورة موسي",
-            "short_name": "فاتورة موسي",
-            "start_url": ".",
-            "display": "standalone",
-            "theme_color": "#4c1d95",
-            "background_color": "#eef2ff",
-            "icons": [{ "src": "Icon.png", "sizes": "any", "type": "image/jpeg", "purpose": "any maskable" }]
-        };
-        const manifestBlob = new Blob([JSON.stringify(manifestObj)], {type: 'application/json'});
-        const manifestURL = URL.createObjectURL(manifestBlob);
-        let manifestLink = document.querySelector('link[rel="manifest"]');
-        if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
-        manifestLink.href = manifestURL;
-        
-        const swCode = `const CACHE_NAME='mahlati-v3';const urlsToCache=['./','./index.html','Icon.png','https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap','https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css','https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js','https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js'];self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(urlsToCache))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>{if(k!==CACHE_NAME)return caches.delete(k)})))));`;
-        const swBlob = new Blob([swCode], {type:'application/javascript'});
-        const swURL = URL.createObjectURL(swBlob);
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register(swURL).catch(e=>console.warn(e)); }
-    })();
+// ======================= الوضع الداكن / الفاتح =======================
+function toggleTheme() {
+    if (document.body.classList.contains('dark')) {
+        document.body.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+        document.getElementById('themeToggleBtn').innerHTML = '<i class="fas fa-moon"></i> داكن';
+    } else {
+        document.body.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+        document.getElementById('themeToggleBtn').innerHTML = '<i class="fas fa-sun"></i> فاتح';
+    }
+}
+if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark');
+    document.getElementById('themeToggleBtn') && (document.getElementById('themeToggleBtn').innerHTML = '<i class="fas fa-sun"></i> فاتح');
+}
 
-    let deferredPrompt = null;
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const btn = document.getElementById('installPwaBtn'); if(btn) btn.style.display = 'inline-block'; });
-    function installPwa() { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>{ deferredPrompt=null; const btn=document.getElementById('installPwaBtn'); if(btn) btn.style.display='none'; }); } else alert('المتصفح لا يدعم التثبيت التلقائي'); }
-
-    // ======================= Firebase =======================
-    const firebaseConfig = {
-        apiKey: "AIzaSyCYh6oC5nM2DZHgdOquHuo1so1DiQ7Gbs0",
-        authDomain: "bakkala-system.firebaseapp.com",
-        projectId: "bakkala-system",
-        storageBucket: "bakkala-system.firebasestorage.app",
-        messagingSenderId: "807660158854",
-        appId: "1:807660158854:web:c3690293a27185f07fb607"
+// ======================= PWA Setup =======================
+(function setupPWA() {
+    const manifestObj = {
+        "name": "فاتورة موسي",
+        "short_name": "فاتورة موسي",
+        "start_url": ".",
+        "display": "standalone",
+        "theme_color": "#4c1d95",
+        "background_color": "#eef2ff",
+        "icons": [{ "src": "Icon.png", "sizes": "any", "type": "image/jpeg", "purpose": "any maskable" }]
     };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    db.enablePersistence({ synchronizeTabs: true }).catch(e=>console.warn(e));
+    const manifestBlob = new Blob([JSON.stringify(manifestObj)], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(manifestBlob);
+    let manifestLink = document.querySelector('link[rel="manifest"]');
+    if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
+    manifestLink.href = manifestURL;
+    
+    const swCode = `const CACHE_NAME='mahlati-v3';const urlsToCache=['./','./index.html','Icon.png','https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap','https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css','https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js','https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js'];self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(urlsToCache))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>{if(k!==CACHE_NAME)return caches.delete(k)})))));`;
+    const swBlob = new Blob([swCode], {type:'application/javascript'});
+    const swURL = URL.createObjectURL(swBlob);
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register(swURL).catch(e=>console.warn(e)); }
+})();
 
-    let currentUserAuth=null, userData=null, currentStoreId=null, currentRole=null, isAdminGlobal=false;
-    let allProducts=[], allCustomers=[], allSuppliers=[], allSalesCache=[];
-    let lastReceiptData=null;
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const btn = document.getElementById('installPwaBtn'); if(btn) btn.style.display = 'inline-block'; });
+function installPwa() { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>{ deferredPrompt=null; const btn=document.getElementById('installPwaBtn'); if(btn) btn.style.display='none'; }); } else alert('المتصفح لا يدعم التثبيت التلقائي'); }
 
-    function showFlash(id,txt,err=false){
-        let el=document.getElementById(id);
-        if(!el){ el=document.createElement('div'); el.className='flash'; const t=document.getElementById('tabContent')||document.getElementById('dashboard'); if(t) t.prepend(el); else document.getElementById('app')?.prepend(el); }
-        el.innerText=txt; el.style.backgroundColor=err?'#ffe0e0':'#e0f2fe'; el.style.color=err?'#b91c1c':'#065f46';
-        setTimeout(()=>el.remove(),3500);
-    }
-    function escapeHtml(s){ return String(s).replace(/[&<>]/g,m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
-    function formatDate(ts){ return ts?.toDate().toLocaleString('ar-EG')||'غير محدد'; }
+// ======================= Firebase =======================
+const firebaseConfig = {
+    apiKey: "AIzaSyCYh6oC5nM2DZHgdOquHuo1so1DiQ7Gbs0",
+    authDomain: "bakkala-system.firebaseapp.com",
+    projectId: "bakkala-system",
+    storageBucket: "bakkala-system.firebasestorage.app",
+    messagingSenderId: "807660158854",
+    appId: "1:807660158854:web:c3690293a27185f07fb607"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+db.enablePersistence({ synchronizeTabs: true }).catch(e=>console.warn(e));
 
-    function getStoreRef(){ return db.collection('stores').doc(currentStoreId); }
-    function getProductsCol(){ return getStoreRef().collection('products'); }
-    function getCustomersCol(){ return getStoreRef().collection('customers'); }
-    function getSuppliersCol(){ return getStoreRef().collection('suppliers'); }
-    function getSalesCol(){ return getStoreRef().collection('sales'); }
-    function getInventoryCol(){ return getStoreRef().collection('inventoryTransactions'); }
-
-    async function ensureStoreDocument(sid,sname){
-        const ref=db.collection('stores').doc(sid);
-        const doc=await ref.get();
-        if(!doc.exists) await ref.set({ name:sname, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
-        return ref;
-    }
-    async function ensureUserDocument(uid,email){
-        const userRef=db.collection('users').doc(uid);
-        const doc=await userRef.get();
-        if(doc.exists){
-            if(doc.data().isActive===false) throw new Error('الحساب معطل');
-            const data=doc.data();
-            await ensureStoreDocument(data.storeId, data.storeName||'محل تجاري');
-            return data;
+// ======================= Offline storage (IndexedDB) =======================
+let idbReady = false;
+let pendingOpsDB;
+const openDB = async () => {
+    if (!window.idb) return;
+    pendingOpsDB = await idb.openDB('FatoraMousaOffline', 1, {
+        upgrade(db) {
+            if (!db.objectStoreNames.contains('pending')) db.createObjectStore('pending', { autoIncrement: true });
+            if (!db.objectStoreNames.contains('cache')) db.createObjectStore('cache', { keyPath: 'key' });
         }
-        const newStoreId=`store_${Date.now()}_${Math.floor(Math.random()*10000)}`;
-        const storeName=`محل ${email.split('@')[0]}`;
-        await ensureStoreDocument(newStoreId,storeName);
-        const newUser={ email, role:'owner', storeId:newStoreId, storeName, isActive:true, createdAt:firebase.firestore.FieldValue.serverTimestamp() };
-        await userRef.set(newUser);
-        return newUser;
-    }
-    async function loadStoreData(){
-        if(isAdminGlobal||!currentStoreId) return;
-        const [p,c,s]=await Promise.all([getProductsCol().get(), getCustomersCol().get(), getSuppliersCol().get()]);
-        allProducts=p.docs.map(d=>({id:d.id,...d.data()}));
-        allCustomers=c.docs.map(d=>({id:d.id,...d.data()}));
-        allSuppliers=s.docs.map(d=>({id:d.id,...d.data()}));
-    }
-    async function ensureSalesCache(){
-        if(allSalesCache.length===0 && currentStoreId){
-            const snap=await getSalesCol().get();
-            allSalesCache=snap.docs.map(d=>({id:d.id,...d.data()}));
-        }
-        return allSalesCache;
-    }
+    });
+    idbReady = true;
+};
+openDB();
 
-    function buildTabs(){
-        const cont=document.getElementById('navTabs');
-        let tabs=isAdminGlobal?[{id:'adminPanel',name:'📊 لوحة التحكم'}]:[
-            {id:'pos',name:'💰 نقطة البيع'},{id:'products',name:'📦 المنتجات'},
-            {id:'customers',name:'👥 العملاء'},{id:'suppliers',name:'🏭 الموردين'},
-            {id:'salesLog',name:'📋 سجل المبيعات'},{id:'invoices',name:'📄 الفواتير'},
-            {id:'other',name:'📦 أخرى'}
-        ];
-        cont.innerHTML=tabs.map(t=>`<button class="nav-btn" data-tab="${t.id}">${t.name}</button>`).join('');
-        document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
-        if(tabs.length) switchTab(tabs[0].id);
-    }
-    async function switchTab(tabId){
-        document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-        const ab=document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
-        if(ab) ab.classList.add('active');
-        const cont=document.getElementById('tabContent');
-        if(isAdminGlobal){ cont.innerHTML='<div class="flash">لوحة المشرف قيد التطوير</div>'; return; }
-        await loadStoreData();
-        if(tabId==='pos') await renderPosTab(cont);
-        else if(tabId==='products') await renderProductsTab(cont);
-        else if(tabId==='customers') await renderCustomersTab(cont);
-        else if(tabId==='suppliers') await renderSuppliersTab(cont);
-        else if(tabId==='salesLog') await renderSalesLogTab(cont);
-        else if(tabId==='invoices') await renderInvoicesTab(cont);
-        else if(tabId==='other') await renderOtherTab(cont);
-    }
+// Cache data locally for offline view
+async function cacheData(key, data) { if (idbReady) await pendingOpsDB.put('cache', { key, data, timestamp: Date.now() }); }
+async function getCachedData(key) { if (idbReady) { const res = await pendingOpsDB.get('cache', key); return res?.data; } return null; }
+async function addPendingOp(op) { if (idbReady) await pendingOpsDB.add('pending', op); }
+async function getPendingOps() { if (idbReady) return await pendingOpsDB.getAll('pending'); return []; }
+async function clearPendingOps() { if (idbReady) await pendingOpsDB.clear('pending'); }
 
-    // ======================= نقطة البيع =======================
-    let cart=[];
-    async function renderPosTab(container){
-        cart=[]; lastReceiptData=null;
-        let custOpt=`<option value="">بدون عميل</option>`+allCustomers.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} (دين: ${c.debt||0})</option>`).join('');
-        container.innerHTML=`
-            <div style="background:#f8fafc; border-radius:32px; padding:20px;">
-                <h3>💰 نقطة البيع السريعة</h3>
-                <div class="pos-row">
-                    <input type="text" id="searchProduct" placeholder="🔍 باركود أو اسم المنتج" oninput="searchProductLive()">
-                    <select id="productSelect"><option>اختر منتج</option></select>
-                    <input type="number" id="cartQty" placeholder="الكمية" value="1">
-                    <button onclick="addToCart()" class="btn-sm">➕ أضف للسلة</button>
-                </div>
-                <div id="cartItems"></div>
-                <div class="pos-row">
-                    <select id="customerId">${custOpt}</select>
-                    <select id="paymentMethod"><option value="cash">كاش</option><option value="visa">فيزا</option><option value="credit">آجل</option></select>
-                    <input type="number" id="paidAmount" placeholder="المدفوع" oninput="updateChange()">
-                    <input type="text" id="changeAmount" placeholder="الباقي" readonly>
-                </div>
-                <div style="font-size:24px; font-weight:bold;" id="totalAmount">الإجمالي: 0 ج.م</div>
-                <button onclick="confirmSale()" style="background:#10b981;">إتمام البيع</button>
-                <div id="posFlash"></div>
-                <div id="printReceiptArea" style="margin-top:10px; display:none;"><button onclick="printLastReceipt()" style="background:#22c55e; width:auto; padding:8px 20px;">🖨️ طباعة الفاتورة</button></div>
-            </div>`;
-        const sel=document.getElementById('productSelect');
-        sel.innerHTML=allProducts.map(p=>`<option value="${p.id}" data-price="${p.priceRetail||p.price}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('');
-        if(allProducts.length===0) sel.innerHTML='<option>لا توجد منتجات</option>';
-        window.searchProductLive=()=>{
-            let val=document.getElementById('searchProduct').value;
-            let filtered=allProducts.filter(p=>(p.barcode&&p.barcode.includes(val))||p.name.includes(val));
-            let s=document.getElementById('productSelect');
-            s.innerHTML=filtered.map(p=>`<option value="${p.id}" data-price="${p.priceRetail||p.price}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('');
-            if(filtered.length===0) s.innerHTML='<option>لا يوجد</option>';
-        };
-        window.addToCart=()=>{
-            let sel=document.getElementById('productSelect');
-            let pid=sel.value;
-            if(!pid||pid==='لا يوجد') return;
-            let qty=parseInt(document.getElementById('cartQty').value);
-            if(qty<=0) return;
-            let prod=allProducts.find(p=>p.id===pid);
-            if(!prod||prod.qty<qty){ showFlash('posFlash','كمية غير متوفرة',true); return; }
-            let existing=cart.find(i=>i.id===pid);
-            if(existing) existing.qty+=qty;
-            else cart.push({id:pid,name:prod.name,price:prod.priceRetail||prod.price,qty});
-            renderCart();
-        };
-        window.renderCart=()=>{
-            let cd=document.getElementById('cartItems');
-            let total=0;
-            let h=`<h4>السلة</h4>`;
-            cart.forEach((item,idx)=>{
-                total+=item.price*item.qty;
-                h+=`<div class="card" style="padding:10px;">${item.name} x ${item.qty} = ${(item.price*item.qty).toFixed(2)} ج.م <button class="btn-sm btn-danger" onclick="removeFromCart(${idx})">حذف</button></div>`;
-            });
-            cd.innerHTML=h;
-            document.getElementById('totalAmount').innerHTML=`الإجمالي: ${total.toFixed(2)} ج.م`;
-            updateChange();
-        };
-        window.removeFromCart=(idx)=>{ cart.splice(idx,1); renderCart(); };
-        window.updateChange=()=>{
-            let t=cart.reduce((s,i)=>s+(i.price*i.qty),0);
-            let paid=parseFloat(document.getElementById('paidAmount').value)||0;
-            document.getElementById('changeAmount').value=(paid>t)?(paid-t).toFixed(2):0;
-        };
-        renderCart();
-    }
+let currentUserAuth=null, userData=null, currentStoreId=null, currentRole=null, isAdminGlobal=false;
+let allProducts=[], allCustomers=[], allSuppliers=[], allInvoicesCache=[]; // مخزون الفواتير كاملة
+let lastReceiptData=null;
 
-    async function confirmSale(){
-        if(cart.length===0) return showFlash('posFlash','السلة فارغة',true);
-        let cid=document.getElementById('customerId').value||null;
-        let pm=document.getElementById('paymentMethod').value;
-        let paid=parseFloat(document.getElementById('paidAmount').value)||0;
-        let total=cart.reduce((s,i)=>s+(i.price*i.qty),0);
-        let finalMethod=pm, change=0, debtAdded=0;
-        if(cid && paid<total){ finalMethod='credit'; debtAdded=total-paid; paid=total; change=0; showFlash('posFlash',`سيتم إضافة ${debtAdded} ج.م كدين على العميل`,false); }
-        else if(finalMethod!=='credit' && paid<total) return showFlash('posFlash','المدفوع أقل من الإجمالي',true);
-        else if(finalMethod!=='credit'){ change=paid-total; if(change<0) return showFlash('posFlash','المدفوع أقل من الإجمالي',true); }
-        try{
-            const prodRefs=cart.map(i=>getProductsCol().doc(i.id));
-            const snaps=await Promise.all(prodRefs.map(r=>r.get()));
-            for(let i=0;i<cart.length;i++) if(snaps[i].data().qty<cart[i].qty) throw new Error(`المنتج ${cart[i].name} غير متوفر`);
-            const batch=db.batch();
-            for(let i=0;i<cart.length;i++) batch.update(prodRefs[i],{qty:snaps[i].data().qty-cart[i].qty});
-            for(let item of cart){
-                const saleRef=getSalesCol().doc();
-                batch.set(saleRef,{
-                    productId:item.id, productName:item.name, quantity:item.qty,
-                    unitPrice:item.price, total:item.price*item.qty,
-                    paymentMethod:finalMethod, customerId:cid, paidAmount:paid, changeAmount:change,
-                    userId:currentUserAuth.uid, cancelled:false, date:firebase.firestore.FieldValue.serverTimestamp()
-                });
-                const invRef=getInventoryCol().doc();
-                batch.set(invRef,{type:'sale', productId:item.id, productName:item.name, quantity:-item.qty, date:firebase.firestore.FieldValue.serverTimestamp()});
+// تحميل البيانات المخزنة محلياً أولاً
+async function loadLocalCache() {
+    const cachedProds = await getCachedData('products');
+    if (cachedProds) allProducts = cachedProds;
+    const cachedCust = await getCachedData('customers');
+    if (cachedCust) allCustomers = cachedCust;
+    const cachedSupp = await getCachedData('suppliers');
+    if (cachedSupp) allSuppliers = cachedSupp;
+    const cachedInvoices = await getCachedData('invoices');
+    if (cachedInvoices) allInvoicesCache = cachedInvoices;
+}
+loadLocalCache();
+
+function showFlash(id,txt,err=false){
+    let el=document.getElementById(id);
+    if(!el){ el=document.createElement('div'); el.className='flash'; const t=document.getElementById('tabContent')||document.getElementById('dashboard'); if(t) t.prepend(el); else document.getElementById('app')?.prepend(el); }
+    el.innerText=txt; el.style.backgroundColor=err?'#ffe0e0':'#e0f2fe'; el.style.color=err?'#b91c1c':'#065f46';
+    setTimeout(()=>el.remove(),3500);
+}
+function escapeHtml(s){ return String(s).replace(/[&<>]/g,m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+function formatDate(ts){ return ts?.toDate ? ts.toDate().toLocaleString('ar-EG') : new Date(ts).toLocaleString('ar-EG'); }
+
+function getStoreRef(){ return db.collection('stores').doc(currentStoreId); }
+function getProductsCol(){ return getStoreRef().collection('products'); }
+function getCustomersCol(){ return getStoreRef().collection('customers'); }
+function getSuppliersCol(){ return getStoreRef().collection('suppliers'); }
+function getInvoicesCol(){ return getStoreRef().collection('invoices'); }  // استخدام مجموعة الفواتير بدلاً من sales
+function getInventoryCol(){ return getStoreRef().collection('inventoryTransactions'); }
+
+async function ensureStoreDocument(sid,sname){
+    const ref=db.collection('stores').doc(sid);
+    const doc=await ref.get();
+    if(!doc.exists) await ref.set({ name:sname, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
+    return ref;
+}
+async function ensureUserDocument(uid,email){
+    const userRef=db.collection('users').doc(uid);
+    const doc=await userRef.get();
+    if(doc.exists){
+        if(doc.data().isActive===false) throw new Error('الحساب معطل');
+        const data=doc.data();
+        await ensureStoreDocument(data.storeId, data.storeName||'محل تجاري');
+        return data;
+    }
+    const newStoreId=`store_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+    const storeName=`محل ${email.split('@')[0]}`;
+    await ensureStoreDocument(newStoreId,storeName);
+    const newUser={ email, role:'owner', storeId:newStoreId, storeName, isActive:true, createdAt:firebase.firestore.FieldValue.serverTimestamp() };
+    await userRef.set(newUser);
+    return newUser;
+}
+async function loadStoreData(){
+    if(isAdminGlobal||!currentStoreId) return;
+    const [p,c,s] = await Promise.all([getProductsCol().get(), getCustomersCol().get(), getSuppliersCol().get()]);
+    allProducts = p.docs.map(d=>({id:d.id,...d.data()}));
+    allCustomers = c.docs.map(d=>({id:d.id,...d.data()}));
+    allSuppliers = s.docs.map(d=>({id:d.id,...d.data()}));
+    await cacheData('products', allProducts);
+    await cacheData('customers', allCustomers);
+    await cacheData('suppliers', allSuppliers);
+}
+async function ensureInvoicesCache(){
+    if(allInvoicesCache.length===0 && currentStoreId){
+        const snap = await getInvoicesCol().get();
+        allInvoicesCache = snap.docs.map(d=>({id:d.id,...d.data()}));
+        await cacheData('invoices', allInvoicesCache);
+    }
+    return allInvoicesCache;
+}
+
+// مزامنة العمليات المعلقة عند العودة للاتصال
+async function syncPendingOps() {
+    if (!navigator.onLine) return;
+    const pending = await getPendingOps();
+    if (pending.length === 0) return;
+    for (let op of pending) {
+        try {
+            if (op.type === 'addInvoice') {
+                await getInvoicesCol().add(op.data);
+                // تحديث المخزون لكل منتج (تم تحديثه محلياً بالفعل، لكن للتأكد نعيده)
+                for (let item of op.data.items) {
+                    const prodRef = getProductsCol().doc(item.productId);
+                    const prodDoc = await prodRef.get();
+                    if (prodDoc.exists) await prodRef.update({ qty: prodDoc.data().qty - item.quantity });
+                }
+                if (op.data.customerId && op.data.paymentMethod === 'credit' && op.data.debtAdded > 0) {
+                    const custRef = getCustomersCol().doc(op.data.customerId);
+                    const custDoc = await custRef.get();
+                    await custRef.update({ debt: (custDoc.data().debt || 0) + op.data.debtAdded });
+                }
+            } else if (op.type === 'addProduct') {
+                await getProductsCol().add(op.data);
+            } else if (op.type === 'cancelInvoice') {
+                const invoiceRef = getInvoicesCol().doc(op.invoiceId);
+                await invoiceRef.update({ cancelled: true });
+                for (let item of op.items) {
+                    const prodRef = getProductsCol().doc(item.productId);
+                    const prodDoc = await prodRef.get();
+                    if (prodDoc.exists) await prodRef.update({ qty: (prodDoc.data().qty || 0) + item.quantity });
+                }
+                if (op.customerId && op.debtRemoved > 0) {
+                    const custRef = getCustomersCol().doc(op.customerId);
+                    const custDoc = await custRef.get();
+                    await custRef.update({ debt: Math.max(0, (custDoc.data().debt || 0) - op.debtRemoved) });
+                }
             }
-            if(cid && debtAdded>0){ const custRef=getCustomersCol().doc(cid); const cs=await custRef.get(); batch.update(custRef,{debt:(cs.data().debt||0)+debtAdded}); }
-            await batch.commit();
-            showFlash('posFlash',`✅ بيع ناجح بقيمة ${total} ج.م`,false);
-            lastReceiptData={cartItems:[...cart], total, method:finalMethod, customerId:cid, change, debtAdded};
-            document.getElementById('printReceiptArea').style.display='block';
-            await loadStoreData();
-            const sel=document.getElementById('productSelect'); if(sel) sel.innerHTML=allProducts.map(p=>`<option value="${p.id}" data-price="${p.priceRetail||p.price}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('');
-            cart=[]; renderCart(); await ensureSalesCache();
-        }catch(err){ showFlash('posFlash',err.message,true); }
+        } catch(e) { console.warn('sync failed', e); }
     }
+    await clearPendingOps();
+    await ensureInvoicesCache();
+    if (document.getElementById('salesLogList')) filterAndDisplayInvoices();
+    if (document.getElementById('tabContent') && document.getElementById('salesLogList')) filterAndDisplayInvoices();
+    showFlash('tabContent', '✅ تمت مزامنة العمليات المعلقة مع السحابة', false);
+}
+window.addEventListener('online', async () => {
+    document.getElementById('statusBar').innerHTML = '🌐 متصل - جاري المزامنة...';
+    document.getElementById('statusBar').style.backgroundColor = '#d1fae5';
+    await syncPendingOps();
+    document.getElementById('statusBar').innerHTML = '🌐 متصل';
+    setTimeout(() => { if(document.getElementById('statusBar').innerHTML === '🌐 متصل') document.getElementById('statusBar').style.backgroundColor = '#d1fae5'; }, 2000);
+    location.reload();
+});
+window.addEventListener('offline', () => {
+    document.getElementById('statusBar').innerHTML = '📡 غير متصل - سيتم حفظ البيانات محلياً';
+    document.getElementById('statusBar').style.backgroundColor = '#fee2e2';
+});
+function isOnline() { return navigator.onLine; }
 
-    function printLastReceipt(){
-        if(!lastReceiptData) return;
-        let {cartItems,total,method,customerId,change,debtAdded}=lastReceiptData;
-        let custName=customerId?(allCustomers.find(c=>c.id===customerId)?.name||'عميل'):'نقدي';
-        let debtMsg=debtAdded>0?`<p>تم إضافة مبلغ ${debtAdded} ج.م كدين على العميل</p>`:'';
-        let storeName=userData?.storeName||'متجر';
-        let win=window.open('','_blank');
-        win.document.write(`<!DOCTYPE html><html dir="rtl"><head><style>
-            body{font-family:'Tajawal',sans-serif;padding:15px;margin:0;background:white;direction:rtl;}
-            .store-box{text-align:center;margin-bottom:20px;padding:10px;border:2px solid #4c1d95;border-radius:12px;background:#f8f4ff;box-shadow:0 2px 5px rgba(0,0,0,0.1);}
-            .store-name{font-size:22px;font-weight:bold;color:#4c1d95;margin:0;}
-            h3{text-align:center;color:#333;margin:10px 0;}
-            .details{margin:12px 0;font-size:14px;}
-            table{width:100%;border-collapse:collapse;margin:15px 0;}
-            th,td{border-bottom:1px solid #ddd;padding:8px;text-align:center;font-size:14px;}
-            th{background:#f2f2f2;font-weight:bold;}
-            .total-row{font-weight:bold;font-size:16px;margin-top:10px;text-align:center;}
-            .method{margin-top:8px;font-size:14px;}
-            .debt-msg{color:#dc2626;margin-top:8px;font-size:13px;}
-            .no-print{display:none;}
-            @media print{body{padding:0;margin:0;}.no-print{display:none;}}
-        </style></head><body>
-        <div class="store-box"><div class="store-name">🏪 ${escapeHtml(storeName)}</div></div>
-        <h3>فاتورة البيع</h3>
-        <div class="details"><div>العميل: ${custName}</div><div>التاريخ: ${new Date().toLocaleString('ar-EG')}</div></div>
-        <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
-        <tbody>${cartItems.map(i=>`<tr><td>${escapeHtml(i.name)}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody>
-        </table>
-        <div class="total-row">الإجمالي: ${total.toFixed(2)} ج.م</div>
-        <div class="method">طريقة الدفع: ${method}</div>
-        ${method!=='credit'?`<div class="method">المدفوع: ${(total+change).toFixed(2)} ج.م | الباقي: ${change.toFixed(2)} ج.م</div>`:''}
-        ${debtMsg}
-        <div class="no-print" style="text-align:center;margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div>
-        </body></html>`);
-        win.document.close(); win.focus(); win.print();
-    }
+function buildTabs(){
+    const cont=document.getElementById('navTabs');
+    let tabs=isAdminGlobal?[{id:'adminPanel',name:'📊 لوحة التحكم'}]:[
+        {id:'pos',name:'💰 نقطة البيع'},{id:'products',name:'📦 المنتجات'},
+        {id:'customers',name:'👥 العملاء'},{id:'suppliers',name:'🏭 الموردين'},
+        {id:'salesLog',name:'📋 سجل المبيعات'},{id:'invoices',name:'📄 الفواتير'},
+        {id:'other',name:'📦 أخرى'}
+    ];
+    cont.innerHTML=tabs.map(t=>`<button class="nav-btn" data-tab="${t.id}">${t.name}</button>`).join('');
+    document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
+    if(tabs.length) switchTab(tabs[0].id);
+}
+async function switchTab(tabId){
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    const ab=document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+    if(ab) ab.classList.add('active');
+    const cont=document.getElementById('tabContent');
+    if(isAdminGlobal){ cont.innerHTML='<div class="flash">لوحة المشرف قيد التطوير</div>'; return; }
+    await loadStoreData();
+    if(tabId==='pos') await renderPosTab(cont);
+    else if(tabId==='products') await renderProductsTab(cont);
+    else if(tabId==='customers') await renderCustomersTab(cont);
+    else if(tabId==='suppliers') await renderSuppliersTab(cont);
+    else if(tabId==='salesLog') await renderSalesLogTab(cont);
+    else if(tabId==='invoices') await renderInvoicesTab(cont);
+    else if(tabId==='other') await renderOtherTab(cont);
+}
 
-    // ======================= المنتجات (مع صلاحيات) =======================
-    async function renderProductsTab(container){
-        await loadStoreData();
-        container.innerHTML=`<h3>➕ إضافة منتج جديد</h3><div class="grid-2"><input id="prodName" placeholder="اسم المنتج*"> <input id="prodBarcode" placeholder="باركود"><input id="prodPriceRetail" type="number" placeholder="سعر القطاعي"> <input id="prodPriceWholesale" type="number" placeholder="سعر الجملة"><input id="prodCost" type="number" placeholder="سعر الشراء"> <select id="prodUnit"><option>قطعة</option><option>كيلو</option></select><input id="prodQty" type="number" placeholder="الكمية"> <input id="prodLowStock" type="number" placeholder="حد التنبيه"><input id="prodImage" placeholder="رابط الصورة"> <button onclick="addNewProduct()">إضافة منتج</button></div><h3>📋 قائمة المنتجات</h3><div id="productsListArea"></div>`;
-        await renderProductsList();
-    }
-    async function renderProductsList(){
-        const area=document.getElementById('productsListArea');
-        if(!area) return;
-        let html='';
-        for(let p of allProducts){
-            let low=(p.qty<=(p.lowStockAlert||0))?'low-stock':'';
-            html+=`<div class="card ${low}"><div class="card-info">${p.imageUrl?`<img class="product-img" src="${p.imageUrl}">`:''}<strong>${escapeHtml(p.name)}</strong> (باركود: ${p.barcode||'-'})<br>قطاعي: ${p.priceRetail} | جملة: ${p.priceWholesale} | الشراء: ${p.cost||0}<br>الكمية: ${p.qty} ${p.unit} | التنبيه: ${p.lowStockAlert||0}</div><div>${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button>`:''}<button class="btn-sm" onclick="editProduct('${p.id}')">✏️</button></div></div>`;
-        }
-        area.innerHTML=html||'<p>لا توجد منتجات</p>';
-    }
-    window.addNewProduct=async()=>{
-        let name=document.getElementById('prodName').value.trim();
-        if(!name) return showFlash('productsListArea','الاسم مطلوب',true);
-        await getProductsCol().add({
-            name, barcode:document.getElementById('prodBarcode').value,
-            priceRetail:parseFloat(document.getElementById('prodPriceRetail').value)||0,
-            priceWholesale:parseFloat(document.getElementById('prodPriceWholesale').value)||0,
-            cost:parseFloat(document.getElementById('prodCost').value)||0,
-            unit:document.getElementById('prodUnit').value, qty:parseInt(document.getElementById('prodQty').value)||0,
-            lowStockAlert:parseInt(document.getElementById('prodLowStock').value)||0,
-            imageUrl:document.getElementById('prodImage').value, createdAt:firebase.firestore.FieldValue.serverTimestamp()
-        });
-        showFlash('productsListArea','تمت الإضافة');
-        renderProductsTab(document.getElementById('tabContent'));
-    };
-    window.deleteProduct=async(id)=>{ 
-        if(currentRole!=='owner'){ showFlash('productsListArea','غير مسموح، فقط المالك يمكنه الحذف',true); return; }
-        if(confirm('حذف المنتج نهائياً؟')){ await getProductsCol().doc(id).delete(); renderProductsTab(document.getElementById('tabContent')); }
-    };
-    window.editProduct=async(id)=>{
-        let newName=prompt('اسم جديد'); if(!newName) return;
-        let newPrice=parseFloat(prompt('سعر قطاعي جديد'));
-        let newQty=parseInt(prompt('كمية جديدة'));
-        await getProductsCol().doc(id).update({name:newName, priceRetail:newPrice, qty:newQty});
-        renderProductsTab(document.getElementById('tabContent'));
-    };
-
-    // ======================= العملاء =======================
-    async function renderCustomersTab(container){
-        await loadStoreData();
-        container.innerHTML=`<h3>👤 إضافة عميل جديد</h3><div class="pos-row"><input id="custName" placeholder="الاسم"><input id="custPhone" placeholder="الهاتف"><button onclick="addCustomer()">إضافة</button></div><h3>📋 قائمة العملاء</h3><div id="customersListDiv"></div>`;
-        const listDiv=document.getElementById('customersListDiv');
-        listDiv.innerHTML=allCustomers.map(c=>`<div class="card"><div class="card-info"><strong>${escapeHtml(c.name)}</strong> - هاتف: ${c.phone||'-'} | دين: ${c.debt||0} ج.م</div><div>${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteCustomer('${c.id}')">🗑️</button>`:''}<button class="btn-sm" onclick="editCustomer('${c.id}')">✏️</button><button class="btn-sm" onclick="recordPayment('${c.id}')">تسديد</button></div></div>`).join('');
-    }
-    window.addCustomer=async()=>{ let name=document.getElementById('custName').value.trim(); if(!name) return; await getCustomersCol().add({name, phone:document.getElementById('custPhone').value, debt:0 }); renderCustomersTab(document.getElementById('tabContent')); };
-    window.editCustomer=async(id)=>{ let newName=prompt('اسم العميل الجديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف الجديد'); await getCustomersCol().doc(id).update({name:newName, phone:newPhone}); renderCustomersTab(document.getElementById('tabContent')); };
-    window.deleteCustomer=async(id)=>{ if(currentRole!=='owner'){ showFlash('customersListDiv','غير مسموح، فقط المالك يمكنه الحذف',true); return; } if(confirm('حذف العميل؟')){ await getCustomersCol().doc(id).delete(); renderCustomersTab(document.getElementById('tabContent')); } };
-    window.recordPayment=async(custId)=>{ let amt=parseFloat(prompt('المبلغ المسدد')); if(isNaN(amt)) return; const ref=getCustomersCol().doc(custId); const doc=await ref.get(); let newDebt=(doc.data().debt||0)-amt; await ref.update({debt:newDebt<0?0:newDebt}); renderCustomersTab(document.getElementById('tabContent')); };
-
-    // ======================= الموردين =======================
-    async function renderSuppliersTab(container){
-        await loadStoreData();
-        container.innerHTML=`<h3>🏭 إدارة الموردين</h3><div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="رقم الهاتف"><button onclick="addSupplier()">إضافة مورد</button></div><div id="suppliersList"></div>`;
-        const listDiv=document.getElementById('suppliersList');
-        let html='';
-        for(let s of allSuppliers){
-            html+=`<div class="card"><div class="card-info"><strong>${escapeHtml(s.name)}</strong> - هاتف: ${s.phone||'-'}</div><div>${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteSupplier('${s.id}')">🗑️</button>`:''}<button class="btn-sm" onclick="editSupplier('${s.id}')">✏️</button><button class="btn-sm" onclick="showSupplierProducts('${s.id}','${escapeHtml(s.name)}')">📋 منتجات المورد</button></div></div>`;
-        }
-        listDiv.innerHTML=html||'<p>لا يوجد موردون</p>';
-    }
-    window.showSupplierProducts=async(sid,sname)=>{
-        const cont=document.getElementById('tabContent');
-        const snap=await getSuppliersCol().doc(sid).collection('products').get();
-        let prods=snap.docs.map(d=>`<div class="card"><div class="card-info">${escapeHtml(d.data().name)} - سعر: ${d.data().price||0} ج.م</div><div><button class="btn-sm" onclick="deleteSupplierProduct('${sid}','${d.id}')">🗑️</button></div></div>`).join('');
-        if(snap.empty) prods='<p>لا توجد منتجات لهذا المورد</p>';
-        cont.innerHTML=`<h3>📦 منتجات المورد: ${sname}</h3><div class="pos-row"><input id="productName" placeholder="اسم المنتج"><input id="productPrice" type="number" placeholder="السعر"><button onclick="addSupplierProduct('${sid}')">➕ إضافة منتج</button></div><div id="supplierProductsList">${prods}</div><button class="btn-sm" onclick="renderSuppliersTab(document.getElementById('tabContent'))">🔙 رجوع</button>`;
-    };
-    window.addSupplierProduct=async(sid)=>{ let name=document.getElementById('productName').value.trim(); let price=parseFloat(document.getElementById('productPrice').value); if(!name||isNaN(price)) return showFlash('supplierProductsList','بيانات غير صحيحة',true); await getSuppliersCol().doc(sid).collection('products').add({name,price}); showFlash('supplierProductsList','تمت الإضافة'); window.showSupplierProducts(sid,''); };
-    window.deleteSupplierProduct=async(sid,pid)=>{ if(!confirm('حذف المنتج؟')) return; await getSuppliersCol().doc(sid).collection('products').doc(pid).delete(); showFlash('supplierProductsList','تم الحذف'); window.showSupplierProducts(sid,''); };
-    window.addSupplier=async()=>{ let name=document.getElementById('supName').value.trim(); if(!name) return; await getSuppliersCol().add({name, phone:document.getElementById('supPhone').value}); renderSuppliersTab(document.getElementById('tabContent')); };
-    window.editSupplier=async(id)=>{ let newName=prompt('اسم المورد الجديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف الجديد'); await getSuppliersCol().doc(id).update({name:newName, phone:newPhone}); renderSuppliersTab(document.getElementById('tabContent')); };
-    window.deleteSupplier=async(id)=>{ if(currentRole!=='owner'){ showFlash('suppliersList','غير مسموح، فقط المالك يمكنه الحذف',true); return; } if(confirm('حذف المورد؟')){ await getSuppliersCol().doc(id).delete(); renderSuppliersTab(document.getElementById('tabContent')); } };
-
-    // ======================= سجل المبيعات =======================
-    let salesFilter='all', selectedDate='';
-    async function renderSalesLogTab(container){
-        container.innerHTML=`<h3>📋 سجل المبيعات</h3><div class="pos-row"><button class="btn-sm ${salesFilter==='all'?'active':''}" onclick="setSalesFilter('all')">📋 الكل</button><button class="btn-sm ${salesFilter==='today'?'active':''}" onclick="setSalesFilter('today')">📅 اليوم</button><button class="btn-sm ${salesFilter==='yesterday'?'active':''}" onclick="setSalesFilter('yesterday')">📆 الأمس</button><button class="btn-sm ${salesFilter==='custom'?'active':''}" onclick="setSalesFilter('custom')">📅 تاريخ</button><input type="date" id="customDatePicker" style="display:${salesFilter==='custom'?'inline-block':'none'}" onchange="setCustomDate(this.value)"><button class="btn-sm btn-secondary" onclick="loadSalesLog()">تحديث</button></div><div id="salesLogList">جاري التحميل...</div><hr><h3>🏆 أكثر 10 منتجات مبيعًا خلال الأسبوع</h3><div id="topProductsWeek">جاري التحميل...</div>`;
-        await ensureSalesCache(); filterAndDisplaySales(); calculateTopProductsWeek();
-    }
-    function filterAndDisplaySales(){
-        const cont=document.getElementById('salesLogList'); if(!cont) return;
-        let filtered=[...allSalesCache];
-        const now=new Date();
-        if(salesFilter==='today'){ const s=new Date(now.getFullYear(),now.getMonth(),now.getDate()), e=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1); filtered=filtered.filter(f=>f.date&&f.date.toDate()>=s&&f.date.toDate()<e); }
-        else if(salesFilter==='yesterday'){ const s=new Date(now.getFullYear(),now.getMonth(),now.getDate()-1), e=new Date(now.getFullYear(),now.getMonth(),now.getDate()); filtered=filtered.filter(f=>f.date&&f.date.toDate()>=s&&f.date.toDate()<e); }
-        else if(salesFilter==='custom' && selectedDate){ const s=new Date(selectedDate); s.setHours(0,0,0,0); const e=new Date(selectedDate); e.setHours(23,59,59,999); filtered=filtered.filter(f=>f.date&&f.date.toDate()>=s&&f.date.toDate()<=e); }
-        filtered.sort((a,b)=>(b.date?.toDate()||0)-(a.date?.toDate()||0));
-        if(filtered.length===0){ cont.innerHTML='<p>⚠️ لا توجد مبيعات في هذا التاريخ</p>'; return; }
-        let html='';
-        for(let s of filtered){
-            let canc=s.cancelled===true;
-            let cust=s.customerId?allCustomers.find(c=>c.id===s.customerId):null;
-            html+=`<div class="card ${canc?'cancelled':''}"><div class="card-info"><strong>${escapeHtml(s.productName)}</strong> - الكمية: ${s.quantity} | الإجمالي: ${s.total} ج.م<br>طريقة الدفع: ${s.paymentMethod} | العميل: ${cust?cust.name:'نقدي'}<br>التاريخ: ${formatDate(s.date)} | الحالة: ${canc?'ملغاة':'ناجحة'}</div><div>${!canc?`<button class="btn-sm btn-danger" onclick="cancelSale('${s.id}')">إلغاء</button>`:''}</div></div>`;
-        }
-        cont.innerHTML=html;
-    }
-    function calculateTopProductsWeek(){
-        const cont=document.getElementById('topProductsWeek'); if(!cont) return;
-        const weekAgo=new Date(); weekAgo.setDate(weekAgo.getDate()-7);
-        const pc={};
-        for(let s of allSalesCache){
-            if(s.cancelled===true) continue;
-            if(!s.productName||!s.date) continue;
-            const d=s.date.toDate();
-            if(d>=weekAgo) pc[s.productName]=(pc[s.productName]||0)+(s.quantity||0);
-        }
-        const sorted=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,10);
-        if(sorted.length===0){ cont.innerHTML='<p>لا توجد مبيعات خلال الأسبوع الماضي</p>'; return; }
-        cont.innerHTML=sorted.map(([n,q])=>`<div class="card"><div class="card-info">${escapeHtml(n)} : ${q} وحدة</div></div>`).join('');
-    }
-    window.setSalesFilter=(f)=>{ salesFilter=f; const p=document.getElementById('customDatePicker'); if(p) p.style.display=f==='custom'?'inline-block':'none'; if(f!=='custom') selectedDate=''; filterAndDisplaySales(); };
-    window.setCustomDate=(d)=>{ selectedDate=d; filterAndDisplaySales(); };
-    window.loadSalesLog=async()=>{ await ensureSalesCache(); filterAndDisplaySales(); calculateTopProductsWeek(); };
-
-    // ======================= فواتير اليوم =======================
-    async function renderInvoicesTab(container){
-        await ensureSalesCache();
-        const now=new Date();
-        const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-        const end=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
-        const today=allSalesCache.filter(s=>s.date&&s.date.toDate()>=start&&s.date.toDate()<end);
-        const days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-        const dayName=days[now.getDay()];
-        let html=`<h3>📄 فواتير اليوم - ${dayName}</h3>`;
-        if(today.length===0) html+='<p>لا توجد فواتير اليوم</p>';
-        else for(let s of today){
-            let canc=s.cancelled===true;
-            let cust=s.customerId?allCustomers.find(c=>c.id===s.customerId):null;
-            html+=`<div class="card ${canc?'cancelled':''}"><div class="card-info"><strong>${escapeHtml(s.productName)}</strong><br>الكمية: ${s.quantity} | الإجمالي: ${s.total} ج.م<br>طريقة الدفع: ${s.paymentMethod}<br>العميل: ${cust?cust.name:'نقدي'}<br>الوقت: ${s.date?.toDate().toLocaleTimeString('ar-EG')}</div><div>${!canc?`<button class="btn-sm btn-danger" onclick="cancelSale('${s.id}',true)">🔄 إرجاع</button>`:'<span class="btn-sm">ملغاة</span>'} <button class="btn-sm" onclick="printInvoice('${s.id}')">🖨️ طباعة</button></div></div>`;
-        }
-        container.innerHTML=html;
-    }
-    window.printInvoice=async(saleId)=>{
-        const sale=allSalesCache.find(s=>s.id===saleId);
-        if(!sale) return;
-        let custName=sale.customerId?(allCustomers.find(c=>c.id===sale.customerId)?.name||'عميل'):'نقدي';
-        let storeName=userData?.storeName||'متجر';
-        let win=window.open('','_blank');
-        win.document.write(`<!DOCTYPE html><html dir="rtl"><head><style>body{font-family:'Tajawal',sans-serif;padding:15px;margin:0;background:white;direction:rtl;} .store-box{text-align:center;margin-bottom:20px;padding:10px;border:2px solid #4c1d95;border-radius:12px;background:#f8f4ff;box-shadow:0 2px 5px rgba(0,0,0,0.1);} .store-name{font-size:22px;font-weight:bold;color:#4c1d95;margin:0;} h3{text-align:center;color:#333;margin:10px 0;} .details{margin:12px 0;font-size:14px;} table{width:100%;border-collapse:collapse;margin:15px 0;} th,td{border-bottom:1px solid #ddd;padding:8px;text-align:center;font-size:14px;} th{background:#f2f2f2;font-weight:bold;} .total-row{font-weight:bold;font-size:16px;margin-top:10px;text-align:center;} .method{margin-top:8px;font-size:14px;} .no-print{display:none;} @media print{body{padding:0;margin:0;} .no-print{display:none;}}</style></head><body>
-        <div class="store-box"><div class="store-name">🏪 ${escapeHtml(storeName)}</div></div>
-        <h3>فاتورة البيع</h3><div class="details"><div>العميل: ${custName}</div><div>التاريخ: ${formatDate(sale.date)}</div></div>
-        <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody><tr><td>${escapeHtml(sale.productName)}</td><td>${sale.quantity}</td><td>${sale.unitPrice}</td><td>${sale.total.toFixed(2)}</td></tr></tbody></table>
-        <div class="total-row">الإجمالي: ${sale.total.toFixed(2)} ج.م</div>
-        <div class="method">طريقة الدفع: ${sale.paymentMethod}</div>${sale.paymentMethod!=='credit'?`<div class="method">المدفوع: ${(sale.total+(sale.changeAmount||0)).toFixed(2)} ج.م | الباقي: ${(sale.changeAmount||0).toFixed(2)} ج.م</div>`:''}
-        <div class="no-print" style="text-align:center;margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div></body></html>`);
-        win.document.close(); win.focus(); win.print();
-    };
-    window.cancelSale=async(saleId,fromInvoices=false)=>{
-        if(!confirm('إلغاء هذه العملية؟ سيتم إعادة الكمية للمخزون.')) return;
-        try{
-            const saleRef=getSalesCol().doc(saleId);
-            const saleDoc=await saleRef.get();
-            if(!saleDoc.exists||saleDoc.data().cancelled) throw new Error('لا يمكن الإلغاء');
-            const sale=saleDoc.data();
-            const prodRef=getProductsCol().doc(sale.productId);
-            const prodDoc=await prodRef.get();
-            const batch=db.batch();
-            if(prodDoc.exists) batch.update(prodRef,{qty:(prodDoc.data().qty||0)+sale.quantity});
-            batch.update(saleRef,{cancelled:true});
-            await batch.commit();
-            const idx=allSalesCache.findIndex(s=>s.id===saleId);
-            if(idx!==-1) allSalesCache[idx].cancelled=true;
-            if(fromInvoices) await renderInvoicesTab(document.getElementById('tabContent'));
-            else{ filterAndDisplaySales(); calculateTopProductsWeek(); }
-            showFlash('tabContent','تم إلغاء البيع'+(prodDoc.exists?' وأعيدت الكمية':''),false);
-        }catch(err){ showFlash('tabContent',err.message,true); }
-    };
-
-    // ======================= تبويب "أخرى" =======================
-    let otherSubTab='inventory';
-    async function renderOtherTab(container){
-        container.innerHTML=`
-            <h3>📦 القائمة الإضافية</h3>
-            <div class="sub-tabs">
-                <div class="sub-tab ${otherSubTab==='inventory'?'active':''}" onclick="setOtherSubTab('inventory')">📦 المخزون</div>
-                <div class="sub-tab ${otherSubTab==='hottest'?'active':''}" onclick="setOtherSubTab('hottest')">🔥 الأكثر مبيعاً (نطاق زمني)</div>
-                <div class="sub-tab ${otherSubTab==='account'?'active':''}" onclick="setOtherSubTab('account')">ℹ️ معلومات الحساب</div>
-                <div class="sub-tab ${otherSubTab==='reports'?'active':''}" onclick="setOtherSubTab('reports')">📊 التقارير</div>
-                <div class="sub-tab ${otherSubTab==='todaySales'?'active':''}" onclick="setOtherSubTab('todaySales')">📆 مبيعات اليوم</div>
-                <div class="sub-tab ${otherSubTab==='yesterdaySales'?'active':''}" onclick="setOtherSubTab('yesterdaySales')">📆 مبيعات الأمس</div>
-                <div class="sub-tab ${otherSubTab==='invoices'?'active':''}" onclick="setOtherSubTab('invoices')">📄 الفواتير</div>
-                <div class="sub-tab ${otherSubTab==='install'?'active':''}" onclick="setOtherSubTab('install')">📱 تثبيت التطبيق</div>
-                <div class="sub-tab ${otherSubTab==='contact'?'active':''}" onclick="setOtherSubTab('contact')">📱 تواصل معنا</div>
+// ======================= نقطة البيع =======================
+let cart=[];
+async function renderPosTab(container){
+    cart=[]; lastReceiptData=null;
+    let custOpt=`<option value="">بدون عميل</option>`+allCustomers.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} (دين: ${c.debt||0})</option>`).join('');
+    container.innerHTML=`
+        <div style="background:#f8fafc; border-radius:32px; padding:20px;">
+            <h3>💰 نقطة البيع السريعة</h3>
+            <div class="pos-row">
+                <input type="text" id="searchProduct" placeholder="🔍 باركود أو اسم المنتج" oninput="searchProductLive()">
+                <select id="productSelect"><option>اختر منتج</option></select>
+                <input type="number" id="cartQty" placeholder="الكمية" value="1">
+                <button onclick="addToCart()" class="btn-sm">➕ أضف للسلة</button>
             </div>
-            <div id="otherContent"></div>`;
-        await loadOtherSubContent();
-    }
-    window.setOtherSubTab=(tab)=>{ otherSubTab=tab; renderOtherTab(document.getElementById('tabContent')); };
-    async function loadOtherSubContent(){
-        const div=document.getElementById('otherContent'); if(!div) return;
-        if(otherSubTab==='inventory'){
-            div.innerHTML=`<h3>📦 المخزون الحالي</h3><div id="inventoryList"></div>`;
-            const listDiv=document.getElementById('inventoryList');
-            let html='';
-            for(let p of allProducts) html+=`<div class="card"><div class="card-info"><strong>${escapeHtml(p.name)}</strong> - الكمية: ${p.qty} ${p.unit} | سعر القطاعي: ${p.priceRetail} | سعر الجملة: ${p.priceWholesale}</div></div>`;
-            listDiv.innerHTML=html||'<p>لا توجد منتجات</p>';
-        }else if(otherSubTab==='hottest'){
-            div.innerHTML=`<h3>🔥 أكثر 5 منتجات مبيعاً في نطاق زمني</h3><div class="pos-row"><input type="datetime-local" id="startTime" placeholder="من"><input type="datetime-local" id="endTime" placeholder="إلى"><button onclick="calculateHottestProducts()">عرض</button></div><div id="hottestResult"></div>`;
-        }else if(otherSubTab==='account'){
-            const user=auth.currentUser;
-            const uid=user?.email?.replace('@bkalla.com','')||'غير متوفر';
-            const sn=userData?.storeName||'غير متوفر';
-            const roleName=(currentRole==='owner')?'مالك (Owner)':(currentRole==='manager'?'مستخدم':'مستخدم');
-            div.innerHTML=`<h3>ℹ️ معلومات الحساب</h3><div class="card"><div class="card-info"><p><strong>🆔 الـ ID:</strong> ${escapeHtml(uid)}</p><p><strong>🏪 اسم المحل:</strong> ${escapeHtml(sn)}</p><p><strong>🔑 الدور:</strong> ${roleName}</p></div></div>
-            <h3>🔐 تغيير كلمة المرور</h3><div class="card"><div class="card-info"><input type="password" id="oldPassword" placeholder="كلمة المرور القديمة"><input type="password" id="newPassword1" placeholder="كلمة المرور الجديدة"><input type="password" id="newPassword2" placeholder="تأكيد كلمة المرور الجديدة"><button onclick="changePassword()" class="btn-secondary">تغيير كلمة المرور</button><div id="passwordMsg" class="flash" style="display:none;"></div></div></div>`;
-        }else if(otherSubTab==='reports'){
-            await renderReportsInside(div);
-        }else if(otherSubTab==='todaySales'){
-            await renderDaySalesWithStats(div,'today');
-        }else if(otherSubTab==='yesterdaySales'){
-            await renderDaySalesWithStats(div,'yesterday');
-        }else if(otherSubTab==='invoices'){
-            await renderInvoicesTab(div);
-        }else if(otherSubTab==='install'){
-            div.innerHTML=`<div class="card"><div class="card-info" style="text-align:center;"><p>قم بتثبيت التطبيق على شاشتك الرئيسية للوصول السريع</p><button id="installPwaBtn" class="btn-secondary" onclick="installPwa()" style="display:${deferredPrompt?'inline-block':'none'}">📱 تثبيت على الواجهة الرئيسية</button>${!deferredPrompt?'<p class="flash">👈 يمكنك إضافة التطبيق يدوياً من قائمة المتصفح (إضافة إلى الشاشة الرئيسية)</p>':''}</div></div>`;
-        }else if(otherSubTab==='contact'){
-            div.innerHTML=`<div class="card"><div class="card-info"><a href="https://t.me/amgadmousa1000" target="_blank"><button class="btn-secondary">📱 تواصل معنا عبر تليجرام</button></a></div></div>`;
-        }
-    }
-
-    async function renderDaySalesWithStats(container, dayType){
-        await ensureSalesCache();
-        const now=new Date();
-        let start,end,dayName;
-        const days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-        if(dayType==='today'){
-            start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-            end=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
-            dayName=days[now.getDay()];
-            container.innerHTML=`<h3>📆 مبيعات اليوم (${dayName})</h3><div id="daySalesList"></div><div id="dayStats"></div>`;
-        }else{
-            start=new Date(now.getFullYear(),now.getMonth(),now.getDate()-1);
-            end=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-            const yest=new Date(now.getFullYear(),now.getMonth(),now.getDate()-1);
-            dayName=days[yest.getDay()];
-            container.innerHTML=`<h3>📆 مبيعات الأمس (${dayName})</h3><div id="daySalesList"></div><div id="dayStats"></div>`;
-        }
-        const filtered=allSalesCache.filter(s=>!s.cancelled && s.date && s.date.toDate()>=start && s.date.toDate()<end);
-        const listDiv=document.getElementById('daySalesList');
-        if(filtered.length===0){ listDiv.innerHTML='<p>لا توجد مبيعات</p>'; document.getElementById('dayStats').innerHTML=''; return; }
-        let totalSales=0, totalProfit=0, html='';
-        for(let s of filtered){
-            totalSales+=s.total;
-            const prod=allProducts.find(p=>p.id===s.productId);
-            const cost=prod?.cost||0;
-            totalProfit+=s.total-(cost*s.quantity);
-            html+=`<div class="card"><div class="card-info">${escapeHtml(s.productName)} - الكمية: ${s.quantity} - الإجمالي: ${s.total} ج.م</div></div>`;
-        }
-        listDiv.innerHTML=html;
-        document.getElementById('dayStats').innerHTML=`<div class="card" style="background:#e0f2fe;"><div class="card-info"><strong>📊 إجمالي المبيعات: ${totalSales.toFixed(2)} ج.م</strong><br><strong>💰 إجمالي الأرباح: ${totalProfit.toFixed(2)} ج.م</strong></div></div>`;
-    }
-    window.calculateHottestProducts=async()=>{
-        const start=new Date(document.getElementById('startTime').value);
-        const end=new Date(document.getElementById('endTime').value);
-        if(isNaN(start)||isNaN(end)) return showFlash('hottestResult','يرجى تحديد النطاق الزمني',true);
-        await ensureSalesCache();
-        const pc={};
-        for(let s of allSalesCache){
-            if(s.cancelled) continue;
-            const sd=s.date?.toDate();
-            if(sd && sd>=start && sd<=end) pc[s.productName]=(pc[s.productName]||0)+s.quantity;
-        }
-        const sorted=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,5);
-        const resultDiv=document.getElementById('hottestResult');
-        if(sorted.length===0){ resultDiv.innerHTML='<p>لا توجد مبيعات في هذا النطاق</p>'; return; }
-        resultDiv.innerHTML=sorted.map(([n,q])=>`<div class="card"><div class="card-info">${escapeHtml(n)} : ${q} وحدة</div></div>`).join('');
+            <div id="cartItems"></div>
+            <div class="pos-row">
+                <input type="text" id="searchCustomer" placeholder="🔍 بحث عن عميل" oninput="filterCustomers()">
+                <select id="customerId">${custOpt}</select>
+                <select id="paymentMethod"><option value="cash">كاش</option><option value="visa">فيزا</option><option value="credit">آجل</option></select>
+                <input type="number" id="paidAmount" placeholder="المدفوع" oninput="updateChange()">
+                <input type="text" id="changeAmount" placeholder="الباقي" readonly>
+            </div>
+            <div style="font-size:24px; font-weight:bold;" id="totalAmount">الإجمالي: 0 ج.م</div>
+            <button onclick="confirmSale()" style="background:#10b981;">إتمام البيع</button>
+            <div id="posFlash"></div>
+            <div id="printReceiptArea" style="margin-top:10px; display:none;"><button onclick="printLastReceipt()" style="background:#22c55e; width:auto; padding:8px 20px;">🖨️ طباعة الفاتورة</button></div>
+        </div>`;
+    const sel=document.getElementById('productSelect');
+    sel.innerHTML=allProducts.map(p=>`<option value="${p.id}" data-price="${p.priceRetail||p.price}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('');
+    if(allProducts.length===0) sel.innerHTML='<option>لا توجد منتجات</option>';
+    window.searchProductLive=()=>{
+        let val=document.getElementById('searchProduct').value;
+        let filtered=allProducts.filter(p=>(p.barcode&&p.barcode.includes(val))||p.name.includes(val));
+        let s=document.getElementById('productSelect');
+        s.innerHTML=filtered.map(p=>`<option value="${p.id}" data-price="${p.priceRetail||p.price}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('');
+        if(filtered.length===0) s.innerHTML='<option>لا يوجد</option>';
     };
-    async function renderReportsInside(container){
+    window.filterCustomers=()=>{
+        let val=document.getElementById('searchCustomer').value.toLowerCase();
+        let filtered=allCustomers.filter(c=>c.name.toLowerCase().includes(val));
+        let options=`<option value="">بدون عميل</option>`+filtered.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} (دين: ${c.debt||0})</option>`).join('');
+        document.getElementById('customerId').innerHTML=options;
+    };
+    window.addToCart=()=>{
+        let sel=document.getElementById('productSelect');
+        let pid=sel.value;
+        if(!pid||pid==='لا يوجد') return;
+        let qty=parseInt(document.getElementById('cartQty').value);
+        if(qty<=0) return;
+        let prod=allProducts.find(p=>p.id===pid);
+        if(!prod||prod.qty<qty){ showFlash('posFlash','كمية غير متوفرة',true); return; }
+        let existing=cart.find(i=>i.id===pid);
+        if(existing) existing.qty+=qty;
+        else cart.push({id:pid,name:prod.name,price:prod.priceRetail||prod.price,qty});
+        renderCart();
+    };
+    window.renderCart=()=>{
+        let cd=document.getElementById('cartItems');
+        let total=0;
+        let h=`<h4>السلة</h4>`;
+        cart.forEach((item,idx)=>{
+            total+=item.price*item.qty;
+            h+=`<div class="card" style="padding:10px;">${item.name} x ${item.qty} = ${(item.price*item.qty).toFixed(2)} ج.م <button class="btn-sm btn-danger" onclick="removeFromCart(${idx})">حذف</button></div>`;
+        });
+        cd.innerHTML=h;
+        document.getElementById('totalAmount').innerHTML=`الإجمالي: ${total.toFixed(2)} ج.م`;
+        updateChange();
+    };
+    window.removeFromCart=(idx)=>{ cart.splice(idx,1); renderCart(); };
+    window.updateChange=()=>{
+        let t=cart.reduce((s,i)=>s+(i.price*i.qty),0);
+        let paid=parseFloat(document.getElementById('paidAmount').value)||0;
+        document.getElementById('changeAmount').value=(paid>t)?(paid-t).toFixed(2):0;
+    };
+    renderCart();
+}
+
+async function confirmSale(){
+    if(cart.length===0) return showFlash('posFlash','السلة فارغة',true);
+    let cid=document.getElementById('customerId').value||null;
+    let pm=document.getElementById('paymentMethod').value;
+    let paid=parseFloat(document.getElementById('paidAmount').value)||0;
+    let total=cart.reduce((s,i)=>s+(i.price*i.qty),0);
+    let finalMethod=pm, change=0, debtAdded=0;
+    if(cid && paid<total){ finalMethod='credit'; debtAdded=total-paid; paid=total; change=0; showFlash('posFlash',`سيتم إضافة ${debtAdded} ج.م كدين على العميل`,false); }
+    else if(finalMethod!=='credit' && paid<total) return showFlash('posFlash','المدفوع أقل من الإجمالي',true);
+    else if(finalMethod!=='credit'){ change=paid-total; if(change<0) return showFlash('posFlash','المدفوع أقل من الإجمالي',true); }
+    try{
+        // التحقق من الكميات
+        for(let item of cart){
+            let prodRef=getProductsCol().doc(item.id);
+            let prodSnap=await prodRef.get();
+            if(!prodSnap.exists || prodSnap.data().qty < item.qty) throw new Error(`المنتج ${item.name} غير متوفر`);
+        }
+        const invoiceData = {
+            items: cart.map(item=>({ productId: item.id, productName: item.name, quantity: item.qty, unitPrice: item.price, total: item.price*item.qty })),
+            total: total,
+            paymentMethod: finalMethod,
+            customerId: cid,
+            paidAmount: paid,
+            changeAmount: change,
+            userId: currentUserAuth.uid,
+            cancelled: false,
+            date: firebase.firestore.FieldValue.serverTimestamp(),
+            debtAdded: debtAdded
+        };
+        if(!isOnline()){
+            await addPendingOp({ type: 'addInvoice', data: invoiceData });
+            // تحديث الكميات محلياً
+            for(let item of cart){
+                let prod=allProducts.find(p=>p.id===item.id);
+                if(prod) prod.qty -= item.qty;
+            }
+            if(cid && debtAdded>0){
+                let cust=allCustomers.find(c=>c.id===cid);
+                if(cust) cust.debt = (cust.debt||0) + debtAdded;
+            }
+            await cacheData('products', allProducts);
+            await cacheData('customers', allCustomers);
+            showFlash('posFlash','تم حفظ البيع محلياً (غير متصل) - سيتم المزامنة لاحقاً',false);
+            lastReceiptData = { cartItems: [...cart], total, method: finalMethod, customerId: cid, change, debtAdded };
+            document.getElementById('printReceiptArea').style.display='block';
+            cart=[]; renderCart();
+            return;
+        }
+        const batch=db.batch();
+        for(let item of cart){
+            const prodRef=getProductsCol().doc(item.id);
+            batch.update(prodRef, { qty: firebase.firestore.FieldValue.increment(-item.qty) });
+        }
+        const invoiceRef=getInvoicesCol().doc();
+        batch.set(invoiceRef, invoiceData);
+        if(cid && debtAdded>0){
+            const custRef=getCustomersCol().doc(cid);
+            batch.update(custRef, { debt: firebase.firestore.FieldValue.increment(debtAdded) });
+        }
+        await batch.commit();
+        showFlash('posFlash',`✅ بيع ناجح بقيمة ${total} ج.م`,false);
+        lastReceiptData = { cartItems: [...cart], total, method: finalMethod, customerId: cid, change, debtAdded };
+        document.getElementById('printReceiptArea').style.display='block';
         await loadStoreData();
-        const snap=await getSalesCol().where('cancelled','==',false).get();
-        let profit=0, ps={};
-        for(let d of snap.docs){
-            let sale=d.data();
-            let prod=allProducts.find(p=>p.id===sale.productId);
-            let cost=prod?.cost||0;
-            profit+=sale.total-(cost*sale.quantity);
-            ps[sale.productName]=(ps[sale.productName]||0)+sale.quantity;
-        }
-        let best=Object.keys(ps).length?Object.keys(ps).reduce((a,b)=>ps[a]>ps[b]?a:b):'لا يوجد';
-        let low=allProducts.filter(p=>p.qty<=(p.lowStockAlert||0)).map(p=>p.name).join(', ')||'لا يوجد';
-        container.innerHTML=`<div class="grid-2"><div class="stat-card">💰 إجمالي الأرباح: ${profit.toFixed(2)} ج.م</div><div class="stat-card">🏆 الأكثر مبيعاً: ${best}</div><div class="stat-card">⚠️ منتجات منخفضة المخزون: ${low}</div></div><button class="btn-secondary" onclick="renderReportsInside(document.getElementById('otherContent'))">تحديث</button>`;
-    }
-    window.changePassword=async()=>{
-        const old=document.getElementById('oldPassword').value, new1=document.getElementById('newPassword1').value, new2=document.getElementById('newPassword2').value, msg=document.getElementById('passwordMsg');
-        if(!old||!new1||!new2){ msg.style.display='block'; msg.style.backgroundColor='#ffe0e0'; msg.style.color='#b91c1c'; msg.innerText='الرجاء ملء جميع الحقول'; setTimeout(()=>msg.style.display='none',3000); return; }
-        if(new1!==new2){ msg.style.display='block'; msg.style.backgroundColor='#ffe0e0'; msg.style.color='#b91c1c'; msg.innerText='كلمة المرور الجديدة غير متطابقة'; setTimeout(()=>msg.style.display='none',3000); return; }
-        if(new1.length<6){ msg.style.display='block'; msg.style.backgroundColor='#ffe0e0'; msg.style.color='#b91c1c'; msg.innerText='كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل'; setTimeout(()=>msg.style.display='none',3000); return; }
-        const user=auth.currentUser;
-        try{
-            const cred=firebase.auth.EmailAuthProvider.credential(user.email,old);
-            await user.reauthenticateWithCredential(cred);
-            await user.updatePassword(new1);
-            msg.style.display='block'; msg.style.backgroundColor='#e0f2fe'; msg.style.color='#065f46'; msg.innerText='✅ تم تغيير كلمة المرور بنجاح';
-            document.getElementById('oldPassword').value=''; document.getElementById('newPassword1').value=''; document.getElementById('newPassword2').value='';
-            setTimeout(()=>msg.style.display='none',3000);
-        }catch(e){
-            msg.style.display='block'; msg.style.backgroundColor='#ffe0e0'; msg.style.color='#b91c1c';
-            msg.innerText=e.code==='auth/wrong-password'?'كلمة المرور القديمة خاطئة':'حدث خطأ، حاول مرة أخرى';
-            setTimeout(()=>msg.style.display='none',3000);
-        }
-    };
+        await ensureInvoicesCache();
+        const sel=document.getElementById('productSelect'); if(sel) sel.innerHTML=allProducts.map(p=>`<option value="${p.id}" data-price="${p.priceRetail||p.price}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('');
+        cart=[]; renderCart();
+    }catch(err){ showFlash('posFlash',err.message,true); }
+}
 
-    // ======================= تسجيل الدخول والخروج =======================
-    async function handleSignedInUser(user){
-        try{
-            const info=await ensureUserDocument(user.uid,user.email);
-            currentUserAuth=user; userData=info; currentStoreId=info.storeId; currentRole=info.role; isAdminGlobal=(currentRole==='admin');
-            document.getElementById('loginScreen').style.display='none';
-            document.getElementById('dashboard').style.display='block';
-            document.getElementById('storeTitle').innerHTML=`<i class="fas fa-store"></i> ${info.storeName||'المحل'}`;
-            if(!isAdminGlobal) await loadStoreData();
-            buildTabs();
-        }catch(e){ console.error(e); await auth.signOut(); location.reload(); }
+function printLastReceipt(){
+    if(!lastReceiptData) return;
+    let {cartItems,total,method,customerId,change,debtAdded}=lastReceiptData;
+    let custName=customerId?(allCustomers.find(c=>c.id===customerId)?.name||'عميل'):'نقدي';
+    let debtMsg=debtAdded>0?`<p>تم إضافة مبلغ ${debtAdded} ج.م كدين على العميل</p>`:'';
+    let storeName=userData?.storeName||'متجر';
+    let win=window.open('','_blank');
+    win.document.write(`<!DOCTYPE html><html dir="rtl"><head><style>
+        body{font-family:'Tajawal',sans-serif;padding:15px;margin:0;background:white;direction:rtl;}
+        .store-box{text-align:center;margin-bottom:20px;padding:10px;border:2px solid #4c1d95;border-radius:12px;background:#f8f4ff;box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+        .store-name{font-size:22px;font-weight:bold;color:#4c1d95;margin:0;}
+        h3{text-align:center;color:#333;margin:10px 0;}
+        .details{margin:12px 0;font-size:14px;}
+        table{width:100%;border-collapse:collapse;margin:15px 0;}
+        th,td{border-bottom:1px solid #ddd;padding:8px;text-align:center;font-size:14px;}
+        th{background:#f2f2f2;font-weight:bold;}
+        .total-row{font-weight:bold;font-size:16px;margin-top:10px;text-align:center;}
+        .method{margin-top:8px;font-size:14px;}
+        .debt-msg{color:#dc2626;margin-top:8px;font-size:13px;}
+        .no-print{display:none;}
+        @media print{body{padding:0;margin:0;}.no-print{display:none;}}
+    </style></head><body>
+    <div class="store-box"><div class="store-name">🏪 ${escapeHtml(storeName)}</div></div>
+    <h3>فاتورة البيع</h3>
+    <div class="details"><div>العميل: ${custName}</div><div>التاريخ: ${new Date().toLocaleString('ar-EG')}</div></div>
+    <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
+    <tbody>${cartItems.map(i=>`<tr><td>${escapeHtml(i.name)}</td><td>${i.qty}</td><td>${i.price}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('')}</tbody></table>
+    <div class="total-row">الإجمالي: ${total.toFixed(2)} ج.م</div>
+    <div class="method">طريقة الدفع: ${method}</div>
+    ${method!=='credit'?`<div class="method">المدفوع: ${(total+change).toFixed(2)} ج.م | الباقي: ${change.toFixed(2)} ج.م</div>`:''}
+    ${debtMsg}
+    <div class="no-print" style="text-align:center;margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div>
+    </body></html>`);
+    win.document.close(); win.focus(); win.print();
+}
+
+// ======================= المنتجات (نفس الكود الأصلي مع صلاحيات) =======================
+async function renderProductsTab(container){
+    await loadStoreData();
+    container.innerHTML=`<h3>➕ إضافة منتج جديد</h3><div class="grid-2"><input id="prodName" placeholder="اسم المنتج*"> <input id="prodBarcode" placeholder="باركود"><input id="prodPriceRetail" type="number" placeholder="سعر القطاعي"> <input id="prodPriceWholesale" type="number" placeholder="سعر الجملة"><input id="prodCost" type="number" placeholder="سعر الشراء"> <select id="prodUnit"><option>قطعة</option><option>كيلو</option></select><input id="prodQty" type="number" placeholder="الكمية"> <input id="prodLowStock" type="number" placeholder="حد التنبيه"><input id="prodImage" placeholder="رابط الصورة"> <button onclick="addNewProduct()">إضافة منتج</button></div><h3>📋 قائمة المنتجات</h3><div id="productsListArea"></div>`;
+    await renderProductsList();
+}
+async function renderProductsList(){
+    const area=document.getElementById('productsListArea');
+    if(!area) return;
+    let html='';
+    for(let p of allProducts){
+        let low=(p.qty<=(p.lowStockAlert||0))?'low-stock':'';
+        html+=`<div class="card ${low}"><div class="card-info">${p.imageUrl?`<img class="product-img" src="${p.imageUrl}">`:''}<strong>${escapeHtml(p.name)}</strong> (باركود: ${p.barcode||'-'})<br>قطاعي: ${p.priceRetail} | جملة: ${p.priceWholesale} | الشراء: ${p.cost||0}<br>الكمية: ${p.qty} ${p.unit} | التنبيه: ${p.lowStockAlert||0}</div><div>${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button>`:''}<button class="btn-sm" onclick="editProduct('${p.id}')">✏️</button></div></div>`;
     }
-    async function loginUser(){
-        const id=document.getElementById('loginId').value.trim();
-        const pwd=document.getElementById('loginPassword').value;
-        if(!id||!pwd){ document.getElementById('loginError').innerText='الرجاء إدخال ID وكلمة المرور'; return; }
-        const email=id+"@bkalla.com";
-        try{ const cred=await auth.signInWithEmailAndPassword(email,pwd); await handleSignedInUser(cred.user); }
-        catch(e){ document.getElementById('loginError').innerText='فشل الدخول: تحقق من ID وكلمة المرور'; }
+    area.innerHTML=html||'<p>لا توجد منتجات</p>';
+}
+window.addNewProduct=async()=>{
+    let name=document.getElementById('prodName').value.trim();
+    if(!name) return showFlash('productsListArea','الاسم مطلوب',true);
+    const data={ name, barcode:document.getElementById('prodBarcode').value, priceRetail:parseFloat(document.getElementById('prodPriceRetail').value)||0, priceWholesale:parseFloat(document.getElementById('prodPriceWholesale').value)||0, cost:parseFloat(document.getElementById('prodCost').value)||0, unit:document.getElementById('prodUnit').value, qty:parseInt(document.getElementById('prodQty').value)||0, lowStockAlert:parseInt(document.getElementById('prodLowStock').value)||0, imageUrl:document.getElementById('prodImage').value, createdAt:firebase.firestore.FieldValue.serverTimestamp() };
+    if(!isOnline()){
+        await addPendingOp({ type: 'addProduct', data });
+        allProducts.push({ id: 'temp_'+Date.now(), ...data });
+        renderProductsList();
+        showFlash('productsListArea','تمت إضافة المنتج محلياً (سيتم المزامنة لاحقاً)',false);
+        return;
     }
-    window.logoutUser=async()=>{ await auth.signOut(); location.reload(); };
-    auth.onAuthStateChanged(async(u)=>{ if(u) await handleSignedInUser(u); else { document.getElementById('loginScreen').style.display='flex'; document.getElementById('dashboard').style.display='none'; } });
+    await getProductsCol().add(data);
+    showFlash('productsListArea','تمت الإضافة');
+    renderProductsTab(document.getElementById('tabContent'));
+};
+window.deleteProduct=async(id)=>{ 
+    if(currentRole!=='owner'){ showFlash('productsListArea','غير مسموح، فقط المالك يمكنه الحذف',true); return; }
+    if(confirm('حذف المنتج نهائياً؟')){ await getProductsCol().doc(id).delete(); renderProductsTab(document.getElementById('tabContent')); }
+};
+window.editProduct=async(id)=>{ let newName=prompt('اسم جديد'); if(!newName) return; let newPrice=parseFloat(prompt('سعر قطاعي جديد')); let newQty=parseInt(prompt('كمية جديدة')); await getProductsCol().doc(id).update({name:newName, priceRetail:newPrice, qty:newQty}); renderProductsTab(document.getElementById('tabContent')); };
+
+// ======================= العملاء (نفس الأصلي مع تعديل بسيط) =======================
+async function renderCustomersTab(container){
+    await loadStoreData();
+    container.innerHTML=`<h3>👤 إضافة عميل جديد</h3><div class="pos-row"><input id="custName" placeholder="الاسم"><input id="custPhone" placeholder="الهاتف"><button onclick="addCustomer()">إضافة</button></div><h3>📋 قائمة العملاء</h3><div id="customersListDiv"></div>`;
+    const listDiv=document.getElementById('customersListDiv');
+    listDiv.innerHTML=allCustomers.map(c=>`<div class="card"><div class="card-info"><strong>${escapeHtml(c.name)}</strong> - هاتف: ${c.phone||'-'} | دين: ${c.debt||0} ج.م</div><div>${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteCustomer('${c.id}')">🗑️</button>`:''}<button class="btn-sm" onclick="editCustomer('${c.id}')">✏️</button><button class="btn-sm" onclick="recordPayment('${c.id}')">تسديد</button></div></div>`).join('');
+}
+window.addCustomer=async()=>{ let name=document.getElementById('custName').value.trim(); if(!name) return; await getCustomersCol().add({name, phone:document.getElementById('custPhone').value, debt:0 }); renderCustomersTab(document.getElementById('tabContent')); };
+window.editCustomer=async(id)=>{ let newName=prompt('اسم العميل الجديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف الجديد'); await getCustomersCol().doc(id).update({name:newName, phone:newPhone}); renderCustomersTab(document.getElementById('tabContent')); };
+window.deleteCustomer=async(id)=>{ if(currentRole!=='owner'){ showFlash('customersListDiv','غير مسموح، فقط المالك يمكنه الحذف',true); return; } if(confirm('حذف العميل؟')){ await getCustomersCol().doc(id).delete(); renderCustomersTab(document.getElementById('tabContent')); } };
+window.recordPayment=async(custId)=>{ let amt=parseFloat(prompt('المبلغ المسدد')); if(isNaN(amt)) return; const ref=getCustomersCol().doc(custId); const doc=await ref.get(); let newDebt=(doc.data().debt||0)-amt; await ref.update({debt:newDebt<0?0:newDebt}); renderCustomersTab(document.getElementById('tabContent')); };
+
+// ======================= الموردين (نفس الأصلي) =======================
+async function renderSuppliersTab(container){
+    await loadStoreData();
+    container.innerHTML=`<h3>🏭 إدارة الموردين</h3><div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="رقم الهاتف"><button onclick="addSupplier()">إضافة مورد</button></div><div id="suppliersList"></div>`;
+    const listDiv=document.getElementById('suppliersList');
+    let html='';
+    for(let s of allSuppliers){
+        html+=`<div class="card"><div class="card-info"><strong>${escapeHtml(s.name)}</strong> - هاتف: ${s.phone||'-'}</div><div>${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteSupplier('${s.id}')">🗑️</button>`:''}<button class="btn-sm" onclick="editSupplier('${s.id}')">✏️</button><button class="btn-sm" onclick="showSupplierProducts('${s.id}','${escapeHtml(s.name)}')">📋 منتجات المورد</button></div></div>`;
+    }
+    listDiv.innerHTML=html||'<p>لا يوجد موردون</p>';
+}
+window.showSupplierProducts=async(sid,sname)=>{
+    const cont=document.getElementById('tabContent');
+    const snap=await getSuppliersCol().doc(sid).collection('products').get();
+    let prods=snap.docs.map(d=>`<div class="card"><div class="card-info">${escapeHtml(d.data().name)} - سعر: ${d.data().price||0} ج.م</div><div><button class="btn-sm" onclick="deleteSupplierProduct('${sid}','${d.id}')">🗑️</button></div></div>`).join('');
+    if(snap.empty) prods='<p>لا توجد منتجات لهذا المورد</p>';
+    cont.innerHTML=`<h3>📦 منتجات المورد: ${sname}</h3><div class="pos-row"><input id="productName" placeholder="اسم المنتج"><input id="productPrice" type="number" placeholder="السعر"><button onclick="addSupplierProduct('${sid}')">➕ إضافة منتج</button></div><div id="supplierProductsList">${prods}</div><button class="btn-sm" onclick="renderSuppliersTab(document.getElementById('tabContent'))">🔙 رجوع</button>`;
+};
+window.addSupplierProduct=async(sid)=>{ let name=document.getElementById('productName').value.trim(); let price=parseFloat(document.getElementById('productPrice').value); if(!name||isNaN(price)) return showFlash('supplierProductsList','بيانات غير صحيحة',true); await getSuppliersCol().doc(sid).collection('products').add({name,price}); showFlash('supplierProductsList','تمت الإضافة'); window.showSupplierProducts(sid,''); };
+window.deleteSupplierProduct=async(sid,pid)=>{ if(!confirm('حذف المنتج؟')) return; await getSuppliersCol().doc(sid).collection('products').doc(pid).delete(); showFlash('supplierProductsList','تم الحذف'); window.showSupplierProducts(sid,''); };
+window.addSupplier=async()=>{ let name=document.getElementById('supName').value.trim(); if(!name) return; await getSuppliersCol().add({name, phone:document.getElementById('supPhone').value}); renderSuppliersTab(document.getElementById('tabContent')); };
+window.editSupplier=async(id)=>{ let newName=prompt('اسم المورد الجديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف الجديد'); await getSuppliersCol().doc(id).update({name:newName, phone:newPhone}); renderSuppliersTab(document.getElementById('tabContent')); };
+window.deleteSupplier=async(id)=>{ if(currentRole!=='owner'){ showFlash('suppliersList','غير مسموح، فقط المالك يمكنه الحذف',true); return; } if(confirm('حذف المورد؟')){ await getSuppliersCol().doc(id).delete(); renderSuppliersTab(document.getElementById('tabContent')); } };
+
+// ======================= سجل المبيعات (عرض الفواتير المجمعة) =======================
+let invoicesFilter='all', invSelectedDate='';
+async function renderSalesLogTab(container){
+    container.innerHTML=`<h3>📋 سجل المبيعات</h3><div class="pos-row"><button class="btn-sm ${invoicesFilter==='all'?'active':''}" onclick="setInvoicesFilter('all')">📋 الكل</button><button class="btn-sm ${invoicesFilter==='today'?'active':''}" onclick="setInvoicesFilter('today')">📅 اليوم</button><button class="btn-sm ${invoicesFilter==='yesterday'?'active':''}" onclick="setInvoicesFilter('yesterday')">📆 الأمس</button><button class="btn-sm ${invoicesFilter==='custom'?'active':''}" onclick="setInvoicesFilter('custom')">📅 تاريخ</button><input type="date" id="invCustomDatePicker" style="display:${invoicesFilter==='custom'?'inline-block':'none'}" onchange="setInvCustomDate(this.value)"><button class="btn-sm btn-secondary" onclick="loadInvoicesLog()">تحديث</button></div><div id="salesLogList">جاري التحميل...</div><hr><h3>🏆 أكثر 10 منتجات مبيعًا خلال الأسبوع</h3><div id="topProductsWeek">جاري التحميل...</div>`;
+    await ensureInvoicesCache(); filterAndDisplayInvoices(); calculateTopProductsWeekFromInvoices();
+}
+function filterAndDisplayInvoices(){
+    const cont=document.getElementById('salesLogList'); if(!cont) return;
+    let filtered=[...allInvoicesCache];
+    const now=new Date();
+    if(invoicesFilter==='today'){ const s=new Date(now.getFullYear(),now.getMonth(),now.getDate()), e=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1); filtered=filtered.filter(f=>f.date&&f.date.toDate()>=s&&f.date.toDate()<e); }
+    else if(invoicesFilter==='yesterday'){ const s=new Date(now.getFullYear(),now.getMonth(),now.getDate()-1), e=new Date(now.getFullYear(),now.getMonth(),now.getDate()); filtered=filtered.filter(f=>f.date&&f.date.toDate()>=s&&f.date.toDate()<e); }
+    else if(invoicesFilter==='custom' && invSelectedDate){ const s=new Date(invSelectedDate); s.setHours(0,0,0,0); const e=new Date(invSelectedDate); e.setHours(23,59,59,999); filtered=filtered.filter(f=>f.date&&f.date.toDate()>=s&&f.date.toDate()<=e); }
+    filtered.sort((a,b)=>(b.date?.toDate()||0)-(a.date?.toDate()||0));
+    if(filtered.length===0){ cont.innerHTML='<p>⚠️ لا توجد فواتير في هذا التاريخ</p>'; return; }
+    let html='';
+    for(let inv of filtered){
+        let canc=inv.cancelled===true;
+        let cust=inv.customerId?allCustomers.find(c=>c.id===inv.customerId):null;
+        let itemsList = inv.items.map(it=>`${it.productName} (${it.quantity})`).join(', ');
+        html+=`<div class="card ${canc?'cancelled':''}"><div class="card-info"><strong>فاتورة رقم: ${inv.id.slice(-6)}</strong><br>المنتجات: ${itemsList}<br>الإجمالي: ${inv.total} ج.م<br>طريقة الدفع: ${inv.paymentMethod} | العميل: ${cust?cust.name:'نقدي'}<br>التاريخ: ${formatDate(inv.date)} | الحالة: ${canc?'ملغاة':'ناجحة'}</div><div>${!canc?`<button class="btn-sm btn-danger" onclick="cancelInvoice('${inv.id}')">إلغاء الفاتورة</button>`:''}</div></div>`;
+    }
+    cont.innerHTML=html;
+}
+function calculateTopProductsWeekFromInvoices(){
+    const cont=document.getElementById('topProductsWeek'); if(!cont) return;
+    const weekAgo=new Date(); weekAgo.setDate(weekAgo.getDate()-7);
+    const pc={};
+    for(let inv of allInvoicesCache){
+        if(inv.cancelled===true) continue;
+        if(!inv.date) continue;
+        const invDate=inv.date.toDate();
+        if(invDate>=weekAgo){
+            for(let it of inv.items){
+                pc[it.productName]=(pc[it.productName]||0)+it.quantity;
+            }
+        }
+    }
+    const sorted=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    if(sorted.length===0){ cont.innerHTML='<p>لا توجد مبيعات خلال الأسبوع الماضي</p>'; return; }
+    cont.innerHTML=sorted.map(([n,q])=>`<div class="card"><div class="card-info">${escapeHtml(n)} : ${q} وحدة</div></div>`).join('');
+}
+window.setInvoicesFilter=(f)=>{ invoicesFilter=f; const p=document.getElementById('invCustomDatePicker'); if(p) p.style.display=f==='custom'?'inline-block':'none'; if(f!=='custom') invSelectedDate=''; filterAndDisplayInvoices(); };
+window.setInvCustomDate=(d)=>{ invSelectedDate=d; filterAndDisplayInvoices(); };
+window.loadInvoicesLog=async()=>{ await ensureInvoicesCache(); filterAndDisplayInvoices(); calculateTopProductsWeekFromInvoices(); };
+
+window.cancelInvoice=async(invoiceId)=>{
+    if(!confirm('إلغاء هذه الفاتورة؟ سيتم إعادة جميع الكميات للمخزون وخصم الدين إن وجد.')) return;
+    try{
+        const invRef=getInvoicesCol().doc(invoiceId);
+        const invDoc=await invRef.get();
+        if(!invDoc.exists || invDoc.data().cancelled) throw new Error('لا يمكن الإلغاء');
+        const inv=invDoc.data();
+        const batch=db.batch();
+        for(let item of inv.items){
+            const prodRef=getProductsCol().doc(item.productId);
+            batch.update(prodRef, { qty: firebase.firestore.FieldValue.increment(item.quantity) });
+        }
+        if(inv.customerId && inv.paymentMethod==='credit' && inv.debtAdded){
+            const custRef=getCustomersCol().doc(inv.customerId);
+            batch.update(custRef, { debt: firebase.firestore.FieldValue.increment(-inv.debtAdded) });
+        }
+        batch.update(invRef, { cancelled: true });
+        await batch.commit();
+        const idx=allInvoicesCache.findIndex(i=>i.id===invoiceId);
+        if(idx!==-1) allInvoicesCache[idx].cancelled=true;
+        await cacheData('invoices', allInvoicesCache);
+        filterAndDisplayInvoices();
+        calculateTopProductsWeekFromInvoices();
+        showFlash('salesLogList','تم إلغاء الفاتورة وإعادة الكميات',false);
+    }catch(err){ showFlash('salesLogList',err.message,true); }
+};
+
+// ======================= فواتير اليوم (عرض الفواتير المجمعة) =======================
+async function renderInvoicesTab(container){
+    await ensureInvoicesCache();
+    const now=new Date();
+    const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const end=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+    const today=allInvoicesCache.filter(inv=>inv.date&&inv.date.toDate()>=start&&inv.date.toDate()<end);
+    const days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const dayName=days[now.getDay()];
+    let html=`<h3>📄 فواتير اليوم - ${dayName}</h3>`;
+    if(today.length===0) html+='<p>لا توجد فواتير اليوم</p>';
+    else for(let inv of today){
+        let canc=inv.cancelled===true;
+        let cust=inv.customerId?allCustomers.find(c=>c.id===inv.customerId):null;
+        let itemsList = inv.items.map(it=>`${it.productName} (${it.quantity})`).join(', ');
+        html+=`<div class="card ${canc?'cancelled':''}"><div class="card-info"><strong>فاتورة رقم: ${inv.id.slice(-6)}</strong><br>المنتجات: ${itemsList}<br>الإجمالي: ${inv.total} ج.م<br>طريقة الدفع: ${inv.paymentMethod}<br>العميل: ${cust?cust.name:'نقدي'}<br>الوقت: ${inv.date?.toDate().toLocaleTimeString('ar-EG')}</div><div>${!canc?`<button class="btn-sm btn-danger" onclick="cancelInvoice('${inv.id}')">🔄 إرجاع</button>`:'<span class="btn-sm">ملغاة</span>'} <button class="btn-sm" onclick="printInvoice('${inv.id}')">🖨️ طباعة</button></div></div>`;
+    }
+    container.innerHTML=html;
+}
+window.printInvoice=async(invoiceId)=>{
+    const inv=allInvoicesCache.find(i=>i.id===invoiceId);
+    if(!inv) return;
+    let custName=inv.customerId?(allCustomers.find(c=>c.id===inv.customerId)?.name||'عميل'):'نقدي';
+    let storeName=userData?.storeName||'متجر';
+    let win=window.open('','_blank');
+    win.document.write(`<!DOCTYPE html><html dir="rtl"><head><style>body{font-family:'Tajawal',sans-serif;padding:15px;margin:0;background:white;direction:rtl;} .store-box{text-align:center;margin-bottom:20px;padding:10px;border:2px solid #4c1d95;border-radius:12px;background:#f8f4ff;box-shadow:0 2px 5px rgba(0,0,0,0.1);} .store-name{font-size:22px;font-weight:bold;color:#4c1d95;margin:0;} h3{text-align:center;color:#333;margin:10px 0;} .details{margin:12px 0;font-size:14px;} table{width:100%;border-collapse:collapse;margin:15px 0;} th,td{border-bottom:1px solid #ddd;padding:8px;text-align:center;font-size:14px;} th{background:#f2f2f2;font-weight:bold;} .total-row{font-weight:bold;font-size:16px;margin-top:10px;text-align:center;} .method{margin-top:8px;font-size:14px;} .no-print{display:none;} @media print{body{padding:0;margin:0;} .no-print{display:none;}}</style></head><body>
+    <div class="store-box"><div class="store-name">🏪 ${escapeHtml(storeName)}</div></div>
+    <h3>فاتورة البيع</h3>
+    <div class="details"><div>العميل: ${custName}</div><div>التاريخ: ${formatDate(inv.date)}</div></div>
+    <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><tr></thead>
+    <tbody>${inv.items.map(it=>`<tr><td>${escapeHtml(it.productName)}</td><td>${it.quantity}</td><td>${it.unitPrice}</td><td>${it.total.toFixed(2)}</td></tr>`).join('')}</tbody></table>
+    <div class="total-row">الإجمالي: ${inv.total.toFixed(2)} ج.م</div>
+    <div class="method">طريقة الدفع: ${inv.paymentMethod}</div>${inv.paymentMethod!=='credit'?`<div class="method">المدفوع: ${(inv.total+(inv.changeAmount||0)).toFixed(2)} ج.م | الباقي: ${(inv.changeAmount||0).toFixed(2)} ج.م</div>`:''}
+    <div class="no-print" style="text-align:center;margin-top:20px;"><button onclick="window.print()">🖨️ طباعة</button></div></body></html>`);
+    win.document.close(); win.focus(); win.print();
+};
+
+// ======================= تبويب "أخرى" (نفس الأصلي مع تعديل لحساب الأرباح من الفواتير) =======================
+let otherSubTab='inventory';
+async function renderOtherTab(container){
+    container.innerHTML=`
+        <h3>📦 القائمة الإضافية</h3>
+        <div class="sub-tabs">
+            <div class="sub-tab ${otherSubTab==='inventory'?'active':''}" onclick="setOtherSubTab('inventory')">📦 المخزون</div>
+            <div class="sub-tab ${otherSubTab==='hottest'?'active':''}" onclick="setOtherSubTab('hottest')">🔥 الأكثر مبيعاً (نطاق زمني)</div>
+            <div class="sub-tab ${otherSubTab==='account'?'active':''}" onclick="setOtherSubTab('account')">ℹ️ معلومات الحساب</div>
+            <div class="sub-tab ${otherSubTab==='reports'?'active':''}" onclick="setOtherSubTab('reports')">📊 التقارير</div>
+            <div class="sub-tab ${otherSubTab==='todaySales'?'active':''}" onclick="setOtherSubTab('todaySales')">📆 مبيعات اليوم</div>
+            <div class="sub-tab ${otherSubTab==='yesterdaySales'?'active':''}" onclick="setOtherSubTab('yesterdaySales')">📆 مبيعات الأمس</div>
+            <div class="sub-tab ${otherSubTab==='invoices'?'active':''}" onclick="setOtherSubTab('invoices')">📄 الفواتير</div>
+            <div class="sub-tab ${otherSubTab==='install'?'active':''}" onclick="setOtherSubTab('install')">📱 تثبيت التطبيق</div>
+            <div class="sub-tab ${otherSubTab==='contact'?'active':''}" onclick="setOtherSubTab('contact')">📱 تواصل معنا</div>
+        </div>
+        <div id="otherContent"></div>`;
+    await loadOtherSubContent();
+}
+window.setOtherSubTab=(tab)=>{ otherSubTab=tab; renderOtherTab(document.getElementById('tabContent')); };
+async function loadOtherSubContent(){
+    const div=document.getElementById('otherContent'); if(!div) return;
+    if(otherSubTab==='inventory'){
+        div.innerHTML=`<h3>📦 المخزون الحالي</h3><div id="inventoryList"></div>`;
+        const listDiv=document.getElementById('inventoryList');
+        let html='';
+        for(let p of allProducts) html+=`<div class="card"><div class="card-info"><strong>${escapeHtml(p.name)}</strong> - الكمية: ${p.qty} ${p.unit} | سعر القطاعي: ${p.priceRetail} | سعر الجملة: ${p.priceWholesale}</div></div>`;
+        listDiv.innerHTML=html||'<p>لا توجد منتجات</p>';
+    }else if(otherSubTab==='hottest'){
+        div.innerHTML=`<h3>🔥 أكثر 5 منتجات مبيعاً في نطاق زمني</h3><div class="pos-row"><input type="datetime-local" id="startTime" placeholder="من"><input type="datetime-local" id="endTime" placeholder="إلى"><button onclick="calculateHottestProductsFromInvoices()">عرض</button></div><div id="hottestResult"></div>`;
+    }else if(otherSubTab==='account'){
+        const user=auth.currentUser;
+        const uid=user?.email?.replace('@bkalla.com','')||'غير متوفر';
+        const sn=userData?.storeName||'غير متوفر';
+        const roleName=(currentRole==='owner')?'مالك (Owner)':(currentRole==='manager'?'مدير (Admin)':'مستخدم');
+        div.innerHTML=`<h3>ℹ️ معلومات الحساب</h3><div class="card"><div class="card-info"><p><strong>🆔 الـ ID:</strong> ${escapeHtml(uid)}</p><p><strong>🏪 اسم المحل:</strong> ${escapeHtml(sn)}</p><p><strong>🔑 الدور:</strong> ${roleName}</p></div></div>
+        <h3>🔐 تغيير كلمة المرور</h3><div class="card"><div class="card-info"><input type="password" id="oldPassword" placeholder="كلمة المرور القديمة"><input type="password" id="newPassword1" placeholder="كلمة المرور الجديدة"><input type="password" id="newPassword2" placeholder="تأكيد كلمة المرور الجديدة"><button onclick="changePassword()" class="btn-secondary">تغيير كلمة المرور</button><div id="passwordMsg" class="flash" style="display:none;"></div></div></div>`;
+    }else if(otherSubTab==='reports'){
+        await renderReportsInside(div);
+    }else if(otherSubTab==='todaySales'){
+        await renderDaySalesWithStatsFromInvoices(div,'today');
+    }else if(otherSubTab==='yesterdaySales'){
+        await renderDaySalesWithStatsFromInvoices(div,'yesterday');
+    }else if(otherSubTab==='invoices'){
+        await renderInvoicesTab(div);
+    }else if(otherSubTab==='install'){
+        div.innerHTML=`<div class="card"><div class="card-info" style="text-align:center;"><p>قم بتثبيت التطبيق على شاشتك الرئيسية للوصول السريع</p><button id="installPwaBtn" class="btn-secondary" onclick="installPwa()" style="display:${deferredPrompt?'inline-block':'none'}">📱 تثبيت على الواجهة الرئيسية</button>${!deferredPrompt?'<p class="flash">👈 يمكنك إضافة التطبيق يدوياً من قائمة المتصفح (إضافة إلى الشاشة الرئيسية)</p>':''}</div></div>`;
+    }else if(otherSubTab==='contact'){
+        div.innerHTML=`<div class="card"><div class="card-info"><a href="https://t.me/amgadmousa1000" target="_blank"><button class="btn-secondary">📱 تواصل معنا عبر تليجرام</button></a></div></div>`;
+    }
+}
+
+async function renderDaySalesWithStatsFromInvoices(container, dayType){
+    await ensureInvoicesCache();
+    const now=new Date();
+    let start,end,dayName;
+    const days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    if(dayType==='today'){
+        start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+        end=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+        dayName=days[now.getDay()];
+        container.innerHTML=`<h3>📆 مبيعات اليوم (${dayName})</h3><div id="daySalesList"></div><div id="dayStats"></div>`;
+    }else{
+        start=new Date(now.getFullYear(),now.getMonth(),now.getDate()-1);
+        end=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+        const yest=new Date(now.getFullYear(),now.getMonth(),now.getDate()-1);
+        dayName=days[yest.getDay()];
+        container.innerHTML=`<h3>📆 مبيعات الأمس (${dayName})</h3><div id="daySalesList"></div><div id="dayStats"></div>`;
+    }
+    const filtered=allInvoicesCache.filter(inv=>!inv.cancelled && inv.date && inv.date.toDate()>=start && inv.date.toDate()<end);
+    const listDiv=document.getElementById('daySalesList');
+    if(filtered.length===0){ listDiv.innerHTML='<p>لا توجد مبيعات</p>'; document.getElementById('dayStats').innerHTML=''; return; }
+    let totalSales=0, totalProfit=0, html='';
+    for(let inv of filtered){
+        totalSales+=inv.total;
+        for(let it of inv.items){
+            const prod=allProducts.find(p=>p.id===it.productId);
+            const cost=prod?.cost||0;
+            totalProfit+=it.total-(cost*it.quantity);
+        }
+        html+=`<div class="card"><div class="card-info">فاتورة ${inv.id.slice(-6)} - الإجمالي: ${inv.total} ج.م (${inv.items.length} منتج)</div></div>`;
+    }
+    listDiv.innerHTML=html;
+    document.getElementById('dayStats').innerHTML=`<div class="card" style="background:#e0f2fe;"><div class="card-info"><strong>📊 إجمالي المبيعات: ${totalSales.toFixed(2)} ج.م</strong><br><strong>💰 إجمالي الأرباح: ${totalProfit.toFixed(2)} ج.م</strong></div></div>`;
+}
+window.calculateHottestProductsFromInvoices=async()=>{
+    const start=new Date(document.getElementById('startTime').value);
+    const end=new Date(document.getElementById('endTime').value);
+    if(isNaN(start)||isNaN(end)) return showFlash('hottestResult','يرجى تحديد النطاق الزمني',true);
+    await ensureInvoicesCache();
+    const pc={};
+    for(let inv of allInvoicesCache){
+        if(inv.cancelled) continue;
+        const invDate=inv.date?.toDate();
+        if(invDate && invDate>=start && invDate<=end){
+            for(let it of inv.items){
+                pc[it.productName]=(pc[it.productName]||0)+it.quantity;
+            }
+        }
+    }
+    const sorted=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const resultDiv=document.getElementById('hottestResult');
+    if(sorted.length===0){ resultDiv.innerHTML='<p>لا توجد مبيعات في هذا النطاق</p>'; return; }
+    resultDiv.innerHTML=sorted.map(([n,q])=>`<div class="card"><div class="card-info">${escapeHtml(n)} : ${q} وحدة</div></div>`).join('');
+};
+async function renderReportsInside(container){
+    await loadStoreData();
+    await ensureInvoicesCache();
+    let profit=0, ps={};
+    for(let inv of allInvoicesCache){
+        if(inv.cancelled) continue;
+        for(let it of inv.items){
+            const prod=allProducts.find(p=>p.id===it.productId);
+            const cost=prod?.cost||0;
+            profit+=it.total-(cost*it.quantity);
+            ps[it.productName]=(ps[it.productName]||0)+it.quantity;
+        }
+    }
+    let best=Object.keys(ps).length?Object.keys(ps).reduce((a,b)=>ps[a]>ps[b]?a:b):'لا يوجد';
+    let low=allProducts.filter(p=>p.qty<=(p.lowStockAlert||0)).map(p=>p.name).join(', ')||'لا يوجد';
+    container.innerHTML=`<div class="grid-2"><div class="stat-card">💰 إجمالي الأرباح: ${profit.toFixed(2)} ج.م</div><div class="stat-card">🏆 الأكثر مبيعاً: ${best}</div><div class="stat-card">⚠️ منتجات منخفضة المخزون: ${low}</div></div><button class="btn-secondary" onclick="renderReportsInside(document.getElementById('otherContent'))">تحديث</button>`;
+}
+
+window.changePassword=async()=>{
+    const old=document.getElementById('oldPassword').value, new1=document.getElementById('newPassword1').value, new2=document.getElementById('newPassword2').value, msg=document.getElementById('passwordMsg');
+    if(!old||!new1||!new2){ msg.style.display='block'; msg.style.backgroundColor='#ffe0e0'; msg.style.color='#b91c1c'; msg.innerText='الرجاء ملء جميع الحقول'; setTimeout(()=>msg.style.display='none',3000); return; }
+    if(new1!==new2){ msg.style.display='block'; msg.style.backgroundColor='#ffe0e0'; msg.style.color='#b91c1c'; msg.innerText='كلمة المرور الجديدة غير متطابقة'; setTimeout(()=>msg.style.display='none',3000); return; }
+    if(new1.length<6){ msg.style.display='block'; msg.style.backgroundColor='#ffe0e0'; msg.style.color='#b91c1c'; msg.innerText='كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل'; setTimeout(()=>msg.style.display='none',3000); return; }
+    const user=auth.currentUser;
+    try{
+        const cred=firebase.auth.EmailAuthProvider.credential(user.email,old);
+        await user.reauthenticateWithCredential(cred);
+        await user.updatePassword(new1);
+        msg.style.display='block'; msg.style.backgroundColor='#e0f2fe'; msg.style.color='#065f46'; msg.innerText='✅ تم تغيير كلمة المرور بنجاح';
+        document.getElementById('oldPassword').value=''; document.getElementById('newPassword1').value=''; document.getElementById('newPassword2').value='';
+        setTimeout(()=>msg.style.display='none',3000);
+    }catch(e){
+        msg.style.display='block'; msg.style.backgroundColor='#ffe0e0'; msg.style.color='#b91c1c';
+        msg.innerText=e.code==='auth/wrong-password'?'كلمة المرور القديمة خاطئة':'حدث خطأ، حاول مرة أخرى';
+        setTimeout(()=>msg.style.display='none',3000);
+    }
+};
+
+// ======================= تسجيل الدخول والخروج =======================
+async function handleSignedInUser(user){
+    try{
+        const info=await ensureUserDocument(user.uid,user.email);
+        currentUserAuth=user; userData=info; currentStoreId=info.storeId; currentRole=info.role; isAdminGlobal=(currentRole==='admin');
+        document.getElementById('loginScreen').style.display='none';
+        document.getElementById('dashboard').style.display='block';
+        document.getElementById('storeTitle').innerHTML=`<i class="fas fa-store"></i> ${info.storeName||'المحل'}`;
+        if(!isAdminGlobal) await loadStoreData();
+        await ensureInvoicesCache();
+        buildTabs();
+        // عرض حالة الاتصال
+        if(!navigator.onLine) document.getElementById('statusBar').innerHTML = '📡 غير متصل - سيتم حفظ البيانات محلياً';
+        else document.getElementById('statusBar').innerHTML = '🌐 متصل';
+    }catch(e){ console.error(e); await auth.signOut(); location.reload(); }
+}
+async function loginUser(){
+    const id=document.getElementById('loginId').value.trim();
+    const pwd=document.getElementById('loginPassword').value;
+    if(!id||!pwd){ document.getElementById('loginError').innerText='الرجاء إدخال ID وكلمة المرور'; return; }
+    const email=id+"@bkalla.com";
+    try{ const cred=await auth.signInWithEmailAndPassword(email,pwd); await handleSignedInUser(cred.user); }
+    catch(e){ document.getElementById('loginError').innerText='فشل الدخول: تحقق من ID وكلمة المرور'; }
+}
+window.logoutUser=async()=>{ await auth.signOut(); location.reload(); };
+auth.onAuthStateChanged(async(u)=>{ if(u) await handleSignedInUser(u); else { document.getElementById('loginScreen').style.display='flex'; document.getElementById('dashboard').style.display='none'; } });
 </script>
 </body>
 </html>
