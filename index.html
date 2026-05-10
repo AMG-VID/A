@@ -1014,7 +1014,7 @@ window.printSalesTable=()=>{
     directPrint(generatePrintHTML('تقرير المبيعات اليومية', headerInfo, tableHeaders, tableRows, ''));
 };
 async function renderProductFilter(container){
-    container.innerHTML=`<h3>🔍 تصفية المنتجات</h3><div class="filter-row"><input type="text" id="filterSearch" placeholder="بحث بالاسم أو الباركود" oninput="applyProductFilter()"><div class="pos-row" style="gap:6px;"><input type="number" id="filterMinQty" placeholder="الكمية اقل من"><input type="number" id="filterMaxQty" placeholder="الكمية اكثر من"><button class="btn-sm" onclick="applyProductFilter()">تصفية</button><button class="btn-sm" onclick="resetProductFilter()">إعادة تعيين</button></div></div><div id="filteredProductsList"></div>`;
+    container.innerHTML=`<h3>🔍 تصفية المنتجات</h3><div class="filter-row"><input type="text" id="filterSearch" placeholder="بحث بالاسم أو الباركود" oninput="applyProductFilter()"><div class="pos-row" style="gap:6px;"><input type="number" id="filterMinQty" placeholder="منتجات كميتها اكثر من ..."><input type="number" id="filterMaxQty" placeholder="منتجات كميتها اقل من ..."><button class="btn-sm" onclick="applyProductFilter()">تصفية</button><button class="btn-sm" onclick="resetProductFilter()">إعادة تعيين</button></div></div><div id="filteredProductsList"></div>`;
     applyProductFilter();
 }
 function applyProductFilter(){
