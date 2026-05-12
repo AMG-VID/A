@@ -475,7 +475,7 @@ async function renderPosTab(container){
         let afterDiscount=Math.max(0, t-discount);
         let paid=parseFloat(document.getElementById('paidAmount').value)||0;
         document.getElementById('changeAmount').value=(paid>afterDiscount)?(paid-afterDiscount).toFixed(2):0;
-        document.getElementById('totalAmount').innerHTML=`الإجمالي: ${afterDiscount.toFixed(2)} ج.م (بعد الخصم)`;
+        document.getElementById('totalAmount').innerHTML=`الإجمالي: ${afterDiscount.toFixed(2)} ج.م`;
     };
     window.applyDiscount=()=>{ updateChange(); };
     async function refreshProductsForPos(){
