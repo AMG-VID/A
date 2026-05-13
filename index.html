@@ -607,7 +607,7 @@ async function confirmSale(){
         showFlash('posFlash',`✅ بيع ناجح بقيمة ${total} ج.م`,false);
         lastReceiptData={cartItems:[...cart],total,method:finalMethod,customerId:cid,change,debtAdded,invoiceNumber,discountAmount};
         document.getElementById('printReceiptArea').style.display='block';
-        await refreshFromFirestore(false); // تحديث خلفي صامت (لا يظهر شريط التحميل)
+        // await refreshFromFirestore(false); // تحديث خلفي صامت (لا يظهر شريط التحميل)
         cart=[]; renderCart();
     }catch(err){ showFlash('posFlash',err.message,true); }
 }
