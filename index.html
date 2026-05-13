@@ -219,17 +219,22 @@ async function loadFromCacheThenSync() {
 }
 loadFromCacheThenSync();
 
-async function refreshFromFirestore() {
+// ========== تحسين: تجنب التحميل المتكرر ==========
+let lastRefreshTime = 0;
+const REFRESH_COOLDOWN = 5 * 60 * 1000; // 5 دقائق
+
+async function refreshFromFirestore(showLoading = true) {
     if (!currentStoreId || isAdminGlobal) return;
     try {
         const loadingBar = document.getElementById('productsLoadingBar');
-        if (loadingBar) { loadingBar.style.display = 'flex'; loadingBar.innerHTML = '<span class="search-spinner"></span> جاري تحميل المنتجات...'; }
-
+        if (showLoading && loadingBar) {
+            loadingBar.style.display = 'flex';
+            loadingBar.innerHTML = '<span class="search-spinner"></span> جاري تحميل المنتجات...';
+        }
         let allFetchedProducts = [];
         let lastDoc = null;
         const batchSize = 500;
         let keepFetching = true;
-
         while (keepFetching) {
             let query = getProductsCol().orderBy(firebase.firestore.FieldPath.documentId()).limit(batchSize);
             if (lastDoc) query = query.startAfter(lastDoc);
@@ -238,12 +243,11 @@ async function refreshFromFirestore() {
             const batch = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             allFetchedProducts = allFetchedProducts.concat(batch);
             lastDoc = snap.docs[snap.docs.length - 1];
-            if (loadingBar) loadingBar.innerHTML = `<span class="search-spinner"></span> جاري تحميل المنتجات... ${allFetchedProducts.length} منتج`;
+            if (showLoading && loadingBar) loadingBar.innerHTML = `<span class="search-spinner"></span> جاري تحميل المنتجات... ${allFetchedProducts.length} منتج`;
             if (snap.docs.length < batchSize) keepFetching = false;
             if (allFetchedProducts.length >= QUERY_LIMITS.products) keepFetching = false;
         }
-
-        if (loadingBar) loadingBar.style.display = 'none';
+        if (showLoading && loadingBar) loadingBar.style.display = 'none';
 
         const [custSnap, suppSnap, invSnap, missingSnap] = await Promise.all([
             getCustomersCol().limit(QUERY_LIMITS.customers).get(),
@@ -271,6 +275,16 @@ async function refreshFromFirestore() {
         if (document.getElementById('customersListDiv')) renderCustomersTable();
         if (document.getElementById('invoicesList')) applyInvoicesFilters();
     } catch(e) { console.warn(e); }
+}
+
+async function loadStoreData(forceRefresh = false) {
+    if (isAdminGlobal || !currentStoreId) return;
+    const now = Date.now();
+    if (!forceRefresh && allProducts.length > 0 && (now - lastRefreshTime) < REFRESH_COOLDOWN) {
+        return; // استخدام البيانات المخزنة محلياً
+    }
+    await refreshFromFirestore(true);
+    lastRefreshTime = now;
 }
 
 function showFlash(id,txt,err=false){
@@ -335,7 +349,6 @@ async function getNextInvoiceNumber() {
     });
 }
 
-async function loadStoreData(){ if(isAdminGlobal||!currentStoreId) return; await refreshFromFirestore(); }
 async function ensureInvoicesCache(){ return allInvoicesCache; }
 
 async function syncPendingOps() {
@@ -382,7 +395,7 @@ async function syncPendingOps() {
         }catch(e){ console.warn(e); }
     }
     await clearPendingOps();
-    await refreshFromFirestore();
+    await refreshFromFirestore(true);
     if(document.getElementById('salesLogList')) filterAndDisplayInvoices();
     if(document.getElementById('otherContent')) loadOtherSubContent();
     showFlash('tabContent','',false);
@@ -420,7 +433,7 @@ async function switchTab(tabId){
     if(ab) ab.classList.add('active');
     const cont=document.getElementById('tabContent');
     if(isAdminGlobal){ cont.innerHTML='<div class="flash">لوحة المشرف قيد التطوير</div>'; return; }
-    await loadStoreData();
+    await loadStoreData(false); // لا تفرض التحديث، استخدم الكاش إن وجد
     if(tabId==='pos') await renderPosTab(cont);
     else if(tabId==='products') await renderProductsTab(cont);
     else if(tabId==='customers') await renderCustomersTab(cont);
@@ -594,7 +607,7 @@ async function confirmSale(){
         showFlash('posFlash',`✅ بيع ناجح بقيمة ${total} ج.م`,false);
         lastReceiptData={cartItems:[...cart],total,method:finalMethod,customerId:cid,change,debtAdded,invoiceNumber,discountAmount};
         document.getElementById('printReceiptArea').style.display='block';
-        await refreshFromFirestore();
+        await refreshFromFirestore(false); // تحديث خلفي صامت (لا يظهر شريط التحميل)
         cart=[]; renderCart();
     }catch(err){ showFlash('posFlash',err.message,true); }
 }
@@ -654,7 +667,7 @@ function printLastReceipt(){
     let today = new Date();
     let dayName = dayNames[today.getDay()];
     let headerInfo = `<span>رقم الفاتورة: ${invoiceNumber} (${dayName})</span><span>التاريخ: ${new Date().toLocaleString('ar-EG')}</span><span>العميل: ${custName}</span>`;
-    let tableHeaders = `<tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></td>`;
+    let tableHeaders = `<tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>`;
     let tableRows = cartItems.map(i => `<tr><td style="text-align:right;">${escapeHtml(i.name)}</td><td>${i.qty}</td><td>${i.price.toFixed(2)}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('');
     let footerInfo = `<div class="info-row">طريقة الدفع: ${paymentMethodArabic}</div>`;
     if(discountAmount > 0) footerInfo = `<div class="info-row">الخصم: - ${discountAmount.toFixed(2)} ج.م</div>` + footerInfo;
@@ -686,7 +699,7 @@ async function renderProductsTable(filteredList) {
     const startIdx = (currentProductPage - 1) * productsPerPage;
     const endIdx = startIdx + productsPerPage;
     const pageProducts = sourceList.slice(startIdx, endIdx);
-    let html = `<div class="table-responsive"><table class="data-table"><thead><tr><th>الصورة</th><th>الاسم</th><th>باركود</th><th>سعر القطاعي</th><th>الكمية</th><th>الوحدة</th><th>حد التنبيه</th><th></th></tr></thead><tbody>`;
+    let html = `<div class="table-responsive"><table class="data-table"><thead><tr><th>الصورة</th><th>الاسم</th><th>باركود</th><th>سعر القطاعي</th><th>الكمية</th><th>الوحدة</th><th>حد التنبيه</th><th></th></td></thead><tbody>`;
     for (let p of pageProducts) {
         let lowStockClass = (p.qty <= (p.lowStockAlert || 0)) ? 'low-stock-row' : '';
         html += `<tr class="${lowStockClass}"><td>${p.imageUrl ? `<img src="${p.imageUrl}" width="40" height="40">` : '—'}</td>
@@ -695,17 +708,9 @@ async function renderProductsTable(filteredList) {
         <td>${p.unit}</td><td>${p.lowStockAlert || 0}</td>
         <td><button class="btn-sm" onclick="openEditProductModal('${p.id}')">✏️ تعديل</button> ${currentRole === 'owner' ? `<button class="btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button>` : ''}</td></tr>`;
     }
-    html += `</tbody></table></div>`;
-    html += `<div class="pagination-controls">`;
-    html += `<button class="btn-sm" onclick="changeProductPage(-1)" ${currentProductPage <= 1 ? 'disabled style="opacity:0.4;cursor:default;"' : ''}>▶ السابق</button>`;
-    html += `<span class="pagination-info">صفحة ${currentProductPage} من ${totalPages} | إجمالي: ${totalProducts} منتج</span>`;
-    html += `<button class="btn-sm" onclick="changeProductPage(1)" ${currentProductPage >= totalPages ? 'disabled style="opacity:0.4;cursor:default;"' : ''}>التالي ◀</button>`;
-    html += `</div>`;
-    const searchBar = `<div class="filter-row" style="margin-bottom:8px;">
-        <input type="text" id="productsTableSearch" placeholder="🔍 بحث سريع بالاسم أو الباركود" oninput="searchInProductsTable(this.value)" style="margin:0;">
-        <button class="btn-sm" onclick="searchInProductsTable(document.getElementById('productsTableSearch')?.value||'')">بحث</button>
-        <button class="btn-sm" onclick="clearProductsTableSearch()">مسح</button>
-    </div>`;
+    html += `</tbody><table></div>`;
+    html += `<div class="pagination-controls"><button class="btn-sm" onclick="changeProductPage(-1)" ${currentProductPage <= 1 ? 'disabled style="opacity:0.4;cursor:default;"' : ''}>▶ السابق</button><span class="pagination-info">صفحة ${currentProductPage} من ${totalPages} | إجمالي: ${totalProducts} منتج</span><button class="btn-sm" onclick="changeProductPage(1)" ${currentProductPage >= totalPages ? 'disabled style="opacity:0.4;cursor:default;"' : ''}>التالي ◀</button></div>`;
+    const searchBar = `<div class="filter-row" style="margin-bottom:8px;"><input type="text" id="productsTableSearch" placeholder="🔍 بحث سريع بالاسم أو الباركود" oninput="searchInProductsTable(this.value)" style="margin:0;"><button class="btn-sm" onclick="searchInProductsTable(document.getElementById('productsTableSearch')?.value||'')">بحث</button><button class="btn-sm" onclick="clearProductsTableSearch()">مسح</button></div>`;
     area.innerHTML = searchBar + html;
 }
 
@@ -713,74 +718,45 @@ window.changeProductPage = function(direction) {
     currentProductPage += direction;
     const searchVal = document.getElementById('productsTableSearch')?.value || '';
     if (searchVal.trim()) {
-        const filtered = allProducts.filter(p =>
-            p.name.toLowerCase().includes(searchVal.toLowerCase()) ||
-            (p.barcode && p.barcode.toLowerCase().includes(searchVal.toLowerCase()))
-        );
+        const filtered = allProducts.filter(p => p.name.toLowerCase().includes(searchVal.toLowerCase()) || (p.barcode && p.barcode.toLowerCase().includes(searchVal.toLowerCase())));
         renderProductsTable(filtered);
     } else {
         renderProductsTable();
     }
-    setTimeout(() => {
-        const si = document.getElementById('productsTableSearch');
-        if (si) si.value = searchVal;
-    }, 0);
+    setTimeout(() => { const si = document.getElementById('productsTableSearch'); if (si) si.value = searchVal; }, 0);
 };
 
 let _productSearchTimer = null;
 window.searchInProductsTable = function(val) {
     currentProductPage = 1;
     clearTimeout(_productSearchTimer);
-    if (!val || !val.trim()) {
-        renderProductsTable();
-        return;
-    }
+    if (!val || !val.trim()) { renderProductsTable(); return; }
     const area = document.getElementById('productsListArea');
     if (area) {
         const searchBar = area.querySelector('.filter-row');
         const spinnerEl = document.getElementById('prodSearchSpinner');
-        if (!spinnerEl && searchBar) {
-            const sp = document.createElement('span');
-            sp.id = 'prodSearchSpinner'; sp.className = 'search-spinner'; sp.style.marginRight = '6px';
-            searchBar.appendChild(sp);
-        } else if (spinnerEl) spinnerEl.style.display = 'inline-block';
+        if (!spinnerEl && searchBar) { const sp = document.createElement('span'); sp.id = 'prodSearchSpinner'; sp.className = 'search-spinner'; sp.style.marginRight = '6px'; searchBar.appendChild(sp); }
+        else if (spinnerEl) spinnerEl.style.display = 'inline-block';
     }
     _productSearchTimer = setTimeout(async () => {
         const term = val.trim();
         if (!isOnline() || !currentStoreId) {
-            const filtered = allProducts.filter(p =>
-                p.name.toLowerCase().includes(term.toLowerCase()) ||
-                (p.barcode && p.barcode.toLowerCase().includes(term.toLowerCase()))
-            );
-            const sp = document.getElementById('prodSearchSpinner');
-            if (sp) sp.style.display = 'none';
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(term.toLowerCase()) || (p.barcode && p.barcode.toLowerCase().includes(term.toLowerCase())));
+            const sp = document.getElementById('prodSearchSpinner'); if (sp) sp.style.display = 'none';
             renderProductsTable(filtered);
             setTimeout(() => { const si = document.getElementById('productsTableSearch'); if (si) si.value = val; }, 0);
             return;
         }
         try {
-            const snap = await getProductsCol()
-                .orderBy('name')
-                .startAt(term)
-                .endAt(term + '\uf8ff')
-                .limit(50)
-                .get();
+            const snap = await getProductsCol().orderBy('name').startAt(term).endAt(term + '\uf8ff').limit(50).get();
             let results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            const byBarcode = allProducts.filter(p =>
-                p.barcode && p.barcode.toLowerCase().includes(term.toLowerCase()) &&
-                !results.find(r => r.id === p.id)
-            );
+            const byBarcode = allProducts.filter(p => p.barcode && p.barcode.toLowerCase().includes(term.toLowerCase()) && !results.find(r => r.id === p.id));
             results = results.concat(byBarcode).slice(0, 50);
-            const sp = document.getElementById('prodSearchSpinner');
-            if (sp) sp.style.display = 'none';
+            const sp = document.getElementById('prodSearchSpinner'); if (sp) sp.style.display = 'none';
             renderProductsTable(results);
         } catch(e) {
-            const filtered = allProducts.filter(p =>
-                p.name.toLowerCase().includes(term.toLowerCase()) ||
-                (p.barcode && p.barcode.toLowerCase().includes(term.toLowerCase()))
-            );
-            const sp = document.getElementById('prodSearchSpinner');
-            if (sp) sp.style.display = 'none';
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(term.toLowerCase()) || (p.barcode && p.barcode.toLowerCase().includes(term.toLowerCase())));
+            const sp = document.getElementById('prodSearchSpinner'); if (sp) sp.style.display = 'none';
             renderProductsTable(filtered);
         }
         setTimeout(() => { const si = document.getElementById('productsTableSearch'); if (si) si.value = val; }, 0);
@@ -819,21 +795,13 @@ async function saveProductEdit(){
     if(!currentEditProductId) return;
     let name = document.getElementById('editProdName').value.trim();
     if(!name) return showFlash('productsListArea','الاسم مطلوب',true);
-    let data = {
-        name: name,
-        barcode: document.getElementById('editProdBarCode').value,
-        unit: document.getElementById('editProdUnit').value,
-        qty: parseInt(document.getElementById('editProdQty').value)||0,
-        lowStockAlert: parseInt(document.getElementById('editProdLowStock').value)||0,
-    };
+    let data = { name, barcode: document.getElementById('editProdBarCode').value, unit: document.getElementById('editProdUnit').value, qty: parseInt(document.getElementById('editProdQty').value)||0, lowStockAlert: parseInt(document.getElementById('editProdLowStock').value)||0 };
     if (currentRole === 'owner') {
         data.priceRetail = parseFloat(document.getElementById('editProdPriceRetail').value)||0;
         data.priceWholesale = parseFloat(document.getElementById('editProdPriceWholesale').value)||0;
         data.cost = parseFloat(document.getElementById('editProdCost').value)||0;
         data.imageUrl = document.getElementById('editProdImage').value;
-    } else {
-        showFlash('productsListArea','ملاحظة: لا يمكن للمدير تعديل الأسعار أو الصورة',false);
-    }
+    } else { showFlash('productsListArea','ملاحظة: لا يمكن للمدير تعديل الأسعار أو الصورة',false); }
     await getProductsCol().doc(currentEditProductId).update(data);
     closeProductModal();
     const idx = allProducts.findIndex(p=>p.id===currentEditProductId);
@@ -875,10 +843,7 @@ async function renderCustomersTable(){
     div.innerHTML=html;
 }
 window.addCustomer=async()=>{ let name=document.getElementById('custName').value.trim(); if(!name) return; const docRef=await getCustomersCol().add({name, phone:document.getElementById('custPhone').value, debt:0}); allCustomers.push({id:docRef.id,name,phone:document.getElementById('custPhone').value,debt:0}); await cacheData('customers',allCustomers); renderCustomersTab(document.getElementById('tabContent')); };
-window.editCustomer=async(id)=>{
-    if(currentRole !== 'owner'){ showFlash('customersListDiv','غير مسموح: فقط المالك يمكنه تعديل بيانات العملاء',true); return; }
-    let newName=prompt('اسم جديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف'); await getCustomersCol().doc(id).update({name:newName, phone:newPhone}); const idx=allCustomers.findIndex(c=>c.id===id); if(idx!==-1){allCustomers[idx].name=newName; allCustomers[idx].phone=newPhone;} await cacheData('customers',allCustomers); renderCustomersTab(document.getElementById('tabContent'));
-};
+window.editCustomer=async(id)=>{ if(currentRole !== 'owner'){ showFlash('customersListDiv','غير مسموح: فقط المالك يمكنه تعديل بيانات العملاء',true); return; } let newName=prompt('اسم جديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف'); await getCustomersCol().doc(id).update({name:newName, phone:newPhone}); const idx=allCustomers.findIndex(c=>c.id===id); if(idx!==-1){allCustomers[idx].name=newName; allCustomers[idx].phone=newPhone;} await cacheData('customers',allCustomers); renderCustomersTab(document.getElementById('tabContent')); };
 window.deleteCustomer=async(id)=>{ if(currentRole!=='owner'){ showFlash('customersListDiv','غير مسموح',true); return; } if(confirm('حذف العميل؟')){ await getCustomersCol().doc(id).delete(); allCustomers=allCustomers.filter(c=>c.id!==id); await cacheData('customers',allCustomers); renderCustomersTab(document.getElementById('tabContent')); } };
 window.recordPayment=async(custId)=>{ let amt=parseFloat(prompt('المبلغ المسدد')); if(isNaN(amt)) return; const ref=getCustomersCol().doc(custId); const doc=await ref.get(); let newDebt=Math.max(0,(doc.data().debt||0)-amt); await ref.update({debt:newDebt}); const idx=allCustomers.findIndex(c=>c.id===custId); if(idx!==-1) allCustomers[idx].debt=newDebt; await cacheData('customers',allCustomers); renderCustomersTab(document.getElementById('tabContent')); };
 
@@ -918,10 +883,7 @@ window.showSupplierProducts=async(sid,sname)=>{
 };
 window.deleteSupplierProduct=async(sid,pid)=>{ if(confirm('حذف المنتج؟')){ await getSuppliersCol().doc(sid).collection('products').doc(pid).delete(); window.showSupplierProducts(sid,''); } };
 window.addSupplier=async()=>{ let name=document.getElementById('supName').value.trim(); if(!name) return; const docRef=await getSuppliersCol().add({name, phone:document.getElementById('supPhone').value}); allSuppliers.push({id:docRef.id,name,phone:document.getElementById('supPhone').value}); await cacheData('suppliers',allSuppliers); renderSuppliersTab(document.getElementById('tabContent')); };
-window.editSupplier=async(id)=>{
-    if(currentRole !== 'owner'){ showFlash('suppliersList','غير مسموح: فقط المالك يمكنه تعديل بيانات الموردين',true); return; }
-    let newName=prompt('اسم جديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف'); await getSuppliersCol().doc(id).update({name:newName, phone:newPhone}); const idx=allSuppliers.findIndex(s=>s.id===id); if(idx!==-1){allSuppliers[idx].name=newName; allSuppliers[idx].phone=newPhone;} await cacheData('suppliers',allSuppliers); renderSuppliersTab(document.getElementById('tabContent'));
-};
+window.editSupplier=async(id)=>{ if(currentRole !== 'owner'){ showFlash('suppliersList','غير مسموح: فقط المالك يمكنه تعديل بيانات الموردين',true); return; } let newName=prompt('اسم جديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف'); await getSuppliersCol().doc(id).update({name:newName, phone:newPhone}); const idx=allSuppliers.findIndex(s=>s.id===id); if(idx!==-1){allSuppliers[idx].name=newName; allSuppliers[idx].phone=newPhone;} await cacheData('suppliers',allSuppliers); renderSuppliersTab(document.getElementById('tabContent')); };
 window.deleteSupplier=async(id)=>{ if(currentRole!=='owner'){ showFlash('suppliersList','غير مسموح',true); return; } if(confirm('حذف المورد؟')){ await getSuppliersCol().doc(id).delete(); allSuppliers=allSuppliers.filter(s=>s.id!==id); await cacheData('suppliers',allSuppliers); renderSuppliersTab(document.getElementById('tabContent')); } };
 
 // ========== سجل المبيعات ==========
@@ -1057,7 +1019,7 @@ async function loadOtherSubContent(){
         let html=`<h3>⚠️ المنتجات الأقل من حد التنبيه</h3><button class="btn-sm btn-secondary" onclick="printLowStockTable()">🖨️ طباعة الجدول</button><div id="lowStockTable"></div>`;
         div.innerHTML=html;
         let tableHtml=`<table class="data-table" id="lowStockPrintTable"><thead><tr><th>المنتج</th><th>الكمية الحالية</th><th>حد التنبيه</th><th>السعر</th></tr></thead><tbody>`;
-        for(let p of lowProducts){ tableHtml+=`<tr><td>${escapeHtml(p.name)}</td><td>${p.qty}</td><td>${p.lowStockAlert}</td><td>${p.priceRetail} ج.م</td></tr>`; }
+        for(let p of lowProducts){ tableHtml+=`<td><td>${escapeHtml(p.name)}</td><td>${p.qty}</td><td>${p.lowStockAlert}</td><td>${p.priceRetail} ج.م</td></tr>`; }
         tableHtml+=`</tbody></table>`;
         document.getElementById('lowStockTable').innerHTML=tableHtml;
     } else if(otherSubTab==='filter'){
@@ -1090,36 +1052,21 @@ function filterInventory(){
     const search = document.getElementById('inventorySearch')?.value.trim() || '';
     const container = document.getElementById('inventoryTableContainer');
     if (!container) return;
-    const localFiltered = allProducts.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        (p.barcode && p.barcode.toLowerCase().includes(search.toLowerCase()))
-    );
+    const localFiltered = allProducts.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || (p.barcode && p.barcode.toLowerCase().includes(search.toLowerCase())));
     _renderInventoryTable(localFiltered, container);
     if (search && isOnline() && currentStoreId) {
         clearTimeout(_inventorySearchTimer);
         const sp = document.getElementById('invSearchSpinner');
-        if (!sp) {
-            const spinnerEl = document.createElement('span');
-            spinnerEl.id = 'invSearchSpinner'; spinnerEl.className = 'search-spinner';
-            document.getElementById('inventorySearch')?.parentElement?.appendChild(spinnerEl);
-        }
+        if (!sp) { const spinnerEl = document.createElement('span'); spinnerEl.id = 'invSearchSpinner'; spinnerEl.className = 'search-spinner'; document.getElementById('inventorySearch')?.parentElement?.appendChild(spinnerEl); }
         _inventorySearchTimer = setTimeout(async () => {
             try {
-                const snap = await getProductsCol()
-                    .orderBy('name')
-                    .startAt(search)
-                    .endAt(search + '\uf8ff')
-                    .limit(50)
-                    .get();
+                const snap = await getProductsCol().orderBy('name').startAt(search).endAt(search + '\uf8ff').limit(50).get();
                 let results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                const byBarcode = allProducts.filter(p =>
-                    p.barcode && p.barcode.toLowerCase().includes(search.toLowerCase()) &&
-                    !results.find(r => r.id === p.id)
-                );
+                const byBarcode = allProducts.filter(p => p.barcode && p.barcode.toLowerCase().includes(search.toLowerCase()) && !results.find(r => r.id === p.id));
                 results = results.concat(byBarcode).slice(0, 50);
                 const c2 = document.getElementById('inventoryTableContainer');
                 if (c2) _renderInventoryTable(results, c2);
-            } catch(e) { /* keep local results */ }
+            } catch(e) { /* keep local */ }
             const spinEl = document.getElementById('invSearchSpinner');
             if (spinEl) spinEl.remove();
         }, 400);
@@ -1296,7 +1243,7 @@ function displaySalesTable(invoices, title){
     for(let inv of invoices){
         let custName=inv.customerId?(allCustomers.find(c=>c.id===inv.customerId)?.name||'نقدي'):'نقدي';
         let itemsText = inv.items.map(it=>`${it.productName}(${it.quantity})`).join(', ');
-        html+=`<tr><td>${inv.invoiceNumber}</td><td>${formatDate(inv.date)}</td><td>${custName}</td><td>${inv.total.toFixed(2)}</td><td>${itemsText}</td></tr>`;
+        html+=`<td><td>${inv.invoiceNumber}</td><td>${formatDate(inv.date)}</td><td>${custName}</td><td>${inv.total.toFixed(2)}</td><td>${itemsText}</td></tr>`;
     }
     html+=`</tbody></table><button class="btn-sm" onclick="printSalesTable()">🖨️ طباعة الجدول</button>`;
     document.getElementById('salesReportResult').innerHTML=html;
@@ -1328,7 +1275,7 @@ async function handleSignedInUser(user){
         document.getElementById('loginScreen').style.display='none';
         document.getElementById('dashboard').style.display='block';
         document.getElementById('storeTitle').innerHTML=`<i class="fas fa-store"></i> ${info.storeName||'المحل'}`;
-        if(!isAdminGlobal) await loadStoreData();
+        if(!isAdminGlobal) await loadStoreData(true); // أول مرة نجبر التحميل
         await ensureInvoicesCache(); await ensureMissingProductsCache();
         buildTabs();
         if(!navigator.onLine) document.getElementById('statusBar').innerHTML='';
@@ -1351,20 +1298,9 @@ async function clearAllCachedData() {
             await dbCache.clear('pending');
         }
     } catch(e) { console.warn(e); }
-    allProducts = [];
-    allCustomers = [];
-    allSuppliers = [];
-    allInvoicesCache = [];
-    allMissingProducts = [];
-    currentUserAuth = null;
-    userData = null;
-    currentStoreId = null;
-    currentRole = null;
-    isAdminGlobal = false;
-    missingProductsLoaded = false;
-    currentProductPage = 1;
-    cart = [];
-    lastReceiptData = null;
+    allProducts = []; allCustomers = []; allSuppliers = []; allInvoicesCache = []; allMissingProducts = [];
+    currentUserAuth = null; userData = null; currentStoreId = null; currentRole = null; isAdminGlobal = false;
+    missingProductsLoaded = false; currentProductPage = 1; cart = []; lastReceiptData = null;
 }
 window.logoutUser=async()=>{
     await clearAllCachedData();
