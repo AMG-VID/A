@@ -71,7 +71,20 @@
         .sub-tabs { display: flex; gap: 8px; margin: 15px 0; flex-wrap: wrap; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
         .sub-tab { background: #eef2ff; padding: 8px 16px; border-radius: 30px; cursor: pointer; font-size: 14px; }
         .sub-tab.active { background: #4f46e5; color: white; }
-        .status-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: #f1f5f9; display: flex; justify-content: space-between; align-items: center; padding: 5px 20px; font-size: 12px; }
+
+        /* ===== شريط الحالة المحسّن ===== */
+        .status-bar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 20px; font-size: 12px; font-weight: 600;
+            transition: background 0.4s, color 0.4s;
+        }
+        .status-bar.online  { background: #d1fae5; color: #065f46; }
+        .status-bar.offline { background: #fee2e2; color: #b91c1c; }
+        .status-bar.syncing { background: #e0f2fe; color: #0369a1; }
+        .status-bar.pending { background: #fef9c3; color: #854d0e; }
+        #statusBarPendingCount { font-size: 11px; }
+
         .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .data-table th, .data-table td { border: 1px solid var(--input-border); padding: var(--table-padding); text-align: center; font-size: var(--table-font-size); vertical-align: middle; }
         .data-table th { background: var(--stat-card-bg); font-size: var(--table-header-size); font-weight: 700; }
@@ -88,6 +101,7 @@
         .search-spinner { display:inline-block; width:16px; height:16px; border:2px solid #c4b5fd; border-top-color:#4c1d95; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; margin-right:6px; }
         @keyframes spin { to { transform:rotate(360deg); } }
         #productsLoadingBar { display:none; background:linear-gradient(90deg,#eef2ff,#c7d2fe); border-radius:30px; padding:10px 18px; color:#4c1d95; font-weight:600; margin:8px 0; align-items:center; gap:8px; }
+
         /* ===== قسم التثبيت ===== */
         .install-section { margin: 18px 0; }
         .install-card { background: var(--stat-card-bg); border: 1px solid var(--stat-card-border); border-radius: 20px; padding: 20px; margin-bottom: 14px; }
@@ -95,6 +109,17 @@
         .install-steps { margin: 10px 0 14px 0; padding-right: 20px; }
         .install-steps li { margin-bottom: 8px; font-size: 14px; line-height: 1.8; }
         .unsupported-card { background: #fff3cd; border: 1px solid #ffc107; border-radius: 20px; padding: 24px; text-align: center; color: #856404; }
+
+        /* بطاقة أوفلاين في POS */
+        .offline-badge {
+            display: inline-block; background: #fee2e2; color: #b91c1c;
+            border-radius: 20px; padding: 4px 14px; font-size: 13px; font-weight: bold; margin-bottom: 8px;
+        }
+        .online-badge {
+            display: inline-block; background: #d1fae5; color: #065f46;
+            border-radius: 20px; padding: 4px 14px; font-size: 13px; font-weight: bold; margin-bottom: 8px;
+        }
+
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { margin: 0; padding: 0; background: white; }
@@ -109,7 +134,12 @@
     </style>
 </head>
 <body>
-<div class="status-bar" id="statusBar"></div>
+<div class="status-bar online" id="statusBar">
+    <span id="statusBarText">🟢 متصل بالإنترنت</span>
+    <span id="statusBarPendingCount"></span>
+</div>
+<div style="height:36px;"></div>
+
 <div class="modal-overlay" id="modalOverlay" onclick="closeProductModal()"></div>
 <div class="modal" id="productModal">
     <h3>✏️ تعديل المنتج</h3>
@@ -125,10 +155,11 @@
     <button onclick="saveProductEdit()" class="btn-secondary">حفظ التعديلات</button>
     <button onclick="closeProductModal()" class="btn-sm">إلغاء</button>
 </div>
+
 <div class="container" id="app">
     <div id="loginScreen">
         <div class="login-box">
-            <h1><i class="fas fa-store"></i>ManaraTech</h1>
+            <h1><i class="fas fa-store"></i> ManaraTech</h1>
             <input type="text" id="loginId" placeholder="اسم المستخدم" autocomplete="off">
             <input type="password" id="loginPassword" placeholder="كلمة المرور">
             <button onclick="loginUser()">دخول</button>
@@ -149,8 +180,11 @@
         <div id="tabContent"></div>
     </div>
 </div>
+
 <script>
-// ======================= PWA Service Worker =======================
+/* =====================================================================
+   PWA  –  Service Worker  (Offline-First, Cache Everything)
+   ===================================================================== */
 (function setupPWA() {
     const manifestObj = {
         "name": "ManaraTech", "short_name": "ManaraTech", "start_url": ".",
@@ -163,9 +197,10 @@
     if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
     manifestLink.href = manifestURL;
 
+    /* Service Worker – Cache-First with Network Fallback */
     const swCode = `
-const CACHE_NAME = 'manara-v3';
-const urlsToCache = [
+const CACHE_NAME = 'manara-v5';
+const STATIC_URLS = [
     './', './index.html', 'Icon.png',
     'https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css',
@@ -174,23 +209,53 @@ const urlsToCache = [
     'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js',
     'https://cdn.jsdelivr.net/npm/idb@8.0.0/build/umd.js'
 ];
+
 self.addEventListener('install', e => {
-    e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(urlsToCache)).catch(()=>{}));
+    e.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(c => c.addAll(STATIC_URLS))
+            .catch(() => {})
+    );
     self.skipWaiting();
 });
+
 self.addEventListener('activate', e => {
-    e.waitUntil(caches.keys().then(keys => Promise.all(keys.map(k => { if(k !== CACHE_NAME) return caches.delete(k); }))));
+    e.waitUntil(
+        caches.keys().then(keys =>
+            Promise.all(keys.map(k => { if (k !== CACHE_NAME) return caches.delete(k); }))
+        )
+    );
     self.clients.claim();
 });
+
+/* Cache-First Strategy: serve from cache instantly, update in background */
 self.addEventListener('fetch', e => {
-    e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-        if(res && res.status === 200 && e.request.method === 'GET') {
-            const resClone = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, resClone));
-        }
-        return res;
-    }).catch(() => caches.match('./'))));
+    const req = e.request;
+    if (req.method !== 'GET') return;
+
+    /* Firebase API calls – Network first, cache fallback, never block */
+    if (req.url.includes('firestore.googleapis.com') || req.url.includes('googleapis.com')) {
+        e.respondWith(
+            fetch(req).catch(() => caches.match(req))
+        );
+        return;
+    }
+
+    /* Static assets – Cache first, network fallback */
+    e.respondWith(
+        caches.match(req).then(cached => {
+            const fetchPromise = fetch(req).then(res => {
+                if (res && res.status === 200) {
+                    const clone = res.clone();
+                    caches.open(CACHE_NAME).then(c => c.put(req, clone));
+                }
+                return res;
+            }).catch(() => null);
+            return cached || fetchPromise || caches.match('./');
+        })
+    );
 });`;
+
     const swBlob = new Blob([swCode], {type:'application/javascript'});
     const swURL = URL.createObjectURL(swBlob);
     if ('serviceWorker' in navigator) {
@@ -203,8 +268,11 @@ window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
 });
+window.addEventListener('appinstalled', () => { deferredPrompt = null; });
 
-// ======================= Firebase =======================
+/* =====================================================================
+   FIREBASE
+   ===================================================================== */
 const firebaseConfig = {
     apiKey: "AIzaSyCYh6oC5nM2DZHgdOquHuo1so1DiQ7Gbs0",
     authDomain: "bakkala-system.firebaseapp.com",
@@ -216,47 +284,111 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-db.enablePersistence({ synchronizeTabs: true, cacheSizeBytes: 104857600 }).catch(e => console.warn(e));
+
+/* Enable offline persistence – unlimited cache */
+db.enablePersistence({ synchronizeTabs: true }).catch(e => {
+    if (e.code === 'failed-precondition') console.warn('Persistence: multi-tab');
+    else if (e.code === 'unimplemented') console.warn('Persistence: not supported');
+});
+
+/* Firestore settings for offline */
+db.settings({ cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED });
 
 const QUERY_LIMITS = { products:15000, customers:1000, suppliers:500, invoices:500, missingProducts:200, supplierProducts:200 };
 
+/* =====================================================================
+   IndexedDB  –  Local Storage Layer
+   ===================================================================== */
 let idbReady = false, dbCache;
+
 const openDB = async () => {
     if (!window.idb) return;
-    dbCache = await idb.openDB('FatoraMousaOffline', 10, {
-        upgrade(db) {
-            if (!db.objectStoreNames.contains('pending')) db.createObjectStore('pending', { autoIncrement: true });
-            if (!db.objectStoreNames.contains('cache')) db.createObjectStore('cache', { keyPath: 'key' });
+    dbCache = await idb.openDB('FatoraMousaOffline', 12, {
+        upgrade(db, oldVer) {
+            if (!db.objectStoreNames.contains('pending'))
+                db.createObjectStore('pending', { autoIncrement: true, keyPath: '__id' });
+            if (!db.objectStoreNames.contains('cache'))
+                db.createObjectStore('cache', { keyPath: 'key' });
+            if (!db.objectStoreNames.contains('localInvoices'))
+                db.createObjectStore('localInvoices', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('localCounters'))
+                db.createObjectStore('localCounters', { keyPath: 'key' });
         }
     });
     idbReady = true;
 };
 openDB();
 
-async function cacheData(key, data) { if (idbReady && dbCache) await dbCache.put('cache', { key, data, timestamp: Date.now() }); }
-async function getCachedData(key) { if (idbReady && dbCache) { const res = await dbCache.get('cache', key); return res?.data; } return null; }
-async function addPendingOp(op) { if (idbReady && dbCache) await dbCache.add('pending', op); }
-async function getPendingOps() { if (idbReady && dbCache) return await dbCache.getAll('pending'); return []; }
-async function clearPendingOps() { if (idbReady && dbCache) await dbCache.clear('pending'); }
+/* ---- Generic cache helpers ---- */
+async function cacheData(key, data) {
+    if (!idbReady || !dbCache) return;
+    try { await dbCache.put('cache', { key, data, timestamp: Date.now() }); } catch(e) {}
+}
+async function getCachedData(key) {
+    if (!idbReady || !dbCache) return null;
+    try { const res = await dbCache.get('cache', key); return res?.data ?? null; } catch(e) { return null; }
+}
 
+/* ---- Pending operations queue ---- */
+async function addPendingOp(op) {
+    if (!idbReady || !dbCache) return;
+    /* remove __id so autoIncrement works */
+    const { __id, ...clean } = op;
+    try { await dbCache.add('pending', clean); } catch(e) {}
+    updateStatusBar();
+}
+async function getPendingOps() {
+    if (!idbReady || !dbCache) return [];
+    try { return await dbCache.getAll('pending'); } catch(e) { return []; }
+}
+async function clearPendingOps() {
+    if (!idbReady || !dbCache) return;
+    try { await dbCache.clear('pending'); } catch(e) {}
+}
+async function deletePendingOp(id) {
+    if (!idbReady || !dbCache) return;
+    try { await dbCache.delete('pending', id); } catch(e) {}
+}
+
+/* ---- Local invoice counter (works fully offline for months) ---- */
+async function getLocalInvoiceCounter() {
+    if (!idbReady || !dbCache) return Date.now();
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const key = `inv_${today}`;
+        let rec = await dbCache.get('localCounters', key).catch(() => null);
+        if (!rec) rec = { key, current: 0 };
+        rec.current += 1;
+        await dbCache.put('localCounters', rec);
+        return rec.current;
+    } catch(e) { return Date.now(); }
+}
+
+/* =====================================================================
+   State
+   ===================================================================== */
 let currentUserAuth=null, userData=null, currentStoreId=null, currentRole=null, isAdminGlobal=false;
 let allProducts=[], allCustomers=[], allSuppliers=[], allInvoicesCache=[], allMissingProducts=[];
 let lastReceiptData=null, isSyncing=false, currentEditProductId=null, missingProductsLoaded=false;
 let currentProductPage=1;
 const productsPerPage=100;
 
+/* Pre-load from IndexedDB so app works immediately on open */
 async function loadFromCacheThenSync() {
-    allProducts = await getCachedData('products') || [];
-    allCustomers = await getCachedData('customers') || [];
-    allSuppliers = await getCachedData('suppliers') || [];
-    allInvoicesCache = await getCachedData('invoices') || [];
-    allMissingProducts = await getCachedData('missingProducts') || [];
+    allProducts       = await getCachedData('products')        || [];
+    allCustomers      = await getCachedData('customers')       || [];
+    allSuppliers      = await getCachedData('suppliers')       || [];
+    allInvoicesCache  = await getCachedData('invoices')        || [];
+    allMissingProducts= await getCachedData('missingProducts') || [];
 }
 loadFromCacheThenSync();
 
 let lastRefreshTime = 0;
 const REFRESH_COOLDOWN = 5 * 60 * 1000;
 
+/* =====================================================================
+   Firestore helpers
+   ===================================================================== */
 function getStoreRef(){ return db.collection('stores').doc(currentStoreId); }
 function getProductsCol(){ return getStoreRef().collection('products'); }
 function getCustomersCol(){ return getStoreRef().collection('customers'); }
@@ -265,141 +397,281 @@ function getInvoicesCol(){ return getStoreRef().collection('invoices'); }
 function getCountersCol(){ return getStoreRef().collection('counters'); }
 function getMissingProductsCol(){ return getStoreRef().collection('missingProducts'); }
 
+/* =====================================================================
+   Status Bar
+   ===================================================================== */
+async function updateStatusBar() {
+    const bar    = document.getElementById('statusBar');
+    const text   = document.getElementById('statusBarText');
+    const pcount = document.getElementById('statusBarPendingCount');
+    if (!bar || !text) return;
+
+    const pending = await getPendingOps();
+    const count   = pending.length;
+
+    if (isSyncing) {
+        bar.className = 'status-bar syncing';
+        text.textContent = '🔄 جاري المزامنة...';
+    } else if (!navigator.onLine) {
+        bar.className = 'status-bar offline';
+        text.textContent = '🔴 بدون إنترنت – البيع يعمل محلياً';
+    } else if (count > 0) {
+        bar.className = 'status-bar pending';
+        text.textContent = '🟡 متصل – يوجد عمليات معلقة';
+    } else {
+        bar.className = 'status-bar online';
+        text.textContent = '🟢 متصل بالإنترنت';
+    }
+    pcount.textContent = count > 0 ? `📦 ${count} عملية معلقة` : '';
+}
+
+/* =====================================================================
+   Refresh from Firestore
+   ===================================================================== */
 async function refreshFromFirestore(showLoading=true) {
     if (!currentStoreId || isAdminGlobal) return;
     try {
         const loadingBar = document.getElementById('productsLoadingBar');
-        if (showLoading && loadingBar) { loadingBar.style.display='flex'; loadingBar.innerHTML='<span class="search-spinner"></span> جاري تحميل المنتجات...'; }
-        let allFetchedProducts=[], lastDoc=null;
-        let keepFetching=true;
+        if (showLoading && loadingBar) {
+            loadingBar.style.display='flex';
+            loadingBar.innerHTML='<span class="search-spinner"></span> جاري تحميل المنتجات...';
+        }
+
+        let allFetchedProducts=[], lastDoc=null, keepFetching=true;
         while (keepFetching) {
             let query = getProductsCol().orderBy(firebase.firestore.FieldPath.documentId()).limit(500);
             if (lastDoc) query = query.startAfter(lastDoc);
-            const snap = await query.get();
+            const snap = await query.get({ source: 'server' }).catch(() => query.get());
             if (snap.empty) break;
             allFetchedProducts = allFetchedProducts.concat(snap.docs.map(d=>({id:d.id,...d.data()})));
             lastDoc = snap.docs[snap.docs.length-1];
-            if (showLoading && loadingBar) loadingBar.innerHTML=`<span class="search-spinner"></span> جاري تحميل المنتجات... ${allFetchedProducts.length} منتج`;
+            if (showLoading && loadingBar)
+                loadingBar.innerHTML=`<span class="search-spinner"></span> تحميل... ${allFetchedProducts.length} منتج`;
             if (snap.docs.length < 500 || allFetchedProducts.length >= QUERY_LIMITS.products) keepFetching=false;
         }
         if (showLoading && loadingBar) loadingBar.style.display='none';
+
         const [custSnap,suppSnap,invSnap,missingSnap] = await Promise.all([
             getCustomersCol().limit(QUERY_LIMITS.customers).get(),
             getSuppliersCol().limit(QUERY_LIMITS.suppliers).get(),
             getInvoicesCol().orderBy('date','desc').limit(QUERY_LIMITS.invoices).get(),
             getMissingProductsCol().limit(QUERY_LIMITS.missingProducts).get()
         ]);
-        allProducts=allFetchedProducts;
-        allCustomers=custSnap.docs.map(d=>({id:d.id,...d.data()}));
-        allSuppliers=suppSnap.docs.map(d=>({id:d.id,...d.data()}));
-        allInvoicesCache=invSnap.docs.map(d=>({id:d.id,...d.data()}));
-        allMissingProducts=missingSnap.docs.map(d=>({id:d.id,...d.data()}));
-        missingProductsLoaded=true;
-        await Promise.all([cacheData('products',allProducts),cacheData('customers',allCustomers),cacheData('suppliers',allSuppliers),cacheData('invoices',allInvoicesCache),cacheData('missingProducts',allMissingProducts)]);
+
+        allProducts        = allFetchedProducts;
+        allCustomers       = custSnap.docs.map(d=>({id:d.id,...d.data()}));
+        allSuppliers       = suppSnap.docs.map(d=>({id:d.id,...d.data()}));
+        allInvoicesCache   = invSnap.docs.map(d=>({id:d.id,...d.data()}));
+        allMissingProducts = missingSnap.docs.map(d=>({id:d.id,...d.data()}));
+        missingProductsLoaded = true;
+
+        await Promise.all([
+            cacheData('products',allProducts),
+            cacheData('customers',allCustomers),
+            cacheData('suppliers',allSuppliers),
+            cacheData('invoices',allInvoicesCache),
+            cacheData('missingProducts',allMissingProducts)
+        ]);
+
         if (document.getElementById('productsListArea')) renderProductsTable();
         if (document.getElementById('salesLogList')) filterAndDisplayInvoices();
         if (document.getElementById('otherContent')) loadOtherSubContent();
         if (document.getElementById('customersListDiv')) renderCustomersTable();
         if (document.getElementById('invoicesList')) applyInvoicesFilters();
-    } catch(e) { console.warn(e); }
+    } catch(e) {
+        console.warn('refreshFromFirestore:', e);
+    }
 }
 
 async function loadStoreData(forceRefresh=false) {
     if (isAdminGlobal || !currentStoreId) return;
-    const now=Date.now();
+    const now = Date.now();
     if (!forceRefresh && allProducts.length>0 && (now-lastRefreshTime)<REFRESH_COOLDOWN) return;
     await refreshFromFirestore(true);
-    lastRefreshTime=now;
+    lastRefreshTime = now;
 }
 
+/* =====================================================================
+   Sync pending operations when online
+   ===================================================================== */
+async function syncPendingOps() {
+    if (!navigator.onLine || isSyncing) return;
+    const pending = await getPendingOps();
+    if (pending.length === 0) { updateStatusBar(); return; }
+
+    isSyncing = true;
+    updateStatusBar();
+
+    for (let op of pending) {
+        try {
+            if (op.type === 'addInvoice') {
+                /* Build a clean copy without temp fields */
+                const invData = { ...op.data };
+                delete invData.__localId;
+                /* Fix serverTimestamp if it was stored as a plain object */
+                invData.date = firebase.firestore.FieldValue.serverTimestamp();
+
+                await getInvoicesCol().add(invData);
+
+                /* Update product quantities */
+                const batch = db.batch();
+                for (let item of invData.items) {
+                    batch.update(getProductsCol().doc(item.productId),
+                        {qty: firebase.firestore.FieldValue.increment(-item.quantity)});
+                }
+                await batch.commit();
+
+                if (invData.customerId && invData.paymentMethod==='credit' && invData.debtAdded>0)
+                    await getCustomersCol().doc(invData.customerId)
+                        .update({debt: firebase.firestore.FieldValue.increment(invData.debtAdded)});
+
+            } else if (op.type === 'addProduct') {
+                const docRef = await getProductsCol().add({...op.data, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+                const idx = allProducts.findIndex(p=>p.id===op.__localId);
+                if (idx !== -1) allProducts[idx].id = docRef.id;
+                await cacheData('products', allProducts);
+
+            } else if (op.type === 'cancelInvoice') {
+                const invRef = getInvoicesCol().doc(op.invoiceId);
+                const batch = db.batch();
+                batch.update(invRef, {cancelled: true});
+                for (let item of op.items)
+                    batch.update(getProductsCol().doc(item.productId),
+                        {qty: firebase.firestore.FieldValue.increment(item.quantity)});
+                if (op.customerId && op.debtRemoved>0)
+                    batch.update(getCustomersCol().doc(op.customerId),
+                        {debt: firebase.firestore.FieldValue.increment(-op.debtRemoved)});
+                await batch.commit();
+
+            } else if (op.type === 'addMissingProduct') {
+                await getMissingProductsCol().add({...op.data, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+            } else if (op.type === 'deleteMissingProduct') {
+                await getMissingProductsCol().doc(op.missingId).delete();
+            } else if (op.type === 'updateProduct') {
+                await getProductsCol().doc(op.productId).update(op.data);
+            } else if (op.type === 'deleteProduct') {
+                await getProductsCol().doc(op.productId).delete();
+            } else if (op.type === 'addCustomer') {
+                const docRef = await getCustomersCol().add(op.data);
+                const idx = allCustomers.findIndex(c=>c.id===op.__localId);
+                if (idx !== -1) allCustomers[idx].id = docRef.id;
+                await cacheData('customers', allCustomers);
+            } else if (op.type === 'updateCustomer') {
+                await getCustomersCol().doc(op.customerId).update(op.data);
+            } else if (op.type === 'deleteCustomer') {
+                await getCustomersCol().doc(op.customerId).delete();
+            } else if (op.type === 'recordPayment') {
+                await getCustomersCol().doc(op.customerId)
+                    .update({debt: firebase.firestore.FieldValue.increment(-op.amount)});
+            } else if (op.type === 'addSupplier') {
+                await getSuppliersCol().add(op.data);
+            } else if (op.type === 'updateSupplier') {
+                await getSuppliersCol().doc(op.supplierId).update(op.data);
+            } else if (op.type === 'deleteSupplier') {
+                await getSuppliersCol().doc(op.supplierId).delete();
+            }
+
+            /* Delete the op after success */
+            if (op.__id !== undefined) await deletePendingOp(op.__id);
+
+        } catch(e) {
+            console.warn('syncOp failed:', op.type, e);
+        }
+    }
+
+    await clearPendingOps(); /* clear remainder */
+    isSyncing = false;
+    await refreshFromFirestore(false);
+    updateStatusBar();
+
+    if (document.getElementById('salesLogList')) filterAndDisplayInvoices();
+    if (document.getElementById('otherContent')) loadOtherSubContent();
+}
+
+window.addEventListener('online', async () => {
+    updateStatusBar();
+    setTimeout(() => syncPendingOps(), 1000);
+});
+window.addEventListener('offline', () => { updateStatusBar(); });
+
+function isOnline(){ return navigator.onLine; }
+
+/* =====================================================================
+   Invoice counter – hybrid (online uses Firestore tx, offline uses IDB)
+   ===================================================================== */
+async function getNextInvoiceNumber() {
+    if (!isOnline()) return getLocalInvoiceCounter();
+    try {
+        const today = new Date(); today.setHours(0,0,0,0);
+        const counterRef = getCountersCol().doc(`daily_${today.toISOString().split('T')[0]}`);
+        return await db.runTransaction(async (tx) => {
+            const snap = await tx.get(counterRef);
+            let n = 1;
+            if (snap.exists) {
+                n = snap.data().current + 1;
+                tx.update(counterRef, {current: firebase.firestore.FieldValue.increment(1)});
+            } else {
+                tx.set(counterRef, {current:1, date: firebase.firestore.Timestamp.fromDate(today)});
+            }
+            return n;
+        });
+    } catch(e) {
+        return getLocalInvoiceCounter();
+    }
+}
+
+/* =====================================================================
+   Utilities
+   ===================================================================== */
 function showFlash(id,txt,err=false){
     let el=document.getElementById(id);
-    if(!el){ el=document.createElement('div'); el.className='flash'; const t=document.getElementById('tabContent')||document.getElementById('dashboard'); if(t) t.prepend(el); else document.getElementById('app')?.prepend(el); }
-    el.innerText=txt; el.style.backgroundColor=err?'#ffe0e0':'#e0f2fe'; el.style.color=err?'#b91c1c':'#065f46';
-    setTimeout(()=>el.remove(),3000);
+    if(!el){ el=document.createElement('div'); el.className='flash';
+        const t=document.getElementById('tabContent')||document.getElementById('dashboard');
+        if(t) t.prepend(el); else document.getElementById('app')?.prepend(el); }
+    el.innerText=txt;
+    el.style.backgroundColor=err?'#ffe0e0':'#e0f2fe';
+    el.style.color=err?'#b91c1c':'#065f46';
+    setTimeout(()=>{ try{el.remove();}catch(x){} },3500);
 }
-function escapeHtml(s){ return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function formatDate(ts){ return ts?.toDate ? ts.toDate().toLocaleString('ar-EG') : new Date(ts).toLocaleString('ar-EG'); }
 function getPaymentMethodArabic(m){ return m==='cash'?'كاش':m==='visa'?'فيزا':m==='credit'?'آجل':m; }
+function genLocalId(){ return 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
 
+/* =====================================================================
+   Store bootstrap
+   ===================================================================== */
 async function ensureStoreDocument(sid,sname){
-    const ref=db.collection('stores').doc(sid); const doc=await ref.get();
-    if(!doc.exists) await ref.set({name:sname,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    const ref=db.collection('stores').doc(sid);
+    const doc=await ref.get().catch(()=>({exists:false}));
+    if(!doc.exists) await ref.set({name:sname,createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
     return ref;
 }
 async function ensureUserDocument(uid,email){
-    const userRef=db.collection('users').doc(uid); const doc=await userRef.get();
+    const userRef=db.collection('users').doc(uid);
+    const doc=await userRef.get();
     if(doc.exists){
         if(doc.data().isActive===false) throw new Error('الحساب معطل');
         const data=doc.data();
-        await ensureStoreDocument(data.storeId,data.storeName||'محل تجاري');
+        await ensureStoreDocument(data.storeId,data.storeName||'محل تجاري').catch(()=>{});
         return data;
     }
     let storeName=`محل ${email.split('@')[0]}`;
     let storeIdBase=storeName.replace(/\s/g,'').replace(/[^a-zA-Z0-9\u0600-\u06FF]/g,'');
     let storeId=`store_${storeIdBase}`;
-    const existing=await db.collection('stores').doc(storeId).get();
+    const existing=await db.collection('stores').doc(storeId).get().catch(()=>({exists:false}));
     if(existing.exists) storeId=`store_${storeIdBase}_${Date.now()}`;
-    await ensureStoreDocument(storeId,storeName);
+    await ensureStoreDocument(storeId,storeName).catch(()=>{});
     const newUser={email,role:'owner',storeId,storeName,isActive:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
     await userRef.set(newUser);
     return newUser;
 }
 
-async function getNextInvoiceNumber(){
-    const today=new Date(); today.setHours(0,0,0,0);
-    const counterRef=getCountersCol().doc(`daily_${today.toISOString().split('T')[0]}`);
-    return await db.runTransaction(async(transaction)=>{
-        const snap=await transaction.get(counterRef);
-        let n=1;
-        if(snap.exists){ n=snap.data().current+1; transaction.update(counterRef,{current:firebase.firestore.FieldValue.increment(1)}); }
-        else transaction.set(counterRef,{current:1,date:firebase.firestore.Timestamp.fromDate(today)});
-        return n;
-    });
-}
-
 async function ensureInvoicesCache(){ return allInvoicesCache; }
 
-async function syncPendingOps(){
-    if(!navigator.onLine||isSyncing) return;
-    isSyncing=true;
-    const pending=await getPendingOps();
-    if(pending.length===0){ isSyncing=false; return; }
-    for(let op of pending){
-        try{
-            if(op.type==='addInvoice'){
-                await getInvoicesCol().add(op.data);
-                const productIds=[...new Set(op.data.items.map(i=>i.productId))];
-                const prodDocs=await Promise.all(productIds.map(pid=>getProductsCol().doc(pid).get()));
-                const prodMap={};
-                prodDocs.forEach(doc=>{if(doc.exists) prodMap[doc.id]=doc.data();});
-                const batch=db.batch();
-                for(let item of op.data.items){ if(prodMap[item.productId]!==undefined) batch.update(getProductsCol().doc(item.productId),{qty:firebase.firestore.FieldValue.increment(-item.quantity)}); }
-                await batch.commit();
-                if(op.data.customerId&&op.data.paymentMethod==='credit'&&op.data.debtAdded>0) await getCustomersCol().doc(op.data.customerId).update({debt:firebase.firestore.FieldValue.increment(op.data.debtAdded)});
-            } else if(op.type==='addProduct'){
-                const docRef=await getProductsCol().add(op.data);
-                allProducts.push({id:docRef.id,...op.data}); await cacheData('products',allProducts);
-            } else if(op.type==='cancelInvoice'){
-                const invRef=getInvoicesCol().doc(op.invoiceId);
-                const batch=db.batch(); batch.update(invRef,{cancelled:true});
-                for(let item of op.items) batch.update(getProductsCol().doc(item.productId),{qty:firebase.firestore.FieldValue.increment(item.quantity)});
-                if(op.customerId&&op.debtRemoved>0) batch.update(getCustomersCol().doc(op.customerId),{debt:firebase.firestore.FieldValue.increment(-op.debtRemoved)});
-                await batch.commit();
-            } else if(op.type==='addMissingProduct') await getMissingProductsCol().add(op.data);
-            else if(op.type==='deleteMissingProduct') await getMissingProductsCol().doc(op.missingId).delete();
-        }catch(e){ console.warn(e); }
-    }
-    await clearPendingOps();
-    await refreshFromFirestore(true);
-    if(document.getElementById('salesLogList')) filterAndDisplayInvoices();
-    if(document.getElementById('otherContent')) loadOtherSubContent();
-    isSyncing=false;
-}
-window.addEventListener('online',async()=>{ document.getElementById('statusBar').innerHTML=''; await syncPendingOps(); });
-window.addEventListener('offline',()=>{ document.getElementById('statusBar').style.backgroundColor='#fee2e2'; });
-function isOnline(){ return navigator.onLine; }
-
+/* =====================================================================
+   Navigation
+   ===================================================================== */
 function buildTabs(){
     const cont=document.getElementById('navTabs');
     let tabs=isAdminGlobal?[{id:'adminPanel',name:'📊 لوحة التحكم'}]:[
@@ -419,7 +691,8 @@ async function switchTab(tabId){
     if(ab) ab.classList.add('active');
     const cont=document.getElementById('tabContent');
     if(isAdminGlobal){ cont.innerHTML='<div class="flash">لوحة المشرف قيد التطوير</div>'; return; }
-    await loadStoreData(false);
+
+    /* Use cached data immediately, refresh in background if online */
     if(tabId==='pos') await renderPosTab(cont);
     else if(tabId==='products') await renderProductsTab(cont);
     else if(tabId==='customers') await renderCustomersTab(cont);
@@ -427,20 +700,31 @@ async function switchTab(tabId){
     else if(tabId==='salesLog') await renderSalesLogTab(cont);
     else if(tabId==='invoices') await renderInvoicesTab(cont);
     else if(tabId==='other') await renderOtherTab(cont);
+
+    /* Non-blocking background sync */
+    if(isOnline()) loadStoreData(false).catch(()=>{});
 }
 
-// ========== نقطة البيع ==========
+/* =====================================================================
+   POS – نقطة البيع (Offline-First)
+   ===================================================================== */
 let cart=[];
 async function renderPosTab(container){
     cart=[]; lastReceiptData=null;
+    const onlineBadge = isOnline()
+        ? '<span class="online-badge">🟢 وضع متصل</span>'
+        : '<span class="offline-badge">🔴 وضع أوفلاين – البيع يعمل محلياً</span>';
     let custOpt=`<option value="">بدون عميل</option>`+allCustomers.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} (دين: ${c.debt||0})</option>`).join('');
     container.innerHTML=`
     <div style="background:#f8fafc;border-radius:32px;padding:20px;">
-        <h3>💰 نقطة البيع السريعة</h3>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <h3>💰 نقطة البيع السريعة</h3>
+            <div id="posBadge">${onlineBadge}</div>
+        </div>
         <div class="pos-row">
             <input type="text" id="searchProduct" placeholder="🔍 باركود أو اسم" oninput="searchProductLive()">
             <select id="productSelect"><option>اختر منتج</option></select>
-            <input type="number" id="cartQty" placeholder="الكمية" value="1">
+            <input type="number" id="cartQty" placeholder="الكمية" value="1" min="1">
             <button onclick="addToCart()" class="btn-sm">➕ أضف للسلة</button>
         </div>
         <div id="cartItems"></div>
@@ -461,145 +745,255 @@ async function renderPosTab(container){
         <div style="font-size:24px;font-weight:bold;" id="totalAmount">الإجمالي: 0 ج.م</div>
         <button onclick="confirmSale()" style="background:#10b981;">إتمام البيع</button>
         <div id="posFlash"></div>
-        <div id="printReceiptArea" style="margin-top:10px;display:none;"><button onclick="printLastReceipt()" style="background:#22c55e;">🖨️ طباعة الفاتورة</button></div>
+        <div id="printReceiptArea" style="margin-top:10px;display:none;">
+            <button onclick="printLastReceipt()" style="background:#22c55e;">🖨️ طباعة الفاتورة</button>
+        </div>
     </div>`;
+
     refreshProductsForPos();
-    window.searchProductLive=()=>refreshProductsForPos();
-    window.filterCustomers=()=>{
-        let val=document.getElementById('searchCustomer').value.toLowerCase();
-        let filtered=allCustomers.filter(c=>c.name.toLowerCase().includes(val));
-        document.getElementById('customerId').innerHTML=`<option value="">بدون عميل</option>`+filtered.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} (دين: ${c.debt||0})</option>`).join('');
+
+    window.searchProductLive = () => refreshProductsForPos();
+
+    window.filterCustomers = () => {
+        const val = document.getElementById('searchCustomer').value.toLowerCase();
+        const filtered = allCustomers.filter(c=>c.name.toLowerCase().includes(val));
+        document.getElementById('customerId').innerHTML =
+            `<option value="">بدون عميل</option>` +
+            filtered.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} (دين: ${c.debt||0})</option>`).join('');
     };
-    window.addToCart=()=>{
-        let pid=document.getElementById('productSelect').value;
-        if(!pid||pid==='لا يوجد') return;
-        let qty=parseInt(document.getElementById('cartQty').value);
+
+    window.addToCart = () => {
+        const pid = document.getElementById('productSelect').value;
+        if(!pid || pid==='لا يوجد' || pid==='اختر منتج') return;
+        const qty = parseInt(document.getElementById('cartQty').value)||1;
         if(qty<=0) return;
-        let prod=allProducts.find(p=>p.id===pid);
-        if(!prod||prod.qty<qty){ showFlash('posFlash','كمية غير متوفرة',true); return; }
-        let existing=cart.find(i=>i.id===pid);
-        if(existing) existing.qty+=qty;
-        else cart.push({id:pid,name:prod.name,price:prod.priceRetail||prod.price,qty});
+        const prod = allProducts.find(p=>p.id===pid);
+        if(!prod){ showFlash('posFlash','منتج غير موجود',true); return; }
+
+        /* Offline: allow selling even if qty looks 0 – sync will reconcile */
+        if(isOnline() && prod.qty < qty){ showFlash('posFlash','⚠️ الكمية غير كافية في المخزون',true); return; }
+
+        const existing = cart.find(i=>i.id===pid);
+        if(existing) existing.qty += qty;
+        else cart.push({id:pid, name:prod.name, price:prod.priceRetail||prod.price||0, qty});
         renderCart();
     };
-    window.renderCart=()=>{
-        let cd=document.getElementById('cartItems'); let total=0;
-        let h=`<h4>السلة</h4>`;
-        cart.forEach((item,idx)=>{ total+=item.price*item.qty; h+=`<div class="card" style="padding:10px;">${item.name} x ${item.qty} = ${(item.price*item.qty).toFixed(2)} ج.م <button class="btn-sm btn-danger" onclick="removeFromCart(${idx})">حذف</button></div>`; });
-        cd.innerHTML=h;
-        document.getElementById('totalAmount').innerHTML=`الإجمالي: ${total.toFixed(2)} ج.م`;
+
+    window.renderCart = () => {
+        const cd = document.getElementById('cartItems');
+        let total = 0;
+        let h = `<h4>السلة (${cart.length} صنف)</h4>`;
+        cart.forEach((item,idx)=>{
+            total += item.price * item.qty;
+            h += `<div class="card" style="padding:10px;">
+                <div class="card-info">${escapeHtml(item.name)} &times; ${item.qty} = ${(item.price*item.qty).toFixed(2)} ج.م</div>
+                <button class="btn-sm btn-danger" onclick="removeFromCart(${idx})">حذف</button>
+            </div>`;
+        });
+        cd.innerHTML = h;
+        document.getElementById('totalAmount').innerHTML = `الإجمالي: ${total.toFixed(2)} ج.م`;
         updateChange();
     };
-    window.removeFromCart=(idx)=>{ cart.splice(idx,1); renderCart(); };
-    window.updateChange=()=>{
-        let t=cart.reduce((s,i)=>s+(i.price*i.qty),0);
-        let dv=parseFloat(document.getElementById('discountValue').value)||0;
-        let dt=document.getElementById('discountType').value;
-        let disc=dt==='percent'?(t*dv/100):dv;
-        let after=Math.max(0,t-disc);
-        let paid=parseFloat(document.getElementById('paidAmount').value)||0;
-        document.getElementById('changeAmount').value=(paid>after)?(paid-after).toFixed(2):0;
-        document.getElementById('totalAmount').innerHTML=`الإجمالي: ${after.toFixed(2)} ج.م`;
+
+    window.removeFromCart = (idx) => { cart.splice(idx,1); renderCart(); };
+
+    window.updateChange = () => {
+        const t = cart.reduce((s,i)=>s+(i.price*i.qty),0);
+        const dv = parseFloat(document.getElementById('discountValue').value)||0;
+        const dt = document.getElementById('discountType').value;
+        const disc = dt==='percent' ? (t*dv/100) : dv;
+        const after = Math.max(0, t-disc);
+        const paid = parseFloat(document.getElementById('paidAmount').value)||0;
+        document.getElementById('changeAmount').value = paid>after ? (paid-after).toFixed(2) : '0';
+        document.getElementById('totalAmount').innerHTML = `الإجمالي: ${after.toFixed(2)} ج.م`;
     };
-    window.applyDiscount=()=>updateChange();
-    let _posTimer=null;
-    async function refreshProductsForPos(){
-        const val=document.getElementById('searchProduct').value.trim();
-        const s=document.getElementById('productSelect');
-        if(!val){ const lim=allProducts.slice(0,200); s.innerHTML=lim.map(p=>`<option value="${p.id}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('')||'<option>لا يوجد</option>'; return; }
-        const lf=allProducts.filter(p=>(p.barcode&&p.barcode.includes(val))||p.name.includes(val));
-        s.innerHTML=lf.map(p=>`<option value="${p.id}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('')||'<option>لا يوجد</option>';
-        clearTimeout(_posTimer);
-        _posTimer=setTimeout(async()=>{
-            if(!isOnline()||!currentStoreId) return;
-            try{
-                const snap=await getProductsCol().orderBy('name').startAt(val).endAt(val+'\uf8ff').limit(20).get();
-                let results=snap.docs.map(d=>({id:d.id,...d.data()}));
-                const byB=allProducts.filter(p=>p.barcode&&p.barcode.includes(val)&&!results.find(r=>r.id===p.id));
-                results=results.concat(byB).slice(0,30);
-                const sc=document.getElementById('productSelect'); if(!sc) return;
-                sc.innerHTML=results.map(p=>`<option value="${p.id}">${p.name} - ${p.priceRetail||p.price} ج.م (متوفر ${p.qty})</option>`).join('')||'<option>لا يوجد</option>';
-            }catch(e){}
-        },300);
+
+    window.applyDiscount = () => updateChange();
+
+    /* POS search – local first, no network needed */
+    let _posTimer = null;
+    function refreshProductsForPos(){
+        const val = document.getElementById('searchProduct')?.value?.trim() || '';
+        const s = document.getElementById('productSelect');
+        if(!s) return;
+        const lim = val
+            ? allProducts.filter(p=>(p.barcode&&p.barcode.includes(val))||p.name.includes(val))
+            : allProducts.slice(0,200);
+        s.innerHTML = lim.map(p=>
+            `<option value="${p.id}">${escapeHtml(p.name)} - ${p.priceRetail||p.price||0} ج.م (متوفر ${p.qty})</option>`
+        ).join('') || '<option>لا يوجد</option>';
     }
+
     renderCart();
 }
 
 async function confirmSale(){
     if(cart.length===0) return showFlash('posFlash','السلة فارغة',true);
-    let cid=document.getElementById('customerId').value||null;
-    let pm=document.getElementById('paymentMethod').value;
-    let paid=parseFloat(document.getElementById('paidAmount').value)||0;
-    let totalBefore=cart.reduce((s,i)=>s+(i.price*i.qty),0);
-    let dv=parseFloat(document.getElementById('discountValue').value)||0;
-    let dt=document.getElementById('discountType').value;
-    let discountAmount=dt==='percent'?(totalBefore*dv/100):dv;
-    let total=Math.max(0,totalBefore-discountAmount);
-    let finalMethod=pm,change=0,debtAdded=0;
-    if(cid&&paid<total){ finalMethod='credit'; debtAdded=total-paid; paid=total; change=0; showFlash('posFlash',`سيتم إضافة ${debtAdded} ج.م كدين`,false); }
-    else if(finalMethod!=='credit'&&paid<total) return showFlash('posFlash','المدفوع أقل من الإجمالي',true);
-    else if(finalMethod!=='credit'){ change=paid-total; if(change<0) return showFlash('posFlash','المدفوع أقل',true); }
-    try{
-        for(let item of cart){ let lp=allProducts.find(p=>p.id===item.id); if(!lp||lp.qty<item.qty) throw new Error(`المنتج ${item.name} غير متوفر`); }
-        const invoiceNumber=await getNextInvoiceNumber();
-        const invoiceData={invoiceNumber,items:cart.map(i=>({productId:i.id,productName:i.name,quantity:i.qty,unitPrice:i.price,total:i.price*i.qty})),total,discountAmount,discountType:dt==='percent'?'percent':'fixed',discountValue:dv,paymentMethod:finalMethod,customerId:cid,paidAmount:paid,changeAmount:change,userId:currentUserAuth.uid,cancelled:false,date:firebase.firestore.FieldValue.serverTimestamp(),debtAdded};
-        if(!isOnline()){
-            await addPendingOp({type:'addInvoice',data:invoiceData});
-            if(cid&&debtAdded>0){ let cust=allCustomers.find(c=>c.id===cid); if(cust) cust.debt=(cust.debt||0)+debtAdded; await cacheData('customers',allCustomers); }
-            showFlash('posFlash','✅ تم حفظ البيع محلياً',false);
-            lastReceiptData={cartItems:[...cart],total,method:finalMethod,customerId:cid,change,debtAdded,invoiceNumber,discountAmount};
-            document.getElementById('printReceiptArea').style.display='block';
-            cart=[]; renderCart(); return;
+
+    const cid = document.getElementById('customerId').value || null;
+    const pm  = document.getElementById('paymentMethod').value;
+    const paid= parseFloat(document.getElementById('paidAmount').value)||0;
+
+    const totalBefore = cart.reduce((s,i)=>s+(i.price*i.qty),0);
+    const dv = parseFloat(document.getElementById('discountValue').value)||0;
+    const dt = document.getElementById('discountType').value;
+    const discountAmount = dt==='percent' ? (totalBefore*dv/100) : dv;
+    const total = Math.max(0, totalBefore - discountAmount);
+
+    let finalMethod=pm, change=0, debtAdded=0;
+
+    if(cid && paid < total){
+        finalMethod='credit'; debtAdded=total-paid; change=0;
+        showFlash('posFlash',`سيتم إضافة ${debtAdded.toFixed(2)} ج.م كدين`,false);
+    } else if(finalMethod!=='credit' && paid < total){
+        return showFlash('posFlash','المدفوع أقل من الإجمالي',true);
+    } else if(finalMethod!=='credit'){
+        change = paid - total;
+        if(change < 0) return showFlash('posFlash','المدفوع أقل من الإجمالي',true);
+    }
+
+    try {
+        const invoiceNumber = await getNextInvoiceNumber();
+        const invoiceData = {
+            invoiceNumber,
+            items: cart.map(i=>({
+                productId:i.id, productName:i.name,
+                quantity:i.qty, unitPrice:i.price, total:i.price*i.qty
+            })),
+            total, discountAmount,
+            discountType: dt==='percent'?'percent':'fixed',
+            discountValue: dv,
+            paymentMethod: finalMethod,
+            customerId: cid,
+            paidAmount: paid,
+            changeAmount: change,
+            userId: currentUserAuth?.uid || '',
+            cancelled: false,
+            debtAdded
+        };
+
+        /* ── Update local cache immediately (optimistic) ── */
+        for(let item of cart){
+            const lp = allProducts.find(p=>p.id===item.id);
+            if(lp) lp.qty = Math.max(0, (lp.qty||0) - item.qty);
         }
-        const batch=db.batch();
-        for(let item of cart) batch.update(getProductsCol().doc(item.id),{qty:firebase.firestore.FieldValue.increment(-item.qty)});
-        const invoiceRef=getInvoicesCol().doc(); batch.set(invoiceRef,invoiceData);
-        if(cid&&debtAdded>0) batch.update(getCustomersCol().doc(cid),{debt:firebase.firestore.FieldValue.increment(debtAdded)});
-        await batch.commit();
-        showFlash('posFlash',`✅ بيع ناجح بقيمة ${total} ج.م`,false);
-        lastReceiptData={cartItems:[...cart],total,method:finalMethod,customerId:cid,change,debtAdded,invoiceNumber,discountAmount};
+        if(cid && debtAdded>0){
+            const cust = allCustomers.find(c=>c.id===cid);
+            if(cust) cust.debt = (cust.debt||0) + debtAdded;
+        }
+
+        /* Add to local invoices cache */
+        const localInvoice = {
+            ...invoiceData,
+            id: genLocalId(),
+            date: { toDate: ()=>new Date() }   /* fake Timestamp for display */
+        };
+        allInvoicesCache.unshift(localInvoice);
+
+        await Promise.all([
+            cacheData('products', allProducts),
+            cacheData('customers', allCustomers),
+            cacheData('invoices', allInvoicesCache)
+        ]);
+
+        if(!isOnline()){
+            /* Queue for later sync */
+            await addPendingOp({
+                type:'addInvoice',
+                data: { ...invoiceData, date: null, __localId: localInvoice.id }
+            });
+            showFlash('posFlash',`✅ تم حفظ البيع محلياً – سيتم المزامنة عند الاتصال`,false);
+        } else {
+            /* Save to Firestore now */
+            try {
+                const fsData = { ...invoiceData, date: firebase.firestore.FieldValue.serverTimestamp() };
+                const batch = db.batch();
+                for(let item of cart)
+                    batch.update(getProductsCol().doc(item.id),
+                        {qty: firebase.firestore.FieldValue.increment(-item.qty)});
+                const invoiceRef = getInvoicesCol().doc();
+                batch.set(invoiceRef, fsData);
+                if(cid && debtAdded>0)
+                    batch.update(getCustomersCol().doc(cid),
+                        {debt: firebase.firestore.FieldValue.increment(debtAdded)});
+                await batch.commit();
+                /* Update local invoice with real id */
+                localInvoice.id = invoiceRef.id;
+                await cacheData('invoices', allInvoicesCache);
+                showFlash('posFlash',`✅ بيع ناجح بقيمة ${total.toFixed(2)} ج.م`,false);
+            } catch(fsErr) {
+                /* Firestore failed – fallback to queue */
+                console.warn('Firestore save failed, queued:', fsErr);
+                await addPendingOp({
+                    type:'addInvoice',
+                    data: { ...invoiceData, date: null, __localId: localInvoice.id }
+                });
+                showFlash('posFlash',`✅ تم حفظ البيع محلياً (سيتم المزامنة لاحقاً)`,false);
+            }
+        }
+
+        lastReceiptData = {
+            cartItems:[...cart], total, method:finalMethod,
+            customerId:cid, change, debtAdded, invoiceNumber, discountAmount
+        };
         document.getElementById('printReceiptArea').style.display='block';
-        cart=[]; renderCart();
-    }catch(err){ showFlash('posFlash',err.message,true); }
+        cart=[];
+        renderCart();
+        updateStatusBar();
+
+    } catch(err){ showFlash('posFlash', err.message, true); }
 }
 
+/* =====================================================================
+   Print Helpers
+   ===================================================================== */
 function generatePrintHTML(title,headerInfo,tableHeaders,tableRows,footerInfo){
     return `<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title>
-    <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Tajawal',sans-serif;background:white;padding:4mm;font-size:var(--print-font-size,12pt);}.print-wrapper{max-width:100%;margin:0 auto;}.header{text-align:center;margin-bottom:12px;border-bottom:2px solid #4c1d95;padding-bottom:5px;}.store-name{font-size:18pt;font-weight:bold;color:#4c1d95;}.title{font-size:16pt;margin:5px 0;}.info-row{display:flex;justify-content:space-between;flex-wrap:wrap;margin:4px 0;gap:5px;}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:10pt;}th,td{border:1px solid #aaa;padding:6px 4px;text-align:center;vertical-align:top;word-break:break-word;}th{background:#f0f0f0;}.footer{margin-top:15px;text-align:center;border-top:1px dashed #333;padding-top:8px;font-size:10pt;}@media print{body{margin:0;padding:0;}@page{size:auto;margin:8mm 5mm;}}</style>
-    </head><body><div class="print-wrapper">
+    <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Tajawal',sans-serif;background:white;padding:4mm;font-size:12pt;}.header{text-align:center;margin-bottom:12px;border-bottom:2px solid #4c1d95;padding-bottom:5px;}.store-name{font-size:18pt;font-weight:bold;color:#4c1d95;}.title{font-size:16pt;margin:5px 0;}.info-row{display:flex;justify-content:space-between;flex-wrap:wrap;margin:4px 0;gap:5px;}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:10pt;}th,td{border:1px solid #aaa;padding:6px 4px;text-align:center;vertical-align:top;word-break:break-word;}th{background:#f0f0f0;}.footer{margin-top:15px;text-align:center;border-top:1px dashed #333;padding-top:8px;font-size:10pt;}@media print{body{margin:0;padding:0;}@page{size:auto;margin:8mm 5mm;}}</style>
+    </head><body><div>
     <div class="header"><div class="store-name">${escapeHtml(userData?.storeName||'متجر')}</div><div class="title">${escapeHtml(title)}</div></div>
     ${headerInfo?`<div class="info-row">${headerInfo}</div>`:''}
     <table><thead>${tableHeaders}</thead><tbody>${tableRows}</tbody></table>
-    ${footerInfo?`<div class="info-row">${footerInfo}</div>`:''}
+    ${footerInfo?`<div>${footerInfo}</div>`:''}
     <div class="footer">ManaraTech 📋</div>
     </div></body></html>`;
 }
 
 function directPrint(htmlContent){
     let iframe=document.getElementById('printIframe');
-    if(!iframe){ iframe=document.createElement('iframe'); iframe.id='printIframe'; iframe.style.cssText='position:absolute;width:0;height:0;border:none;'; document.body.appendChild(iframe); }
-    const doc=iframe.contentWindow.document; doc.open(); doc.write(htmlContent); doc.close();
-    iframe.contentWindow.focus(); iframe.contentWindow.print();
+    if(!iframe){
+        iframe=document.createElement('iframe');
+        iframe.id='printIframe';
+        iframe.style.cssText='position:absolute;width:0;height:0;border:none;';
+        document.body.appendChild(iframe);
+    }
+    const doc=iframe.contentWindow.document;
+    doc.open(); doc.write(htmlContent); doc.close();
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
 }
 
 function printLastReceipt(){
     if(!lastReceiptData) return;
-    let {cartItems,total,method,customerId,change,debtAdded,invoiceNumber,discountAmount}=lastReceiptData;
-    let custName=customerId?(allCustomers.find(c=>c.id===customerId)?.name||'عميل'):'نقدي';
-    let dayNames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-    let dayName=dayNames[new Date().getDay()];
-    let headerInfo=`<span>رقم الفاتورة: ${invoiceNumber} (${dayName})</span><span>التاريخ: ${new Date().toLocaleString('ar-EG')}</span><span>العميل: ${custName}</span>`;
-    let tableHeaders=`<tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>`;
-    let tableRows=cartItems.map(i=>`<tr><td style="text-align:right;">${escapeHtml(i.name)}</td><td>${i.qty}</td><td>${i.price.toFixed(2)}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('');
-    let footerInfo=``;
+    const {cartItems,total,method,customerId,change,debtAdded,invoiceNumber,discountAmount}=lastReceiptData;
+    const custName=customerId?(allCustomers.find(c=>c.id===customerId)?.name||'عميل'):'نقدي';
+    const dayNames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const dayName=dayNames[new Date().getDay()];
+    const headerInfo=`<span>رقم الفاتورة: ${invoiceNumber} (${dayName})</span><span>التاريخ: ${new Date().toLocaleString('ar-EG')}</span><span>العميل: ${custName}</span>`;
+    const tableHeaders=`<tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>`;
+    const tableRows=cartItems.map(i=>`<tr><td style="text-align:right;">${escapeHtml(i.name)}</td><td>${i.qty}</td><td>${Number(i.price).toFixed(2)}</td><td>${(i.qty*i.price).toFixed(2)}</td></tr>`).join('');
+    let footerInfo='';
     if(discountAmount>0) footerInfo+=`<div class="info-row">الخصم: - ${discountAmount.toFixed(2)} ج.م</div>`;
-    footerInfo+=`<div class="info-row">طريقة الدفع: ${getPaymentMethodArabic(method)}</div><div class="info-row" style="font-weight:bold;">الإجمالي: ${total.toFixed(2)} ج.م</div>`;
+    footerInfo+=`<div class="info-row">طريقة الدفع: ${getPaymentMethodArabic(method)}</div>`;
+    footerInfo+=`<div class="info-row" style="font-weight:bold;">الإجمالي: ${total.toFixed(2)} ج.م</div>`;
     if(method!=='credit') footerInfo+=`<div class="info-row">المدفوع: ${(total+change).toFixed(2)} ج.م &nbsp; الباقي: ${change.toFixed(2)} ج.م</div>`;
     if(debtAdded>0) footerInfo+=`<div class="info-row">تم إضافة دين: ${debtAdded.toFixed(2)} ج.م</div>`;
     directPrint(generatePrintHTML('فاتورة بيع',headerInfo,tableHeaders,tableRows,footerInfo));
 }
 
-// ========== المنتجات ==========
+/* =====================================================================
+   Products Tab
+   ===================================================================== */
 async function renderProductsTab(container){
     container.innerHTML=`<h3>➕ إضافة منتج جديد</h3>
     <div class="grid-2">
@@ -616,7 +1010,8 @@ async function renderProductsTab(container){
     </div>
     <h3>📋 قائمة المنتجات</h3>
     <div id="productsListArea"></div>`;
-    currentProductPage=1; renderProductsTable();
+    currentProductPage=1;
+    renderProductsTable();
 }
 
 async function renderProductsTable(filteredList){
@@ -632,8 +1027,8 @@ async function renderProductsTable(filteredList){
     const searchBar=`<div class="filter-row" style="margin-bottom:8px;"><input type="text" id="productsTableSearch" placeholder="🔍 بحث سريع بالاسم أو الباركود" oninput="searchInProductsTable(this.value)" style="margin:0;"><button class="btn-sm" onclick="searchInProductsTable(document.getElementById('productsTableSearch')?.value||'')">بحث</button><button class="btn-sm" onclick="clearProductsTableSearch()">مسح</button></div>`;
     let html=`<div class="table-responsive"><table class="data-table"><thead><tr><th>الصورة</th><th>الاسم</th><th>باركود</th><th>سعر القطاعي</th><th>الكمية</th><th>الوحدة</th><th>حد التنبيه</th><th>إجراء</th></tr></thead><tbody>`;
     for(let p of pageProducts){
-        let lsc=(p.qty<=(p.lowStockAlert||0))?'low-stock-row':'';
-        html+=`<tr class="${lsc}"><td>${p.imageUrl?`<img src="${p.imageUrl}" width="40" height="40" style="border-radius:8px;">`:'-'}</td><td style="text-align:right;">${escapeHtml(p.name)}</td><td>${p.barcode||'-'}</td><td>${p.priceRetail} ج.م</td><td>${p.qty}</td><td>${p.unit}</td><td>${p.lowStockAlert||0}</td><td><button class="btn-sm" onclick="openEditProductModal('${p.id}')">✏️</button>${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button>`:''}</td></tr>`;
+        const lsc=(p.qty<=(p.lowStockAlert||0))&&p.lowStockAlert?'low-stock-row':'';
+        html+=`<tr class="${lsc}"><td>${p.imageUrl?`<img src="${p.imageUrl}" width="40" height="40" style="border-radius:8px;">`:'-'}</td><td style="text-align:right;">${escapeHtml(p.name)}</td><td>${p.barcode||'-'}</td><td>${p.priceRetail||0} ج.م</td><td>${p.qty}</td><td>${p.unit||'قطعة'}</td><td>${p.lowStockAlert||0}</td><td><button class="btn-sm" onclick="openEditProductModal('${p.id}')">✏️</button>${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button>`:''}</td></tr>`;
     }
     html+=`</tbody></table></div>`;
     html+=`<div class="pagination-controls"><button class="btn-sm" onclick="changeProductPage(-1)" ${currentProductPage<=1?'disabled style="opacity:0.4;"':''}>▶ السابق</button><span class="pagination-info">صفحة ${currentProductPage} من ${totalPages} | إجمالي: ${totalProducts}</span><button class="btn-sm" onclick="changeProductPage(1)" ${currentProductPage>=totalPages?'disabled style="opacity:0.4;"':''}>التالي ◀</button></div>`;
@@ -643,8 +1038,10 @@ async function renderProductsTable(filteredList){
 window.changeProductPage=function(dir){
     currentProductPage+=dir;
     const sv=document.getElementById('productsTableSearch')?.value||'';
-    if(sv.trim()){ const f=allProducts.filter(p=>p.name.toLowerCase().includes(sv.toLowerCase())||(p.barcode&&p.barcode.toLowerCase().includes(sv.toLowerCase()))); renderProductsTable(f); }
-    else renderProductsTable();
+    if(sv.trim()){
+        const f=allProducts.filter(p=>p.name.toLowerCase().includes(sv.toLowerCase())||(p.barcode&&p.barcode.toLowerCase().includes(sv.toLowerCase())));
+        renderProductsTable(f);
+    } else renderProductsTable();
     setTimeout(()=>{ const si=document.getElementById('productsTableSearch'); if(si) si.value=sv; },0);
 };
 
@@ -652,23 +1049,19 @@ let _productSearchTimer=null;
 window.searchInProductsTable=function(val){
     currentProductPage=1; clearTimeout(_productSearchTimer);
     if(!val||!val.trim()){ renderProductsTable(); return; }
-    _productSearchTimer=setTimeout(async()=>{
+    _productSearchTimer=setTimeout(()=>{
         const term=val.trim();
-        if(!isOnline()||!currentStoreId){
-            renderProductsTable(allProducts.filter(p=>p.name.toLowerCase().includes(term.toLowerCase())||(p.barcode&&p.barcode.toLowerCase().includes(term.toLowerCase()))));
-            setTimeout(()=>{ const si=document.getElementById('productsTableSearch'); if(si) si.value=val; },0); return;
-        }
-        try{
-            const snap=await getProductsCol().orderBy('name').startAt(term).endAt(term+'\uf8ff').limit(50).get();
-            let results=snap.docs.map(d=>({id:d.id,...d.data()}));
-            const byB=allProducts.filter(p=>p.barcode&&p.barcode.toLowerCase().includes(term.toLowerCase())&&!results.find(r=>r.id===p.id));
-            results=results.concat(byB).slice(0,50);
-            renderProductsTable(results);
-        }catch(e){ renderProductsTable(allProducts.filter(p=>p.name.toLowerCase().includes(term.toLowerCase())||(p.barcode&&p.barcode.toLowerCase().includes(term.toLowerCase())))); }
+        renderProductsTable(allProducts.filter(p=>
+            p.name.toLowerCase().includes(term.toLowerCase())||(p.barcode&&p.barcode.toLowerCase().includes(term.toLowerCase()))
+        ));
         setTimeout(()=>{ const si=document.getElementById('productsTableSearch'); if(si) si.value=val; },0);
-    },400);
+    },300);
 };
-window.clearProductsTableSearch=function(){ currentProductPage=1; const si=document.getElementById('productsTableSearch'); if(si) si.value=''; renderProductsTable(); };
+window.clearProductsTableSearch=function(){
+    currentProductPage=1;
+    const si=document.getElementById('productsTableSearch'); if(si) si.value='';
+    renderProductsTable();
+};
 
 function openEditProductModal(id){
     const prod=allProducts.find(p=>p.id===id); if(!prod) return;
@@ -685,60 +1078,195 @@ function openEditProductModal(id){
     document.getElementById('modalOverlay').style.display='block';
     document.getElementById('productModal').style.display='block';
 }
-function closeProductModal(){ document.getElementById('modalOverlay').style.display='none'; document.getElementById('productModal').style.display='none'; currentEditProductId=null; }
+function closeProductModal(){
+    document.getElementById('modalOverlay').style.display='none';
+    document.getElementById('productModal').style.display='none';
+    currentEditProductId=null;
+}
 async function saveProductEdit(){
     if(!currentEditProductId) return;
-    let name=document.getElementById('editProdName').value.trim(); if(!name) return showFlash('productsListArea','الاسم مطلوب',true);
-    let data={name,barcode:document.getElementById('editProdBarCode').value,unit:document.getElementById('editProdUnit').value,qty:parseInt(document.getElementById('editProdQty').value)||0,lowStockAlert:parseInt(document.getElementById('editProdLowStock').value)||0};
+    let name=document.getElementById('editProdName').value.trim();
+    if(!name) return showFlash('productsListArea','الاسم مطلوب',true);
+    let data={
+        name,
+        barcode:document.getElementById('editProdBarCode').value,
+        unit:document.getElementById('editProdUnit').value,
+        qty:parseInt(document.getElementById('editProdQty').value)||0,
+        lowStockAlert:parseInt(document.getElementById('editProdLowStock').value)||0
+    };
     if(currentRole==='owner'){
         data.priceRetail=parseFloat(document.getElementById('editProdPriceRetail').value)||0;
         data.priceWholesale=parseFloat(document.getElementById('editProdPriceWholesale').value)||0;
         data.cost=parseFloat(document.getElementById('editProdCost').value)||0;
         data.imageUrl=document.getElementById('editProdImage').value;
     }
-    await getProductsCol().doc(currentEditProductId).update(data);
-    closeProductModal();
+    /* Update local cache */
     const idx=allProducts.findIndex(p=>p.id===currentEditProductId);
     if(idx!==-1) allProducts[idx]={...allProducts[idx],...data};
     await cacheData('products',allProducts);
+
+    if(!isOnline()){
+        await addPendingOp({type:'updateProduct', productId:currentEditProductId, data});
+    } else {
+        await getProductsCol().doc(currentEditProductId).update(data).catch(async()=>{
+            await addPendingOp({type:'updateProduct', productId:currentEditProductId, data});
+        });
+    }
+
+    closeProductModal();
     if(document.getElementById('productsListArea')) renderProductsTable();
     if(otherSubTab==='inventory'&&document.getElementById('inventoryTableContainer')) filterInventory();
     showFlash('productsListArea','تم تحديث المنتج',false);
 }
+
 window.addNewProduct=async()=>{
-    let name=document.getElementById('prodName').value.trim(); if(!name) return showFlash('productsListArea','الاسم مطلوب',true);
-    const data={name,barcode:document.getElementById('prodBarcode').value,priceRetail:parseFloat(document.getElementById('prodPriceRetail').value)||0,priceWholesale:parseFloat(document.getElementById('prodPriceWholesale').value)||0,cost:parseFloat(document.getElementById('prodCost').value)||0,unit:document.getElementById('prodUnit').value,qty:parseInt(document.getElementById('prodQty').value)||0,lowStockAlert:parseInt(document.getElementById('prodLowStock').value)||0,imageUrl:document.getElementById('prodImage').value,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-    if(!isOnline()){ await addPendingOp({type:'addProduct',data}); showFlash('productsListArea','✅ سيتم إضافة المنتج عند الاتصال',false); return; }
-    const docRef=await getProductsCol().add(data); allProducts.push({id:docRef.id,...data}); await cacheData('products',allProducts);
+    let name=document.getElementById('prodName').value.trim();
+    if(!name) return showFlash('productsListArea','الاسم مطلوب',true);
+    const localId = genLocalId();
+    const data={
+        name,
+        barcode:document.getElementById('prodBarcode').value,
+        priceRetail:parseFloat(document.getElementById('prodPriceRetail').value)||0,
+        priceWholesale:parseFloat(document.getElementById('prodPriceWholesale').value)||0,
+        cost:parseFloat(document.getElementById('prodCost').value)||0,
+        unit:document.getElementById('prodUnit').value,
+        qty:parseInt(document.getElementById('prodQty').value)||0,
+        lowStockAlert:parseInt(document.getElementById('prodLowStock').value)||0,
+        imageUrl:document.getElementById('prodImage').value
+    };
+    allProducts.push({id:localId,...data});
+    await cacheData('products',allProducts);
+
+    if(!isOnline()){
+        await addPendingOp({type:'addProduct', data, __localId:localId});
+        showFlash('productsListArea','✅ تم إضافة المنتج محلياً – ستتم المزامنة لاحقاً',false);
+    } else {
+        try{
+            const docRef=await getProductsCol().add({...data, createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+            const idx=allProducts.findIndex(p=>p.id===localId);
+            if(idx!==-1) allProducts[idx].id=docRef.id;
+            await cacheData('products',allProducts);
+            showFlash('productsListArea','✅ تم إضافة المنتج',false);
+        } catch(e){
+            await addPendingOp({type:'addProduct', data, __localId:localId});
+            showFlash('productsListArea','✅ تم إضافة المنتج (سيتم المزامنة لاحقاً)',false);
+        }
+    }
     renderProductsTab(document.getElementById('tabContent'));
 };
-window.deleteProduct=async(id)=>{ if(currentRole!=='owner'){ showFlash('productsListArea','غير مسموح',true); return; } if(confirm('حذف المنتج؟')){ await getProductsCol().doc(id).delete(); allProducts=allProducts.filter(p=>p.id!==id); await cacheData('products',allProducts); renderProductsTab(document.getElementById('tabContent')); } };
 
-// ========== العملاء ==========
+window.deleteProduct=async(id)=>{
+    if(currentRole!=='owner'){ showFlash('productsListArea','غير مسموح',true); return; }
+    if(!confirm('حذف المنتج؟')) return;
+    allProducts=allProducts.filter(p=>p.id!==id);
+    await cacheData('products',allProducts);
+    if(!isOnline()){
+        await addPendingOp({type:'deleteProduct', productId:id});
+    } else {
+        await getProductsCol().doc(id).delete().catch(async()=>{
+            await addPendingOp({type:'deleteProduct', productId:id});
+        });
+    }
+    renderProductsTab(document.getElementById('tabContent'));
+};
+
+/* =====================================================================
+   Customers
+   ===================================================================== */
 async function renderCustomersTab(container){
-    container.innerHTML=`<h3>👤 إضافة عميل جديد</h3><div class="pos-row"><input id="custName" placeholder="الاسم"><input id="custPhone" placeholder="الهاتف"><button onclick="addCustomer()">إضافة</button></div><h3>📋 قائمة العملاء</h3><div id="customersListDiv"></div>`;
+    container.innerHTML=`<h3>👤 إضافة عميل جديد</h3>
+    <div class="pos-row"><input id="custName" placeholder="الاسم"><input id="custPhone" placeholder="الهاتف"><button onclick="addCustomer()">إضافة</button></div>
+    <h3>📋 قائمة العملاء</h3><div id="customersListDiv"></div>`;
     await renderCustomersTable();
 }
 async function renderCustomersTable(){
     const div=document.getElementById('customersListDiv'); if(!div) return;
     if(!allCustomers.length){ div.innerHTML='<p>لا يوجد عملاء</p>'; return; }
     let html=`<div class="table-responsive"><table class="data-table"><thead><tr><th>الاسم</th><th>الهاتف</th><th>الدين</th><th>إجراء</th></tr></thead><tbody>`;
-    for(let c of allCustomers) html+=`<tr><td style="text-align:right;">${escapeHtml(c.name)}</td><td>${c.phone||'-'}</td><td>${c.debt||0} ج.م</td><td><button class="btn-sm" onclick="editCustomer('${c.id}')">✏️</button>${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteCustomer('${c.id}')">🗑️</button>`:''}<button class="btn-sm" onclick="recordPayment('${c.id}')">تسديد</button></td></tr>`;
+    for(let c of allCustomers)
+        html+=`<tr><td style="text-align:right;">${escapeHtml(c.name)}</td><td>${c.phone||'-'}</td><td>${(c.debt||0).toFixed(2)} ج.م</td><td>
+            <button class="btn-sm" onclick="editCustomer('${c.id}')">✏️</button>
+            ${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteCustomer('${c.id}')">🗑️</button>`:''}
+            <button class="btn-sm" onclick="recordPayment('${c.id}')">تسديد</button>
+        </td></tr>`;
     html+=`</tbody></table></div>`;
     div.innerHTML=html;
 }
-window.addCustomer=async()=>{ let name=document.getElementById('custName').value.trim(); if(!name) return; const docRef=await getCustomersCol().add({name,phone:document.getElementById('custPhone').value,debt:0}); allCustomers.push({id:docRef.id,name,phone:document.getElementById('custPhone').value,debt:0}); await cacheData('customers',allCustomers); renderCustomersTab(document.getElementById('tabContent')); };
-window.editCustomer=async(id)=>{ if(currentRole!=='owner'){ showFlash('customersListDiv','غير مسموح',true); return; } let newName=prompt('اسم جديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف'); await getCustomersCol().doc(id).update({name:newName,phone:newPhone}); const idx=allCustomers.findIndex(c=>c.id===id); if(idx!==-1){allCustomers[idx].name=newName;allCustomers[idx].phone=newPhone;} await cacheData('customers',allCustomers); renderCustomersTab(document.getElementById('tabContent')); };
-window.deleteCustomer=async(id)=>{ if(currentRole!=='owner'){ showFlash('customersListDiv','غير مسموح',true); return; } if(confirm('حذف العميل؟')){ await getCustomersCol().doc(id).delete(); allCustomers=allCustomers.filter(c=>c.id!==id); await cacheData('customers',allCustomers); renderCustomersTab(document.getElementById('tabContent')); } };
-window.recordPayment=async(custId)=>{ let amt=parseFloat(prompt('المبلغ المسدد')); if(isNaN(amt)) return; const ref=getCustomersCol().doc(custId); const doc=await ref.get(); let newDebt=Math.max(0,(doc.data().debt||0)-amt); await ref.update({debt:newDebt}); const idx=allCustomers.findIndex(c=>c.id===custId); if(idx!==-1) allCustomers[idx].debt=newDebt; await cacheData('customers',allCustomers); renderCustomersTab(document.getElementById('tabContent')); };
 
-// ========== الموردين ==========
+window.addCustomer=async()=>{
+    let name=document.getElementById('custName').value.trim(); if(!name) return;
+    const phone=document.getElementById('custPhone').value;
+    const localId=genLocalId();
+    allCustomers.push({id:localId,name,phone,debt:0});
+    await cacheData('customers',allCustomers);
+    if(!isOnline()){
+        await addPendingOp({type:'addCustomer', data:{name,phone,debt:0}, __localId:localId});
+    } else {
+        const docRef=await getCustomersCol().add({name,phone,debt:0}).catch(async()=>{
+            await addPendingOp({type:'addCustomer', data:{name,phone,debt:0}, __localId:localId});
+            return null;
+        });
+        if(docRef){ const idx=allCustomers.findIndex(c=>c.id===localId); if(idx!==-1) allCustomers[idx].id=docRef.id; await cacheData('customers',allCustomers); }
+    }
+    renderCustomersTab(document.getElementById('tabContent'));
+};
+window.editCustomer=async(id)=>{
+    if(currentRole!=='owner'){ showFlash('customersListDiv','غير مسموح',true); return; }
+    let newName=prompt('اسم جديد'); if(!newName) return;
+    let newPhone=prompt('رقم الهاتف')||'';
+    const idx=allCustomers.findIndex(c=>c.id===id);
+    if(idx!==-1){allCustomers[idx].name=newName;allCustomers[idx].phone=newPhone;}
+    await cacheData('customers',allCustomers);
+    if(!isOnline()) await addPendingOp({type:'updateCustomer',customerId:id,data:{name:newName,phone:newPhone}});
+    else await getCustomersCol().doc(id).update({name:newName,phone:newPhone}).catch(async()=>await addPendingOp({type:'updateCustomer',customerId:id,data:{name:newName,phone:newPhone}}));
+    renderCustomersTab(document.getElementById('tabContent'));
+};
+window.deleteCustomer=async(id)=>{
+    if(currentRole!=='owner'){ showFlash('customersListDiv','غير مسموح',true); return; }
+    if(!confirm('حذف العميل؟')) return;
+    allCustomers=allCustomers.filter(c=>c.id!==id);
+    await cacheData('customers',allCustomers);
+    if(!isOnline()) await addPendingOp({type:'deleteCustomer',customerId:id});
+    else await getCustomersCol().doc(id).delete().catch(async()=>await addPendingOp({type:'deleteCustomer',customerId:id}));
+    renderCustomersTab(document.getElementById('tabContent'));
+};
+window.recordPayment=async(custId)=>{
+    let amt=parseFloat(prompt('المبلغ المسدد')); if(isNaN(amt)||amt<=0) return;
+    const idx=allCustomers.findIndex(c=>c.id===custId);
+    if(idx!==-1) allCustomers[idx].debt=Math.max(0,(allCustomers[idx].debt||0)-amt);
+    await cacheData('customers',allCustomers);
+    if(!isOnline()){
+        await addPendingOp({type:'recordPayment',customerId:custId,amount:amt});
+    } else {
+        const ref=getCustomersCol().doc(custId);
+        const doc=await ref.get().catch(()=>null);
+        if(doc&&doc.exists){
+            const newDebt=Math.max(0,(doc.data().debt||0)-amt);
+            await ref.update({debt:newDebt}).catch(async()=>await addPendingOp({type:'recordPayment',customerId:custId,amount:amt}));
+        } else {
+            await addPendingOp({type:'recordPayment',customerId:custId,amount:amt});
+        }
+    }
+    renderCustomersTab(document.getElementById('tabContent'));
+};
+
+/* =====================================================================
+   Suppliers
+   ===================================================================== */
 async function renderSuppliersTab(container){
-    container.innerHTML=`<h3>🏭 إدارة الموردين</h3><div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="رقم الهاتف"><button onclick="addSupplier()">إضافة</button></div><div id="suppliersList"></div>`;
+    container.innerHTML=`<h3>🏭 إدارة الموردين</h3>
+    <div class="pos-row"><input id="supName" placeholder="اسم المورد"><input id="supPhone" placeholder="رقم الهاتف"><button onclick="addSupplier()">إضافة</button></div>
+    <div id="suppliersList"></div>`;
     const listDiv=document.getElementById('suppliersList');
     if(!allSuppliers.length){ listDiv.innerHTML='<p>لا يوجد موردون</p>'; return; }
     let html=`<div class="table-responsive"><table class="data-table"><thead><tr><th>الاسم</th><th>الهاتف</th><th>إجراء</th></tr></thead><tbody>`;
-    for(let s of allSuppliers) html+=`<tr><td style="text-align:right;">${escapeHtml(s.name)}</td><td>${s.phone||'-'}</td><td><button class="btn-sm" onclick="editSupplier('${s.id}')">✏️</button>${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteSupplier('${s.id}')">🗑️</button>`:''}<button class="btn-sm" onclick="showSupplierProducts('${s.id}','${escapeHtml(s.name)}')">📋 منتجات</button><button class="btn-sm" onclick="printSupplierProducts('${s.id}','${escapeHtml(s.name)}')">🖨️</button></td></tr>`;
+    for(let s of allSuppliers)
+        html+=`<tr><td style="text-align:right;">${escapeHtml(s.name)}</td><td>${s.phone||'-'}</td><td>
+            <button class="btn-sm" onclick="editSupplier('${s.id}')">✏️</button>
+            ${currentRole==='owner'?`<button class="btn-sm btn-danger" onclick="deleteSupplier('${s.id}')">🗑️</button>`:''}
+            <button class="btn-sm" onclick="showSupplierProducts('${s.id}','${escapeHtml(s.name)}')">📋 منتجات</button>
+            <button class="btn-sm" onclick="printSupplierProducts('${s.id}','${escapeHtml(s.name)}')">🖨️</button>
+        </td></tr>`;
     html+=`</tbody></table></div>`;
     listDiv.innerHTML=html;
 }
@@ -749,125 +1277,239 @@ window.printSupplierProducts=async(sid,sname)=>{
 };
 window.showSupplierProducts=async(sid,sname)=>{
     const cont=document.getElementById('tabContent');
-    const snap=await getSuppliersCol().doc(sid).collection('products').limit(QUERY_LIMITS.supplierProducts).get();
+    const snap=await getSuppliersCol().doc(sid).collection('products').limit(QUERY_LIMITS.supplierProducts).get().catch(()=>({docs:[]}));
     let products=snap.docs.map(d=>({id:d.id,name:d.data().name}));
-    cont.innerHTML=`<h3>📦 منتجات المورد: ${sname}</h3><div><button class="btn-sm" onclick="showAddProductForm()">➕ إضافة منتج</button><button class="btn-sm" onclick="renderSuppliersTab(document.getElementById('tabContent'))">🔙 رجوع</button></div><div id="supAddProd" style="display:none;"><div class="pos-row"><input id="supProdName" placeholder="اسم المنتج"><button onclick="addSupplierProductItem('${sid}','${sname}')">إضافة</button></div></div><div id="supplierProductsList"></div>`;
+    cont.innerHTML=`<h3>📦 منتجات المورد: ${sname}</h3>
+    <div><button class="btn-sm" onclick="showAddProductForm()">➕ إضافة منتج</button><button class="btn-sm" onclick="renderSuppliersTab(document.getElementById('tabContent'))">🔙 رجوع</button></div>
+    <div id="supAddProd" style="display:none;"><div class="pos-row"><input id="supProdName" placeholder="اسم المنتج"><button onclick="addSupplierProductItem('${sid}','${sname}')">إضافة</button></div></div>
+    <div id="supplierProductsList"></div>`;
     let html=`<div class="table-responsive"><table class="data-table"><thead><tr><th>اسم المنتج</th><th>إجراء</th></tr></thead><tbody>`;
     for(let p of products) html+=`<tr><td style="text-align:right;">${escapeHtml(p.name)}</td><td><button class="btn-sm btn-danger" onclick="deleteSupplierProduct('${sid}','${p.id}','${sname}')">🗑️</button></td></tr>`;
     html+=`</tbody></table></div>`;
     document.getElementById('supplierProductsList').innerHTML=html;
     window.showAddProductForm=()=>document.getElementById('supAddProd').style.display='block';
-    window.addSupplierProductItem=async(sid,sname)=>{ let name=document.getElementById('supProdName').value.trim(); if(!name) return; await getSuppliersCol().doc(sid).collection('products').add({name}); showFlash('supplierProductsList','تمت الإضافة'); window.showSupplierProducts(sid,sname); };
+    window.addSupplierProductItem=async(sid,sname)=>{ let name=document.getElementById('supProdName').value.trim(); if(!name) return; await getSuppliersCol().doc(sid).collection('products').add({name}); window.showSupplierProducts(sid,sname); };
 };
 window.deleteSupplierProduct=async(sid,pid,sname)=>{ if(confirm('حذف المنتج؟')){ await getSuppliersCol().doc(sid).collection('products').doc(pid).delete(); window.showSupplierProducts(sid,sname); } };
-window.addSupplier=async()=>{ let name=document.getElementById('supName').value.trim(); if(!name) return; const docRef=await getSuppliersCol().add({name,phone:document.getElementById('supPhone').value}); allSuppliers.push({id:docRef.id,name,phone:document.getElementById('supPhone').value}); await cacheData('suppliers',allSuppliers); renderSuppliersTab(document.getElementById('tabContent')); };
-window.editSupplier=async(id)=>{ if(currentRole!=='owner'){ showFlash('suppliersList','غير مسموح',true); return; } let newName=prompt('اسم جديد'); if(!newName) return; let newPhone=prompt('رقم الهاتف'); await getSuppliersCol().doc(id).update({name:newName,phone:newPhone}); const idx=allSuppliers.findIndex(s=>s.id===id); if(idx!==-1){allSuppliers[idx].name=newName;allSuppliers[idx].phone=newPhone;} await cacheData('suppliers',allSuppliers); renderSuppliersTab(document.getElementById('tabContent')); };
-window.deleteSupplier=async(id)=>{ if(currentRole!=='owner'){ showFlash('suppliersList','غير مسموح',true); return; } if(confirm('حذف المورد؟')){ await getSuppliersCol().doc(id).delete(); allSuppliers=allSuppliers.filter(s=>s.id!==id); await cacheData('suppliers',allSuppliers); renderSuppliersTab(document.getElementById('tabContent')); } };
+window.addSupplier=async()=>{
+    let name=document.getElementById('supName').value.trim(); if(!name) return;
+    const phone=document.getElementById('supPhone').value;
+    const localId=genLocalId();
+    allSuppliers.push({id:localId,name,phone});
+    await cacheData('suppliers',allSuppliers);
+    if(!isOnline()) await addPendingOp({type:'addSupplier',data:{name,phone}});
+    else { const docRef=await getSuppliersCol().add({name,phone}).catch(async()=>{await addPendingOp({type:'addSupplier',data:{name,phone}});return null;}); if(docRef){const idx=allSuppliers.findIndex(s=>s.id===localId);if(idx!==-1)allSuppliers[idx].id=docRef.id;await cacheData('suppliers',allSuppliers);} }
+    renderSuppliersTab(document.getElementById('tabContent'));
+};
+window.editSupplier=async(id)=>{
+    if(currentRole!=='owner'){ showFlash('suppliersList','غير مسموح',true); return; }
+    let newName=prompt('اسم جديد'); if(!newName) return;
+    let newPhone=prompt('رقم الهاتف')||'';
+    const idx=allSuppliers.findIndex(s=>s.id===id); if(idx!==-1){allSuppliers[idx].name=newName;allSuppliers[idx].phone=newPhone;}
+    await cacheData('suppliers',allSuppliers);
+    if(!isOnline()) await addPendingOp({type:'updateSupplier',supplierId:id,data:{name:newName,phone:newPhone}});
+    else await getSuppliersCol().doc(id).update({name:newName,phone:newPhone}).catch(async()=>await addPendingOp({type:'updateSupplier',supplierId:id,data:{name:newName,phone:newPhone}}));
+    renderSuppliersTab(document.getElementById('tabContent'));
+};
+window.deleteSupplier=async(id)=>{
+    if(currentRole!=='owner'){ showFlash('suppliersList','غير مسموح',true); return; }
+    if(!confirm('حذف المورد؟')) return;
+    allSuppliers=allSuppliers.filter(s=>s.id!==id);
+    await cacheData('suppliers',allSuppliers);
+    if(!isOnline()) await addPendingOp({type:'deleteSupplier',supplierId:id});
+    else await getSuppliersCol().doc(id).delete().catch(async()=>await addPendingOp({type:'deleteSupplier',supplierId:id}));
+    renderSuppliersTab(document.getElementById('tabContent'));
+};
 
-// ========== سجل المبيعات ==========
+/* =====================================================================
+   Sales Log
+   ===================================================================== */
 let invoicesFilter='all', invSelectedDate='', invoiceSearchNumber='';
 async function renderSalesLogTab(container){
     container.innerHTML=`<h3>📋 سجل المبيعات</h3>
-    <div class="pos-row"><input type="text" id="invoiceNumberSearch" placeholder="🔍 رقم الفاتورة" oninput="setInvoiceSearchNumber(this.value)"><button class="btn-sm" onclick="setInvoiceSearchNumber(document.getElementById('invoiceNumberSearch').value)">بحث</button></div>
-    <div class="pos-row"><button class="btn-sm" onclick="setInvoicesFilter('all')">الكل</button><button class="btn-sm" onclick="setInvoicesFilter('today')">اليوم</button><button class="btn-sm" onclick="setInvoicesFilter('yesterday')">الأمس</button><button class="btn-sm" onclick="setInvoicesFilter('custom')">تاريخ</button><input type="date" id="invCustomDatePicker" style="display:${invoicesFilter==='custom'?'inline-block':'none'}" onchange="setInvCustomDate(this.value)"><button class="btn-sm btn-secondary" onclick="loadInvoicesLog()">تحديث</button></div>
+    <div class="pos-row">
+        <input type="text" id="invoiceNumberSearch" placeholder="🔍 رقم الفاتورة" oninput="setInvoiceSearchNumber(this.value)">
+        <button class="btn-sm" onclick="setInvoiceSearchNumber(document.getElementById('invoiceNumberSearch').value)">بحث</button>
+    </div>
+    <div class="pos-row">
+        <button class="btn-sm" onclick="setInvoicesFilter('all')">الكل</button>
+        <button class="btn-sm" onclick="setInvoicesFilter('today')">اليوم</button>
+        <button class="btn-sm" onclick="setInvoicesFilter('yesterday')">الأمس</button>
+        <button class="btn-sm" onclick="setInvoicesFilter('custom')">تاريخ</button>
+        <input type="date" id="invCustomDatePicker" style="display:${invoicesFilter==='custom'?'inline-block':'none'}" onchange="setInvCustomDate(this.value)">
+        <button class="btn-sm btn-secondary" onclick="loadInvoicesLog()">تحديث</button>
+    </div>
     <div><button class="btn-sm btn-secondary" onclick="showTop10Weekly()">🏆 أكثر 10 منتجات مبيعاً خلال الأسبوع</button></div>
-    <div id="salesLogList">جاري التحميل...</div><div id="topProductsWeek" style="margin-top:15px;"></div>`;
-    await ensureInvoicesCache(); filterAndDisplayInvoices();
+    <div id="salesLogList">جاري التحميل...</div>
+    <div id="topProductsWeek" style="margin-top:15px;"></div>`;
+    filterAndDisplayInvoices();
 }
+
 function filterAndDisplayInvoices(){
     let filtered=[...allInvoicesCache];
     const now=new Date();
-    if(invoicesFilter==='today'){ const s=new Date(now.getFullYear(),now.getMonth(),now.getDate()),e=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1); filtered=filtered.filter(f=>f.date&&f.date.toDate()>=s&&f.date.toDate()<e); }
-    else if(invoicesFilter==='yesterday'){ const s=new Date(now.getFullYear(),now.getMonth(),now.getDate()-1),e=new Date(now.getFullYear(),now.getMonth(),now.getDate()); filtered=filtered.filter(f=>f.date&&f.date.toDate()>=s&&f.date.toDate()<e); }
-    else if(invoicesFilter==='custom'&&invSelectedDate){ const s=new Date(invSelectedDate); s.setHours(0,0,0,0); const e=new Date(invSelectedDate); e.setHours(23,59,59,999); filtered=filtered.filter(f=>f.date&&f.date.toDate()>=s&&f.date.toDate()<=e); }
-    if(invoiceSearchNumber.trim()!==''){ const num=parseInt(invoiceSearchNumber); if(!isNaN(num)) filtered=filtered.filter(f=>f.invoiceNumber===num); }
-    filtered.sort((a,b)=>(b.date?.toDate()||0)-(a.date?.toDate()||0));
+    if(invoicesFilter==='today'){
+        const s=new Date(now.getFullYear(),now.getMonth(),now.getDate()),e=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+        filtered=filtered.filter(f=>{const d=f.date?.toDate?.();return d&&d>=s&&d<e;});
+    } else if(invoicesFilter==='yesterday'){
+        const s=new Date(now.getFullYear(),now.getMonth(),now.getDate()-1),e=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+        filtered=filtered.filter(f=>{const d=f.date?.toDate?.();return d&&d>=s&&d<e;});
+    } else if(invoicesFilter==='custom'&&invSelectedDate){
+        const s=new Date(invSelectedDate); s.setHours(0,0,0,0);
+        const e=new Date(invSelectedDate); e.setHours(23,59,59,999);
+        filtered=filtered.filter(f=>{const d=f.date?.toDate?.();return d&&d>=s&&d<=e;});
+    }
+    if(invoiceSearchNumber.trim()!==''){
+        const num=parseInt(invoiceSearchNumber);
+        if(!isNaN(num)) filtered=filtered.filter(f=>f.invoiceNumber===num);
+    }
+    filtered.sort((a,b)=>(b.date?.toDate?.()?.getTime()||0)-(a.date?.toDate?.()?.getTime()||0));
     const cont=document.getElementById('salesLogList'); if(!cont) return;
     if(!filtered.length){ cont.innerHTML='<p>⚠️ لا توجد فواتير</p>'; return; }
-    let html=''; const dayNames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const dayNames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    let html='';
     for(let inv of filtered){
-        let canc=inv.cancelled===true;
-        let cust=inv.customerId?allCustomers.find(c=>c.id===inv.customerId):null;
-        let dayName=dayNames[inv.date.toDate().getDay()];
-        let itemsList=inv.items.map(it=>`${it.productName} (${it.quantity})`).join(', ');
-        html+=`<div class="card ${canc?'cancelled':''}"><div class="card-info"><strong>فاتورة رقم: ${inv.invoiceNumber} - ${dayName}</strong><br>المنتجات: ${itemsList}<br>الإجمالي: ${inv.total} ج.م<br>طريقة الدفع: ${getPaymentMethodArabic(inv.paymentMethod)} | العميل: ${cust?cust.name:'نقدي'}<br>التاريخ: ${formatDate(inv.date)} | الحالة: ${canc?'ملغاة':'ناجحة'}</div><div>${!canc?`<button class="btn-sm btn-danger" onclick="cancelInvoice('${inv.id}')">إلغاء</button>`:''}</div></div>`;
+        const canc=inv.cancelled===true;
+        const cust=inv.customerId?allCustomers.find(c=>c.id===inv.customerId):null;
+        const invDate=inv.date?.toDate?.();
+        const dayName=invDate?dayNames[invDate.getDay()]:'';
+        const itemsList=inv.items.map(it=>`${it.productName} (${it.quantity})`).join(', ');
+        const isLocal=typeof inv.id==='string'&&inv.id.startsWith('local_');
+        html+=`<div class="card ${canc?'cancelled':''}">
+            <div class="card-info">
+                <strong>فاتورة رقم: ${inv.invoiceNumber} - ${dayName}</strong>${isLocal?' <span style="background:#fef9c3;padding:2px 8px;border-radius:10px;font-size:12px;">محلية</span>':''}
+                <br>المنتجات: ${itemsList}<br>
+                الإجمالي: ${Number(inv.total).toFixed(2)} ج.م<br>
+                طريقة الدفع: ${getPaymentMethodArabic(inv.paymentMethod)} | العميل: ${cust?cust.name:'نقدي'}<br>
+                التاريخ: ${invDate?invDate.toLocaleString('ar-EG'):'-'} | الحالة: ${canc?'ملغاة':'ناجحة'}
+            </div>
+            <div>${!canc?`<button class="btn-sm btn-danger" onclick="cancelInvoice('${inv.id}')">إلغاء</button>`:''}</div>
+        </div>`;
     }
     cont.innerHTML=html;
 }
+
 window.showTop10Weekly=()=>{
     const weekAgo=new Date(); weekAgo.setDate(weekAgo.getDate()-7);
     const pc={};
-    for(let inv of allInvoicesCache){ if(inv.cancelled||!inv.date) continue; if(inv.date.toDate()>=weekAgo) for(let it of inv.items) pc[it.productName]=(pc[it.productName]||0)+it.quantity; }
+    for(let inv of allInvoicesCache){
+        if(inv.cancelled||!inv.date) continue;
+        const d=inv.date?.toDate?.(); if(!d||d<weekAgo) continue;
+        for(let it of inv.items) pc[it.productName]=(pc[it.productName]||0)+it.quantity;
+    }
     const sorted=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,10);
     const div=document.getElementById('topProductsWeek');
     if(!sorted.length){ div.innerHTML='<p>لا توجد مبيعات</p>'; return; }
     div.innerHTML=`<h3>🏆 أكثر 10 منتجات مبيعاً بالأسبوع</h3><div class="grid-2">${sorted.map(([n,q])=>`<div class="stat-card">${escapeHtml(n)} : ${q} وحدة</div>`).join('')}</div>`;
 };
-window.setInvoicesFilter=(f)=>{ invoicesFilter=f; const p=document.getElementById('invCustomDatePicker'); if(p) p.style.display=f==='custom'?'inline-block':'none'; if(f!=='custom') invSelectedDate=''; filterAndDisplayInvoices(); };
+window.setInvoicesFilter=(f)=>{
+    invoicesFilter=f;
+    const p=document.getElementById('invCustomDatePicker');
+    if(p) p.style.display=f==='custom'?'inline-block':'none';
+    if(f!=='custom') invSelectedDate='';
+    filterAndDisplayInvoices();
+};
 window.setInvCustomDate=(d)=>{ invSelectedDate=d; filterAndDisplayInvoices(); };
 window.setInvoiceSearchNumber=(num)=>{ invoiceSearchNumber=num; filterAndDisplayInvoices(); };
-window.loadInvoicesLog=async()=>{ await ensureInvoicesCache(); filterAndDisplayInvoices(); };
+window.loadInvoicesLog=async()=>{
+    if(isOnline()) await refreshFromFirestore(false);
+    filterAndDisplayInvoices();
+};
 window.cancelInvoice=async(invoiceId)=>{
     if(!confirm('إلغاء الفاتورة؟ سيتم إعادة الكميات للمخزون.')) return;
     try{
-        const invRef=getInvoicesCol().doc(invoiceId); const invDoc=await invRef.get();
-        if(!invDoc.exists||invDoc.data().cancelled) throw new Error('فاتورة غير موجودة');
-        const inv=invDoc.data();
+        const inv=allInvoicesCache.find(i=>i.id===invoiceId);
+        if(!inv||inv.cancelled) throw new Error('فاتورة غير موجودة أو ملغاة');
+
+        /* Optimistic update */
+        inv.cancelled=true;
+        for(let item of inv.items){ const prod=allProducts.find(p=>p.id===item.productId); if(prod) prod.qty+=item.quantity; }
+        if(inv.customerId&&inv.paymentMethod==='credit'&&inv.debtAdded){
+            const cust=allCustomers.find(c=>c.id===inv.customerId);
+            if(cust) cust.debt=Math.max(0,(cust.debt||0)-inv.debtAdded);
+        }
+        await cacheData('products',allProducts);
+        await cacheData('customers',allCustomers);
+        await cacheData('invoices',allInvoicesCache);
+        filterAndDisplayInvoices();
+
         if(!isOnline()){
             await addPendingOp({type:'cancelInvoice',invoiceId,items:inv.items,customerId:inv.customerId,debtRemoved:inv.debtAdded||0});
-            for(let item of inv.items){ let prod=allProducts.find(p=>p.id===item.productId); if(prod) prod.qty+=item.quantity; }
-            if(inv.customerId&&inv.paymentMethod==='credit'&&inv.debtAdded){ let cust=allCustomers.find(c=>c.id===inv.customerId); if(cust) cust.debt=Math.max(0,(cust.debt||0)-inv.debtAdded); }
-            await cacheData('products',allProducts); await cacheData('customers',allCustomers);
-            const idx=allInvoicesCache.findIndex(i=>i.id===invoiceId); if(idx!==-1) allInvoicesCache[idx].cancelled=true;
-            await cacheData('invoices',allInvoicesCache); filterAndDisplayInvoices();
             showFlash('salesLogList','تم الإلغاء محلياً',false); return;
         }
+
+        const invRef=getInvoicesCol().doc(invoiceId);
         const batch=db.batch();
+        batch.update(invRef,{cancelled:true});
         for(let item of inv.items) batch.update(getProductsCol().doc(item.productId),{qty:firebase.firestore.FieldValue.increment(item.quantity)});
         if(inv.customerId&&inv.paymentMethod==='credit'&&inv.debtAdded) batch.update(getCustomersCol().doc(inv.customerId),{debt:firebase.firestore.FieldValue.increment(-inv.debtAdded)});
-        batch.update(invRef,{cancelled:true}); await batch.commit();
-        const idx=allInvoicesCache.findIndex(i=>i.id===invoiceId); if(idx!==-1) allInvoicesCache[idx].cancelled=true;
-        await cacheData('invoices',allInvoicesCache); filterAndDisplayInvoices();
+        await batch.commit().catch(async()=>await addPendingOp({type:'cancelInvoice',invoiceId,items:inv.items,customerId:inv.customerId,debtRemoved:inv.debtAdded||0}));
         showFlash('salesLogList','تم إلغاء الفاتورة',false);
     }catch(err){ showFlash('salesLogList',err.message,true); }
 };
 
-// ========== الفواتير ==========
+/* =====================================================================
+   Invoices Tab
+   ===================================================================== */
 let invoicesSearchDate='', invoicesSearchNumber='';
 async function renderInvoicesTab(container){
-    container.innerHTML=`<h3>📄 جميع الفواتير</h3><div class="invoices-search"><input type="date" id="invoicesDateFilter" onchange="setInvoicesDateFilter(this.value)"><input type="text" id="invoicesNumberFilter" placeholder="🔍 رقم الفاتورة" oninput="setInvoicesNumberFilter(this.value)"><button class="btn-sm btn-secondary" onclick="applyInvoicesFilters()">تحديث</button><button class="btn-sm" onclick="resetInvoicesFilters()">إعادة تعيين</button></div><div id="invoicesList"></div>`;
-    await ensureInvoicesCache(); applyInvoicesFilters();
+    container.innerHTML=`<h3>📄 جميع الفواتير</h3>
+    <div class="invoices-search">
+        <input type="date" id="invoicesDateFilter" onchange="setInvoicesDateFilter(this.value)">
+        <input type="text" id="invoicesNumberFilter" placeholder="🔍 رقم الفاتورة" oninput="setInvoicesNumberFilter(this.value)">
+        <button class="btn-sm btn-secondary" onclick="applyInvoicesFilters()">تحديث</button>
+        <button class="btn-sm" onclick="resetInvoicesFilters()">إعادة تعيين</button>
+    </div>
+    <div id="invoicesList"></div>`;
+    applyInvoicesFilters();
 }
 window.setInvoicesDateFilter=d=>{ invoicesSearchDate=d; };
 window.setInvoicesNumberFilter=n=>{ invoicesSearchNumber=n; };
 window.applyInvoicesFilters=()=>{
     let filtered=[...allInvoicesCache];
-    if(invoicesSearchDate){ const sd=new Date(invoicesSearchDate); sd.setHours(0,0,0,0); const ed=new Date(sd); ed.setDate(ed.getDate()+1); filtered=filtered.filter(inv=>inv.date&&inv.date.toDate()>=sd&&inv.date.toDate()<ed); }
-    if(invoicesSearchNumber.trim()!==''){ const num=parseInt(invoicesSearchNumber); if(!isNaN(num)) filtered=filtered.filter(inv=>inv.invoiceNumber===num); }
-    filtered.sort((a,b)=>(b.date?.toDate()||0)-(a.date?.toDate()||0));
-    const container=document.getElementById('invoicesList'); if(!filtered.length){ container.innerHTML='<p>لا توجد فواتير</p>'; return; }
+    if(invoicesSearchDate){
+        const sd=new Date(invoicesSearchDate); sd.setHours(0,0,0,0);
+        const ed=new Date(sd); ed.setDate(ed.getDate()+1);
+        filtered=filtered.filter(inv=>{const d=inv.date?.toDate?.();return d&&d>=sd&&d<ed;});
+    }
+    if(invoicesSearchNumber.trim()!==''){
+        const num=parseInt(invoicesSearchNumber);
+        if(!isNaN(num)) filtered=filtered.filter(inv=>inv.invoiceNumber===num);
+    }
+    filtered.sort((a,b)=>(b.date?.toDate?.()?.getTime()||0)-(a.date?.toDate?.()?.getTime()||0));
+    const container=document.getElementById('invoicesList');
+    if(!filtered.length){ container.innerHTML='<p>لا توجد فواتير</p>'; return; }
     let html=`<div class="table-responsive"><table class="data-table"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>العميل</th><th>عدد المنتجات</th><th>الإجمالي</th><th>طريقة الدفع</th><th>الحالة</th><th>طباعة</th></tr></thead><tbody>`;
     for(let inv of filtered){
-        let custName=inv.customerId?(allCustomers.find(c=>c.id===inv.customerId)?.name||'نقدي'):'نقدي';
-        html+=`<tr><td>${inv.invoiceNumber}</td><td>${formatDate(inv.date)}</td><td>${escapeHtml(custName)}</td><td>${inv.items.length}</td><td>${inv.total.toFixed(2)} ج.م</td><td>${getPaymentMethodArabic(inv.paymentMethod)}</td><td>${inv.cancelled?'ملغاة':'ناجحة'}</td><td><button class="btn-sm" onclick="printSpecificInvoice('${inv.id}')">🖨️</button></td></tr>`;
+        const custName=inv.customerId?(allCustomers.find(c=>c.id===inv.customerId)?.name||'نقدي'):'نقدي';
+        const invDate=inv.date?.toDate?.();
+        html+=`<tr><td>${inv.invoiceNumber}</td><td>${invDate?invDate.toLocaleString('ar-EG'):'-'}</td><td>${escapeHtml(custName)}</td><td>${inv.items.length}</td><td>${Number(inv.total).toFixed(2)} ج.م</td><td>${getPaymentMethodArabic(inv.paymentMethod)}</td><td>${inv.cancelled?'ملغاة':'ناجحة'}</td><td><button class="btn-sm" onclick="printSpecificInvoice('${inv.id}')">🖨️</button></td></tr>`;
     }
     html+=`</tbody></table></div>`;
     container.innerHTML=html;
 };
-window.resetInvoicesFilters=()=>{ invoicesSearchDate=''; invoicesSearchNumber=''; document.getElementById('invoicesDateFilter').value=''; document.getElementById('invoicesNumberFilter').value=''; applyInvoicesFilters(); };
+window.resetInvoicesFilters=()=>{
+    invoicesSearchDate=''; invoicesSearchNumber='';
+    document.getElementById('invoicesDateFilter').value='';
+    document.getElementById('invoicesNumberFilter').value='';
+    applyInvoicesFilters();
+};
 window.printSpecificInvoice=async(invoiceId)=>{
     const inv=allInvoicesCache.find(i=>i.id===invoiceId); if(!inv) return;
-    let custName=inv.customerId?(allCustomers.find(c=>c.id===inv.customerId)?.name||'عميل'):'نقدي';
-    let dayName=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][inv.date.toDate().getDay()];
-    let headerInfo=`<span>رقم الفاتورة: ${inv.invoiceNumber} (${dayName})</span><span>التاريخ: ${formatDate(inv.date)}</span><span>العميل: ${custName}</span>`;
-    let tableHeaders=`<tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>`;
-    let tableRows=inv.items.map(it=>`<tr><td style="text-align:right;">${escapeHtml(it.productName)}</td><td>${it.quantity}</td><td>${it.unitPrice.toFixed(2)}</td><td>${it.total.toFixed(2)}</td></tr>`).join('');
-    let footerInfo=`<div class="info-row">طريقة الدفع: ${getPaymentMethodArabic(inv.paymentMethod)}</div><div class="info-row" style="font-weight:bold;">الإجمالي: ${inv.total.toFixed(2)} ج.م</div>`;
-    if(inv.paymentMethod!=='credit') footerInfo+=`<div class="info-row">مدفوع: ${(inv.total+(inv.changeAmount||0)).toFixed(2)} ج.م &nbsp; باقي: ${(inv.changeAmount||0).toFixed(2)} ج.م</div>`;
+    const custName=inv.customerId?(allCustomers.find(c=>c.id===inv.customerId)?.name||'عميل'):'نقدي';
+    const invDate=inv.date?.toDate?.();
+    const dayName=invDate?['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][invDate.getDay()]:'';
+    const headerInfo=`<span>رقم الفاتورة: ${inv.invoiceNumber} (${dayName})</span><span>التاريخ: ${invDate?invDate.toLocaleString('ar-EG'):'-'}</span><span>العميل: ${custName}</span>`;
+    const tableHeaders=`<tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>`;
+    const tableRows=inv.items.map(it=>`<tr><td style="text-align:right;">${escapeHtml(it.productName)}</td><td>${it.quantity}</td><td>${Number(it.unitPrice).toFixed(2)}</td><td>${Number(it.total).toFixed(2)}</td></tr>`).join('');
+    let footerInfo=`<div class="info-row">طريقة الدفع: ${getPaymentMethodArabic(inv.paymentMethod)}</div><div class="info-row" style="font-weight:bold;">الإجمالي: ${Number(inv.total).toFixed(2)} ج.م</div>`;
+    if(inv.paymentMethod!=='credit') footerInfo+=`<div class="info-row">مدفوع: ${(Number(inv.total)+(inv.changeAmount||0)).toFixed(2)} ج.م &nbsp; باقي: ${Number(inv.changeAmount||0).toFixed(2)} ج.م</div>`;
     directPrint(generatePrintHTML('فاتورة بيع',headerInfo,tableHeaders,tableRows,footerInfo));
 };
 
-// ========== تبويب أخرى ==========
+/* =====================================================================
+   Other Tab
+   ===================================================================== */
 let otherSubTab='inventory';
 async function renderOtherTab(container){
     container.innerHTML=`<h3>📦 القائمة الإضافية</h3>
@@ -894,11 +1536,11 @@ async function loadOtherSubContent(){
         div.innerHTML=`<h3>📦 المخزون الحالي</h3><div class="filter-row"><input type="text" id="inventorySearch" placeholder="بحث باسم المنتج أو باركود" oninput="filterInventory()"><button class="btn-sm" onclick="filterInventory()">بحث</button><button class="btn-sm" onclick="resetInventoryFilter()">إعادة تعيين</button></div><div id="inventoryTableContainer"></div>`;
         filterInventory();
     } else if(otherSubTab==='lowStockAlert'){
-        const lowProducts=allProducts.filter(p=>p.qty<=(p.lowStockAlert||0));
+        const lowProducts=allProducts.filter(p=>p.lowStockAlert&&p.qty<=(p.lowStockAlert||0));
         if(!lowProducts.length){ div.innerHTML='<p>لا توجد منتجات أقل من حد التنبيه</p>'; return; }
         div.innerHTML=`<h3>⚠️ المنتجات الأقل من حد التنبيه</h3><button class="btn-sm btn-secondary" onclick="printLowStockTable()">🖨️ طباعة</button><div id="lowStockTable"></div>`;
         let tableHtml=`<div class="table-responsive"><table class="data-table" id="lowStockPrintTable"><thead><tr><th>المنتج</th><th>الكمية الحالية</th><th>حد التنبيه</th><th>السعر</th></tr></thead><tbody>`;
-        for(let p of lowProducts) tableHtml+=`<tr><td style="text-align:right;">${escapeHtml(p.name)}</td><td>${p.qty}</td><td>${p.lowStockAlert}</td><td>${p.priceRetail} ج.م</td></tr>`;
+        for(let p of lowProducts) tableHtml+=`<tr><td style="text-align:right;">${escapeHtml(p.name)}</td><td>${p.qty}</td><td>${p.lowStockAlert}</td><td>${p.priceRetail||0} ج.م</td></tr>`;
         tableHtml+=`</tbody></table></div>`;
         document.getElementById('lowStockTable').innerHTML=tableHtml;
     } else if(otherSubTab==='filter'){
@@ -918,7 +1560,10 @@ async function loadOtherSubContent(){
         const uid=auth.currentUser?.email?.replace('@bkalla.com','')||'غير متوفر';
         const sn=userData?.storeName||'غير متوفر';
         const roleName=currentRole==='owner'?'مالك':currentRole==='manager'?'مدير':'مستخدم';
-        div.innerHTML=`<h3>ℹ️ معلومات الحساب</h3><div class="card"><div class="card-info"><p><strong>المستخدم:</strong> ${escapeHtml(uid)}</p><p><strong>المتجر:</strong> ${escapeHtml(sn)}</p><p><strong>الدور:</strong> ${roleName}</p></div></div><h3>🔐 تغيير كلمة المرور</h3><div class="card"><div class="card-info"><input type="password" id="oldPassword" placeholder="كلمة المرور القديمة"><input type="password" id="newPassword1" placeholder="كلمة المرور الجديدة"><input type="password" id="newPassword2" placeholder="تأكيد"><button onclick="changePassword()" class="btn-secondary">تغيير</button><div id="passwordMsg" class="flash" style="display:none;"></div></div></div>`;
+        div.innerHTML=`<h3>ℹ️ معلومات الحساب</h3>
+        <div class="card"><div class="card-info"><p><strong>المستخدم:</strong> ${escapeHtml(uid)}</p><p><strong>المتجر:</strong> ${escapeHtml(sn)}</p><p><strong>الدور:</strong> ${roleName}</p></div></div>
+        <h3>🔐 تغيير كلمة المرور</h3>
+        <div class="card"><div class="card-info"><input type="password" id="oldPassword" placeholder="كلمة المرور القديمة"><input type="password" id="newPassword1" placeholder="كلمة المرور الجديدة"><input type="password" id="newPassword2" placeholder="تأكيد"><button onclick="changePassword()" class="btn-secondary">تغيير</button><div id="passwordMsg" class="flash" style="display:none;"></div></div></div>`;
     } else if(otherSubTab==='install'){
         renderInstallTab(div);
     } else if(otherSubTab==='contact'){
@@ -926,65 +1571,103 @@ async function loadOtherSubContent(){
     }
 }
 
-// ========== قسم تثبيت التطبيق ==========
+/* =====================================================================
+   Install Tab  –  Windows + Mac + Android
+   ===================================================================== */
 function renderInstallTab(div) {
     const ua = navigator.userAgent.toLowerCase();
     const isWindows = /windows/.test(ua);
+    const isMac     = /macintosh|mac os x/.test(ua) && !/iphone|ipad|ipod/.test(ua);
     const isAndroid = /android/.test(ua);
+    const isIOS     = /iphone|ipad|ipod/.test(ua);
+    const isSafari  = /safari/.test(ua) && !/chrome/.test(ua);
+    const isChrome  = /chrome|chromium|crios/.test(ua);
+    const isEdge    = /edg/.test(ua);
 
-    if (!isWindows && !isAndroid) {
-        div.innerHTML = `
-        <div class="install-section">
-            <div class="unsupported-card">
-                <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
-                <h3 style="margin-bottom:10px;color:#856404;">جهازك غير مدعوم</h3>
-                <p style="font-size:15px;">التثبيت متاح حالياً على ويندوز وأندرويد فقط.</p>
-            </div>
-        </div>`;
-        return;
-    }
+    let html = `<div class="install-section"><h3 style="margin-bottom:16px;">📱 تثبيت التطبيق على جهازك</h3>`;
 
-    let html = `<div class="install-section"><h3 style="margin-bottom:16px;">📱 تثبيت التطبيق</h3>`;
-
+    /* ── ويندوز ── */
     if (isWindows) {
-        html += `
-        <div class="install-card">
+        html += `<div class="install-card">
             <h4>🖥️ تثبيت على ويندوز</h4>
             <p style="margin-bottom:12px;font-size:14px;color:#555;">
-                سيتم تثبيت ManaraTech كبرنامج مستقل على جهازك. يعمل بشكل كامل بدون متصفح،
-                ويخزّن جميع البيانات على هارد الجهاز، ويعمل أوفلاين بالكامل.
+                سيتم تثبيت ManaraTech كبرنامج مستقل على جهازك. يعمل بشكل كامل بدون إنترنت
+                ويخزّن جميع البيانات على الجهاز محلياً.
             </p>
             <div id="winInstallArea">`;
         if (deferredPrompt) {
-            html += `<button onclick="doInstallPwa()" style="background:linear-gradient(95deg,#2563eb,#8b5cf6);max-width:320px;font-size:15px;">
+            html += `<button onclick="doInstallPwa('winInstallArea')" style="background:linear-gradient(95deg,#2563eb,#8b5cf6);max-width:340px;font-size:15px;">
                 ⬇️ تثبيت التطبيق الآن على ويندوز
             </button>`;
         } else {
             html += `<div class="flash" style="background:#e0f2fe;color:#0369a1;border-radius:16px;">
-                <strong>📋 خطوات التثبيت اليدوي على ويندوز (Chrome أو Edge):</strong>
+                <strong>📋 خطوات التثبيت اليدوي على ويندوز:</strong>
                 <ol class="install-steps" style="margin-top:10px;">
                     <li>افتح هذا الموقع في متصفح <strong>Chrome</strong> أو <strong>Edge</strong></li>
-                    <li>في شريط العنوان ابحث عن أيقونة <strong>⊕</strong> أو <strong>💻</strong> في اليمين</li>
+                    <li>في شريط العنوان ابحث عن أيقونة <strong>⊕</strong> أو <strong>💻</strong> على اليمين</li>
                     <li>اضغط عليها واختر <strong>"تثبيت ManaraTech"</strong></li>
-                    <li>أو: اضغط القائمة <strong>⋮</strong> ثم اختر <strong>"تثبيت ManaraTech كتطبيق"</strong></li>
-                    <li>سيظهر اختصار على سطح المكتب ويعمل كبرنامج مستقل</li>
+                    <li>أو: اضغط القائمة <strong>⋮</strong> ← <strong>"تثبيت ManaraTech كتطبيق"</strong></li>
+                    <li>سيظهر اختصار على سطح المكتب ويعمل كبرنامج مستقل بدون إنترنت</li>
                 </ol>
             </div>`;
         }
         html += `</div></div>`;
     }
 
+    /* ── ماك ── */
+    if (isMac) {
+        html += `<div class="install-card">
+            <h4>🍎 تثبيت على Mac</h4>
+            <p style="margin-bottom:12px;font-size:14px;color:#555;">
+                يمكن تثبيت ManaraTech على Mac ليعمل كتطبيق مستقل من الـ Dock،
+                ويعمل بدون إنترنت ويخزّن البيانات محلياً.
+            </p>
+            <div id="macInstallArea">`;
+        if (deferredPrompt) {
+            html += `<button onclick="doInstallPwa('macInstallArea')" style="background:linear-gradient(95deg,#334155,#4f46e5);max-width:340px;font-size:15px;">
+                ⬇️ تثبيت التطبيق الآن على Mac
+            </button>`;
+        } else if (isChrome || isEdge) {
+            html += `<div class="flash" style="background:#e0f2fe;color:#0369a1;border-radius:16px;">
+                <strong>📋 خطوات التثبيت على Mac – Chrome أو Edge:</strong>
+                <ol class="install-steps" style="margin-top:10px;">
+                    <li>افتح هذا الموقع في متصفح <strong>Chrome</strong> أو <strong>Edge</strong></li>
+                    <li>اضغط على القائمة <strong>⋮</strong> في أعلى اليمين</li>
+                    <li>اختر <strong>"Cast, Save, and Share"</strong> ← <strong>"Install Page as App"</strong></li>
+                    <li>أو ابحث عن أيقونة <strong>⊕</strong> في شريط العنوان واضغط عليها</li>
+                    <li>اضغط <strong>"Install"</strong> وستظهر الأيقونة في الـ Dock</li>
+                </ol>
+            </div>`;
+        } else if (isSafari) {
+            html += `<div class="flash" style="background:#e0f2fe;color:#0369a1;border-radius:16px;">
+                <strong>📋 خطوات التثبيت على Mac – Safari:</strong>
+                <ol class="install-steps" style="margin-top:10px;">
+                    <li>افتح هذا الموقع في <strong>Safari</strong></li>
+                    <li>اضغط <strong>File</strong> من شريط القوائم العلوي</li>
+                    <li>اختر <strong>"Add to Dock…"</strong> (macOS Sonoma وأحدث)</li>
+                    <li>اضغط <strong>"Add"</strong> وستظهر الأيقونة في الـ Dock</li>
+                    <li>يعمل التطبيق بالكامل بدون إنترنت بعد التثبيت</li>
+                </ol>
+            </div>`;
+        } else {
+            html += `<div class="flash" style="background:#e0f2fe;color:#0369a1;border-radius:16px;">
+                <strong>📋 للتثبيت على Mac:</strong><br>
+                استخدم Chrome أو Edge أو Safari (macOS Sonoma+) وابحث عن خيار <strong>"Install as App"</strong> أو <strong>"Add to Dock"</strong> في القائمة.
+            </div>`;
+        }
+        html += `</div></div>`;
+    }
+
+    /* ── أندرويد ── */
     if (isAndroid) {
-        html += `
-        <div class="install-card">
+        html += `<div class="install-card">
             <h4>📱 تثبيت على أندرويد</h4>
             <p style="margin-bottom:12px;font-size:14px;color:#555;">
-                سيتم تثبيت ManaraTech على شاشتك الرئيسية ويعمل كتطبيق كامل مستقل،
-                يخزّن البيانات على هاتفك ويعمل أوفلاين بدون إنترنت.
+                سيتم تثبيت ManaraTech على شاشتك الرئيسية ويعمل كتطبيق كامل مستقل بدون إنترنت.
             </p>
             <div id="androidInstallArea">`;
         if (deferredPrompt) {
-            html += `<button onclick="doInstallPwa()" style="background:linear-gradient(95deg,#16a34a,#059669);max-width:320px;font-size:15px;">
+            html += `<button onclick="doInstallPwa('androidInstallArea')" style="background:linear-gradient(95deg,#16a34a,#059669);max-width:340px;font-size:15px;">
                 ⬇️ تثبيت التطبيق الآن على الهاتف
             </button>`;
         } else {
@@ -1002,15 +1685,46 @@ function renderInstallTab(div) {
         html += `</div></div>`;
     }
 
+    /* ── iOS ── */
+    if (isIOS) {
+        html += `<div class="install-card">
+            <h4>🍎 تثبيت على iPhone / iPad</h4>
+            <p style="margin-bottom:12px;font-size:14px;color:#555;">
+                يمكن إضافة ManaraTech لشاشتك الرئيسية ليعمل كتطبيق مستقل بدون إنترنت.
+            </p>
+            <div class="flash" style="background:#e0f2fe;color:#0369a1;border-radius:16px;">
+                <strong>📋 خطوات التثبيت على iPhone / iPad:</strong>
+                <ol class="install-steps" style="margin-top:10px;">
+                    <li>تأكد أنك تستخدم متصفح <strong>Safari</strong></li>
+                    <li>اضغط على أيقونة المشاركة <strong>📤</strong> في أسفل الشاشة</li>
+                    <li>اختر <strong>"Add to Home Screen"</strong> (إضافة للشاشة الرئيسية)</li>
+                    <li>اضغط <strong>"Add"</strong> للتأكيد</li>
+                    <li>ستجد أيقونة ManaraTech على الشاشة الرئيسية</li>
+                </ol>
+            </div>
+        </div>`;
+    }
+
+    /* ── غير مدعوم ── */
+    if (!isWindows && !isMac && !isAndroid && !isIOS) {
+        html += `<div class="unsupported-card">
+            <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+            <h3 style="margin-bottom:10px;">متصفحك لا يدعم التثبيت التلقائي</h3>
+            <p style="font-size:15px;">يُنصح باستخدام Chrome أو Edge أو Safari للحصول على خيار التثبيت.</p>
+        </div>`;
+    }
+
+    /* ── مميزات مشتركة ── */
     html += `
     <div class="install-card" style="background:#f0fdf4;border-color:#bbf7d0;">
         <h4 style="color:#166534;">✅ مميزات التطبيق المثبت</h4>
         <ul style="padding-right:20px;margin-top:8px;">
-            <li style="margin-bottom:8px;font-size:14px;">🔌 يعمل بدون إنترنت بالكامل (أوفلاين 100%)</li>
+            <li style="margin-bottom:8px;font-size:14px;">🔌 يعمل بدون إنترنت بالكامل – حتى لأشهر متواصلة</li>
             <li style="margin-bottom:8px;font-size:14px;">💾 يخزّن كل البيانات على هارد جهازك مباشرة</li>
+            <li style="margin-bottom:8px;font-size:14px;">🛒 البيع يتم محلياً ويتزامن تلقائياً عند عودة النت</li>
             <li style="margin-bottom:8px;font-size:14px;">🖥️ نافذة مستقلة بدون شريط المتصفح</li>
             <li style="margin-bottom:8px;font-size:14px;">⚡ أسرع بكثير في التحميل والاستجابة</li>
-            <li style="margin-bottom:8px;font-size:14px;">🔄 يتزامن تلقائياً عند عودة الإنترنت</li>
+            <li style="margin-bottom:8px;font-size:14px;">🔄 مزامنة تلقائية في الخلفية عند الاتصال</li>
         </ul>
     </div>
     </div>`;
@@ -1018,14 +1732,12 @@ function renderInstallTab(div) {
     div.innerHTML = html;
 }
 
-window.doInstallPwa = function() {
+window.doInstallPwa = function(areaId) {
     if (deferredPrompt) {
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then(choice => {
             deferredPrompt = null;
-            const winArea = document.getElementById('winInstallArea');
-            const andArea = document.getElementById('androidInstallArea');
-            const area = winArea || andArea;
+            const area = document.getElementById(areaId);
             if (area) {
                 if (choice.outcome === 'accepted') {
                     area.innerHTML = '<div class="flash" style="background:#d1fae5;color:#065f46;border-radius:16px;font-size:15px;">✅ تم تثبيت التطبيق بنجاح! يمكنك الآن فتحه من سطح المكتب أو الشاشة الرئيسية.</div>';
@@ -1035,51 +1747,51 @@ window.doInstallPwa = function() {
             }
         });
     } else {
-        alert('لم يتم اكتشاف خيار التثبيت التلقائي. يرجى اتباع خطوات التثبيت اليدوي.');
+        alert('لم يتم اكتشاف خيار التثبيت التلقائي. يرجى اتباع خطوات التثبيت اليدوي أدناه.');
     }
 };
 
-// ========== المخزون ==========
+/* =====================================================================
+   Inventory
+   ===================================================================== */
 let _inventorySearchTimer=null;
 function filterInventory(){
     const search=document.getElementById('inventorySearch')?.value.trim()||'';
     const container=document.getElementById('inventoryTableContainer'); if(!container) return;
-    const localFiltered=allProducts.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())||(p.barcode&&p.barcode.toLowerCase().includes(search.toLowerCase())));
+    const localFiltered=allProducts.filter(p=>
+        p.name.toLowerCase().includes(search.toLowerCase())||(p.barcode&&p.barcode.toLowerCase().includes(search.toLowerCase()))
+    );
     _renderInventoryTable(localFiltered,container);
-    if(search&&isOnline()&&currentStoreId){
-        clearTimeout(_inventorySearchTimer);
-        _inventorySearchTimer=setTimeout(async()=>{
-            try{
-                const snap=await getProductsCol().orderBy('name').startAt(search).endAt(search+'\uf8ff').limit(50).get();
-                let results=snap.docs.map(d=>({id:d.id,...d.data()}));
-                const byB=allProducts.filter(p=>p.barcode&&p.barcode.toLowerCase().includes(search.toLowerCase())&&!results.find(r=>r.id===p.id));
-                results=results.concat(byB).slice(0,50);
-                const c2=document.getElementById('inventoryTableContainer'); if(c2) _renderInventoryTable(results,c2);
-            }catch(e){}
-        },400);
-    }
 }
 function _renderInventoryTable(filtered,container){
     if(!filtered.length){ container.innerHTML='<p>لا توجد منتجات</p>'; return; }
     let html=`<div class="table-responsive"><table class="data-table"><thead><tr><th>المنتج</th><th>الباركود</th><th>الكمية</th><th>الوحدة</th><th>سعر القطاعي</th><th>حد التنبيه</th><th>إجراء</th></tr></thead><tbody>`;
-    for(let p of filtered) html+=`<tr><td style="text-align:right;">${escapeHtml(p.name)}</td><td>${p.barcode||'-'}</td><td>${p.qty}</td><td>${p.unit}</td><td>${p.priceRetail} ج.م</td><td>${p.lowStockAlert||0}</td><td><button class="btn-sm" onclick="openEditProductModal('${p.id}')">✏️ تعديل</button></td></tr>`;
+    for(let p of filtered)
+        html+=`<tr><td style="text-align:right;">${escapeHtml(p.name)}</td><td>${p.barcode||'-'}</td><td>${p.qty}</td><td>${p.unit||'قطعة'}</td><td>${p.priceRetail||0} ج.م</td><td>${p.lowStockAlert||0}</td><td><button class="btn-sm" onclick="openEditProductModal('${p.id}')">✏️ تعديل</button></td></tr>`;
     html+=`</tbody></table></div>`;
     container.innerHTML=html;
 }
 window.resetInventoryFilter=()=>{ document.getElementById('inventorySearch').value=''; filterInventory(); };
 
+/* =====================================================================
+   Missing Products
+   ===================================================================== */
 async function ensureMissingProductsCache(){
-    if(!missingProductsLoaded&&currentStoreId){
-        const snap=await getMissingProductsCol().limit(QUERY_LIMITS.missingProducts).get();
-        allMissingProducts=snap.docs.map(d=>({id:d.id,...d.data()})); missingProductsLoaded=true;
-        await cacheData('missingProducts',allMissingProducts);
-    }
+    if(!missingProductsLoaded&&currentStoreId&&isOnline()){
+        try{
+            const snap=await getMissingProductsCol().limit(QUERY_LIMITS.missingProducts).get();
+            allMissingProducts=snap.docs.map(d=>({id:d.id,...d.data()}));
+            missingProductsLoaded=true;
+            await cacheData('missingProducts',allMissingProducts);
+        }catch(e){}
+    } else { missingProductsLoaded=true; }
 }
 async function refreshMissingProductsTable(){
     const div=document.getElementById('missingProductsList'); if(!div) return;
     if(!allMissingProducts.length){ div.innerHTML='<p>لا توجد منتجات ناقصة</p>'; return; }
     let html=`<div class="table-responsive"><table class="data-table" id="missingProductsTablePrint"><thead><tr><th>الاسم</th><th>الكمية</th><th>إجراء</th></tr></thead><tbody>`;
-    for(let p of allMissingProducts) html+=`<tr><td style="text-align:right;">${escapeHtml(p.name)}</td><td>${p.quantity||'ـ'}</td><td><button class="btn-sm btn-danger" onclick="deleteMissingProduct('${p.id}')">🗑️</button></td></tr>`;
+    for(let p of allMissingProducts)
+        html+=`<tr><td style="text-align:right;">${escapeHtml(p.name)}</td><td>${p.quantity||'ـ'}</td><td><button class="btn-sm btn-danger" onclick="deleteMissingProduct('${p.id}')">🗑️</button></td></tr>`;
     html+=`</tbody></table></div>`;
     div.innerHTML=html;
 }
@@ -1091,41 +1803,70 @@ window.addMissingProduct=async()=>{
     let name=document.getElementById('missingProductName').value.trim(); if(!name) return;
     let qtyRaw=document.getElementById('missingProductQty').value;
     let quantity=qtyRaw?parseInt(qtyRaw):null;
-    const data={name,quantity,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-    if(!isOnline()){ await addPendingOp({type:'addMissingProduct',data}); allMissingProducts.push({id:'temp_'+Date.now(),...data}); refreshMissingProductsTable(); cacheData('missingProducts',allMissingProducts); showFlash('missingProductsList','تمت الإضافة محلياً',false); document.getElementById('missingProductName').value=''; document.getElementById('missingProductQty').value=''; return; }
-    const docRef=await getMissingProductsCol().add(data); allMissingProducts.push({id:docRef.id,...data}); await cacheData('missingProducts',allMissingProducts); refreshMissingProductsTable();
-    document.getElementById('missingProductName').value=''; document.getElementById('missingProductQty').value='';
+    const localId=genLocalId();
+    const data={name,quantity};
+    allMissingProducts.push({id:localId,...data});
+    refreshMissingProductsTable();
+    await cacheData('missingProducts',allMissingProducts);
+    if(!isOnline()){
+        await addPendingOp({type:'addMissingProduct',data});
+        showFlash('missingProductsList','تمت الإضافة محلياً',false);
+    } else {
+        const docRef=await getMissingProductsCol().add({...data,createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(async()=>{ await addPendingOp({type:'addMissingProduct',data}); return null; });
+        if(docRef){ const idx=allMissingProducts.findIndex(p=>p.id===localId); if(idx!==-1) allMissingProducts[idx].id=docRef.id; await cacheData('missingProducts',allMissingProducts); }
+    }
+    document.getElementById('missingProductName').value='';
+    document.getElementById('missingProductQty').value='';
 };
 window.deleteMissingProduct=async(id)=>{
-    if(confirm('حذف؟')){
-        if(!isOnline()){ await addPendingOp({type:'deleteMissingProduct',missingId:id}); allMissingProducts=allMissingProducts.filter(p=>p.id!==id); refreshMissingProductsTable(); return; }
-        await getMissingProductsCol().doc(id).delete(); allMissingProducts=allMissingProducts.filter(p=>p.id!==id); await cacheData('missingProducts',allMissingProducts); refreshMissingProductsTable();
-    }
+    if(!confirm('حذف؟')) return;
+    allMissingProducts=allMissingProducts.filter(p=>p.id!==id);
+    refreshMissingProductsTable();
+    await cacheData('missingProducts',allMissingProducts);
+    if(!isOnline()) await addPendingOp({type:'deleteMissingProduct',missingId:id});
+    else await getMissingProductsCol().doc(id).delete().catch(async()=>await addPendingOp({type:'deleteMissingProduct',missingId:id}));
 };
 
+/* =====================================================================
+   Product Filter
+   ===================================================================== */
 function applyProductFilter(){
     let filtered=[...allProducts];
-    let search=document.getElementById('filterSearch')?.value.toLowerCase()||'';
-    let minQty=parseInt(document.getElementById('filterMinQty')?.value);
-    let maxQty=parseInt(document.getElementById('filterMaxQty')?.value);
+    const search=document.getElementById('filterSearch')?.value.toLowerCase()||'';
+    const minQty=parseInt(document.getElementById('filterMinQty')?.value);
+    const maxQty=parseInt(document.getElementById('filterMaxQty')?.value);
     if(search) filtered=filtered.filter(p=>p.name.toLowerCase().includes(search)||(p.barcode&&p.barcode.toLowerCase().includes(search)));
     if(!isNaN(minQty)) filtered=filtered.filter(p=>p.qty>=minQty);
     if(!isNaN(maxQty)) filtered=filtered.filter(p=>p.qty<=maxQty);
     const container=document.getElementById('filteredProductsList');
     if(!filtered.length){ container.innerHTML='<p>لا توجد منتجات</p>'; return; }
     let html='<div class="grid-2">';
-    for(let p of filtered) html+=`<div class="card"><div class="card-info"><strong>${escapeHtml(p.name)}</strong><br>الباركود: ${p.barcode||'-'}<br>الكمية: ${p.qty} ${p.unit}<br>السعر: ${p.priceRetail} ج.م</div></div>`;
+    for(let p of filtered)
+        html+=`<div class="card"><div class="card-info"><strong>${escapeHtml(p.name)}</strong><br>الباركود: ${p.barcode||'-'}<br>الكمية: ${p.qty} ${p.unit||'قطعة'}<br>السعر: ${p.priceRetail||0} ج.م</div></div>`;
     html+=`</div>`;
     container.innerHTML=html;
 }
-window.resetProductFilter=()=>{ document.getElementById('filterSearch').value=''; document.getElementById('filterMinQty').value=''; document.getElementById('filterMaxQty').value=''; applyProductFilter(); };
+window.resetProductFilter=()=>{
+    document.getElementById('filterSearch').value='';
+    document.getElementById('filterMinQty').value='';
+    document.getElementById('filterMaxQty').value='';
+    applyProductFilter();
+};
 
+/* =====================================================================
+   Top By Time
+   ===================================================================== */
 window.calculateTopByTime=async()=>{
-    let start=document.getElementById('startTime').value, end=document.getElementById('endTime').value;
+    const start=document.getElementById('startTime').value, end=document.getElementById('endTime').value;
     if(!start||!end) return showFlash('topByTimeResult','يرجى تحديد النطاق الزمني',true);
     const startDate=new Date(start), endDate=new Date(end);
     const productCount={};
-    for(let inv of allInvoicesCache){ if(inv.cancelled||!inv.date) continue; const invDate=inv.date?.toDate(); if(invDate&&invDate>=startDate&&invDate<=endDate) for(let it of inv.items) productCount[it.productName]=(productCount[it.productName]||0)+it.quantity; }
+    for(let inv of allInvoicesCache){
+        if(inv.cancelled||!inv.date) continue;
+        const invDate=inv.date?.toDate?.();
+        if(invDate&&invDate>=startDate&&invDate<=endDate)
+            for(let it of inv.items) productCount[it.productName]=(productCount[it.productName]||0)+it.quantity;
+    }
     const sorted=Object.entries(productCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
     const resultDiv=document.getElementById('topByTimeResult');
     if(!sorted.length){ resultDiv.innerHTML='<p>لا توجد مبيعات في هذا النطاق</p>'; return; }
@@ -1133,34 +1874,75 @@ window.calculateTopByTime=async()=>{
     resultDiv.innerHTML=html;
 };
 
-window.printLowStockTable=()=>{ const t=document.getElementById('lowStockPrintTable'); if(!t) return; directPrint(generatePrintHTML('المنتجات الأقل من حد التنبيه','',t.querySelector('thead').innerHTML,t.querySelector('tbody').innerHTML,'')); };
+/* =====================================================================
+   Low Stock Print
+   ===================================================================== */
+window.printLowStockTable=()=>{
+    const t=document.getElementById('lowStockPrintTable'); if(!t) return;
+    directPrint(generatePrintHTML('المنتجات الأقل من حد التنبيه','',t.querySelector('thead').innerHTML,t.querySelector('tbody').innerHTML,''));
+};
 
-window.showReportToday=async()=>{ const s=new Date(); s.setHours(0,0,0,0); const e=new Date(); e.setHours(23,59,59,999); displayReportTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date&&inv.date.toDate()>=s&&inv.date.toDate()<=e),'تقرير اليوم'); };
-window.showReportCustomDate=()=>{ const d=prompt("أدخل التاريخ (YYYY-MM-DD):",new Date().toISOString().split('T')[0]); if(!d) return; const s=new Date(d); s.setHours(0,0,0,0); const e=new Date(d); e.setHours(23,59,59,999); displayReportTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date&&inv.date.toDate()>=s&&inv.date.toDate()<=e),`تقرير ${d}`); };
+/* =====================================================================
+   Reports
+   ===================================================================== */
+window.showReportToday=async()=>{
+    const s=new Date(); s.setHours(0,0,0,0); const e=new Date(); e.setHours(23,59,59,999);
+    displayReportTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date?.toDate?.()>=s&&inv.date?.toDate?.()<=e),'تقرير اليوم');
+};
+window.showReportCustomDate=()=>{
+    const d=prompt("أدخل التاريخ (YYYY-MM-DD):",new Date().toISOString().split('T')[0]); if(!d) return;
+    const s=new Date(d); s.setHours(0,0,0,0); const e=new Date(d); e.setHours(23,59,59,999);
+    displayReportTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date?.toDate?.()>=s&&inv.date?.toDate?.()<=e),`تقرير ${d}`);
+};
 window.showReportAll=()=>{ displayReportTable(allInvoicesCache.filter(inv=>!inv.cancelled),'التقرير الإجمالي'); };
 function displayReportTable(invoices,title){
     if(!invoices.length){ document.getElementById('reportResult').innerHTML='<p>لا توجد بيانات</p>'; return; }
     let totalSales=0,totalProfit=0;
-    for(let inv of invoices){ totalSales+=inv.total; for(let it of inv.items){ const prod=allProducts.find(p=>p.id===it.productId); totalProfit+=it.total-((prod?.cost||0)*it.quantity); } }
-    let html=`<h4>${title}</h4><p>إجمالي المبيعات: ${totalSales.toFixed(2)} ج.م | إجمالي الأرباح: ${totalProfit.toFixed(2)} ج.م</p><div class="table-responsive"><table class="data-table" id="reportPrintTable"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>المنتجات</th></tr></thead><tbody>`;
-    for(let inv of invoices) html+=`<tr><td>${inv.invoiceNumber}</td><td>${formatDate(inv.date)}</td><td>${inv.total.toFixed(2)}</td><td style="text-align:right;">${inv.items.map(it=>`${it.productName}(${it.quantity})`).join(', ')}</td></tr>`;
+    for(let inv of invoices){
+        totalSales+=inv.total;
+        for(let it of inv.items){ const prod=allProducts.find(p=>p.id===it.productId); totalProfit+=it.total-((prod?.cost||0)*it.quantity); }
+    }
+    let html=`<h4>${title}</h4><p>إجمالي المبيعات: ${totalSales.toFixed(2)} ج.م | إجمالي الأرباح: ${totalProfit.toFixed(2)} ج.م</p>
+    <div class="table-responsive"><table class="data-table" id="reportPrintTable"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>المنتجات</th></tr></thead><tbody>`;
+    for(let inv of invoices)
+        html+=`<tr><td>${inv.invoiceNumber}</td><td>${formatDate(inv.date)}</td><td>${Number(inv.total).toFixed(2)}</td><td style="text-align:right;">${inv.items.map(it=>`${it.productName}(${it.quantity})`).join(', ')}</td></tr>`;
     html+=`</tbody></table></div><button class="btn-sm" onclick="printReportTable()">🖨️ طباعة التقرير</button>`;
     document.getElementById('reportResult').innerHTML=html;
 }
 window.printReportTable=()=>{ const t=document.getElementById('reportPrintTable'); if(!t) return; directPrint(generatePrintHTML('تقرير المبيعات','',t.querySelector('thead').innerHTML,t.querySelector('tbody').innerHTML,'')); };
 
-window.showSalesToday=async()=>{ const s=new Date(); s.setHours(0,0,0,0); const e=new Date(); e.setHours(23,59,59,999); displaySalesTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date&&inv.date.toDate()>=s&&inv.date.toDate()<=e),'مبيعات اليوم'); };
-window.showSalesYesterday=async()=>{ const s=new Date(); s.setDate(s.getDate()-1); s.setHours(0,0,0,0); const e=new Date(); e.setDate(e.getDate()-1); e.setHours(23,59,59,999); displaySalesTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date&&inv.date.toDate()>=s&&inv.date.toDate()<=e),'مبيعات الأمس'); };
-window.showSalesByDate=()=>{ const d=prompt("أدخل التاريخ (YYYY-MM-DD):",new Date().toISOString().split('T')[0]); if(!d) return; const s=new Date(d); s.setHours(0,0,0,0); const e=new Date(d); e.setHours(23,59,59,999); displaySalesTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date&&inv.date.toDate()>=s&&inv.date.toDate()<=e),`مبيعات ${d}`); };
+/* =====================================================================
+   Sales Reports
+   ===================================================================== */
+window.showSalesToday=async()=>{
+    const s=new Date(); s.setHours(0,0,0,0); const e=new Date(); e.setHours(23,59,59,999);
+    displaySalesTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date?.toDate?.()>=s&&inv.date?.toDate?.()<=e),'مبيعات اليوم');
+};
+window.showSalesYesterday=async()=>{
+    const s=new Date(); s.setDate(s.getDate()-1); s.setHours(0,0,0,0);
+    const e=new Date(); e.setDate(e.getDate()-1); e.setHours(23,59,59,999);
+    displaySalesTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date?.toDate?.()>=s&&inv.date?.toDate?.()<=e),'مبيعات الأمس');
+};
+window.showSalesByDate=()=>{
+    const d=prompt("أدخل التاريخ (YYYY-MM-DD):",new Date().toISOString().split('T')[0]); if(!d) return;
+    const s=new Date(d); s.setHours(0,0,0,0); const e=new Date(d); e.setHours(23,59,59,999);
+    displaySalesTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date?.toDate?.()>=s&&inv.date?.toDate?.()<=e),`مبيعات ${d}`);
+};
 function displaySalesTable(invoices,title){
     if(!invoices.length){ document.getElementById('salesReportResult').innerHTML='<p>لا توجد مبيعات</p>'; return; }
     let html=`<h4>${title}</h4><div class="table-responsive"><table class="data-table" id="salesPrintTable"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>العميل</th><th>الإجمالي</th><th>المنتجات</th></tr></thead><tbody>`;
-    for(let inv of invoices){ let custName=inv.customerId?(allCustomers.find(c=>c.id===inv.customerId)?.name||'نقدي'):'نقدي'; html+=`<tr><td>${inv.invoiceNumber}</td><td>${formatDate(inv.date)}</td><td>${custName}</td><td>${inv.total.toFixed(2)}</td><td style="text-align:right;">${inv.items.map(it=>`${it.productName}(${it.quantity})`).join(', ')}</td></tr>`; }
+    for(let inv of invoices){
+        const custName=inv.customerId?(allCustomers.find(c=>c.id===inv.customerId)?.name||'نقدي'):'نقدي';
+        html+=`<tr><td>${inv.invoiceNumber}</td><td>${formatDate(inv.date)}</td><td>${custName}</td><td>${Number(inv.total).toFixed(2)}</td><td style="text-align:right;">${inv.items.map(it=>`${it.productName}(${it.quantity})`).join(', ')}</td></tr>`;
+    }
     html+=`</tbody></table></div><button class="btn-sm" onclick="printSalesTable()">🖨️ طباعة الجدول</button>`;
     document.getElementById('salesReportResult').innerHTML=html;
 }
 window.printSalesTable=()=>{ const t=document.getElementById('salesPrintTable'); if(!t) return; directPrint(generatePrintHTML('تقرير المبيعات اليومية','',t.querySelector('thead').innerHTML,t.querySelector('tbody').innerHTML,'')); };
 
+/* =====================================================================
+   Change Password
+   ===================================================================== */
 window.changePassword=async()=>{
     const old=document.getElementById('oldPassword').value, new1=document.getElementById('newPassword1').value, new2=document.getElementById('newPassword2').value, msg=document.getElementById('passwordMsg');
     if(!old||!new1||!new2){ msg.style.display='block'; msg.innerText='املأ الحقول'; setTimeout(()=>msg.style.display='none',3000); return; }
@@ -1169,40 +1951,113 @@ window.changePassword=async()=>{
     try{
         const user=auth.currentUser;
         const cred=firebase.auth.EmailAuthProvider.credential(user.email,old);
-        await user.reauthenticateWithCredential(cred); await user.updatePassword(new1);
-        msg.style.display='block'; msg.style.backgroundColor='#d1fae5'; msg.innerText='✅ تم تغيير كلمة المرور'; setTimeout(()=>msg.style.display='none',3000);
-    }catch(e){ msg.style.display='block'; msg.innerText=e.code==='auth/wrong-password'?'كلمة المرور القديمة خاطئة':'حدث خطأ'; setTimeout(()=>msg.style.display='none',3000); }
+        await user.reauthenticateWithCredential(cred);
+        await user.updatePassword(new1);
+        msg.style.display='block'; msg.style.backgroundColor='#d1fae5'; msg.innerText='✅ تم تغيير كلمة المرور';
+        setTimeout(()=>msg.style.display='none',3000);
+    }catch(e){
+        msg.style.display='block';
+        msg.innerText=e.code==='auth/wrong-password'?'كلمة المرور القديمة خاطئة':'حدث خطأ';
+        setTimeout(()=>msg.style.display='none',3000);
+    }
 };
 
-// ========== تسجيل الدخول ==========
+/* =====================================================================
+   Auth
+   ===================================================================== */
 async function handleSignedInUser(user){
     try{
-        const info=await ensureUserDocument(user.uid,user.email);
+        let info;
+        if(!isOnline()){
+            /* Offline: use cached user data */
+            info = await getCachedData('userData');
+            if(!info) { document.getElementById('loginError').innerText='لا يوجد بيانات مخزنة، يرجى الاتصال بالإنترنت أولاً.'; await auth.signOut(); return; }
+        } else {
+            info = await ensureUserDocument(user.uid, user.email);
+            await cacheData('userData', info);
+        }
+
         currentUserAuth=user; userData=info; currentStoreId=info.storeId; currentRole=info.role; isAdminGlobal=(currentRole==='admin');
         document.getElementById('loginScreen').style.display='none';
         document.getElementById('dashboard').style.display='block';
         document.getElementById('storeTitle').innerHTML=`<i class="fas fa-store"></i> ${info.storeName||'المحل'}`;
-        if(!isAdminGlobal) await loadStoreData(true);
-        await ensureInvoicesCache(); await ensureMissingProductsCache();
+
+        /* Load from cache first for instant UI, then sync */
+        await loadFromCacheThenSync();
         buildTabs();
-        setTimeout(()=>syncPendingOps(),1000);
-    }catch(e){ console.error(e); await auth.signOut(); location.reload(); }
+        updateStatusBar();
+
+        /* Background refresh if online */
+        if(isOnline()){
+            setTimeout(()=>loadStoreData(true),500);
+            setTimeout(()=>syncPendingOps(),1500);
+        }
+    }catch(e){
+        console.error(e);
+        if(e.message==='الحساب معطل'){ document.getElementById('loginError').innerText='الحساب معطل'; await auth.signOut(); return; }
+        /* If network error, try cached data */
+        const cached=await getCachedData('userData');
+        if(cached){
+            userData=cached; currentStoreId=cached.storeId; currentRole=cached.role; isAdminGlobal=(currentRole==='admin');
+            currentUserAuth=user;
+            document.getElementById('loginScreen').style.display='none';
+            document.getElementById('dashboard').style.display='block';
+            document.getElementById('storeTitle').innerHTML=`<i class="fas fa-store"></i> ${cached.storeName||'المحل'}`;
+            await loadFromCacheThenSync();
+            buildTabs();
+            updateStatusBar();
+        } else {
+            await auth.signOut(); location.reload();
+        }
+    }
 }
+
 async function loginUser(){
     const id=document.getElementById('loginId').value.trim();
     const pwd=document.getElementById('loginPassword').value;
     if(!id||!pwd){ document.getElementById('loginError').innerText='أدخل اسم المستخدم وكلمة المرور'; return; }
-    try{ const cred=await auth.signInWithEmailAndPassword(id+"@bkalla.com",pwd); await handleSignedInUser(cred.user); }
-    catch(e){ document.getElementById('loginError').innerText='فشل الدخول - تأكد من البيانات'; }
+    document.getElementById('loginError').innerText='جاري التحقق...';
+    try{
+        const cred=await auth.signInWithEmailAndPassword(id+"@bkalla.com",pwd);
+        await handleSignedInUser(cred.user);
+    }catch(e){
+        document.getElementById('loginError').innerText='فشل الدخول - تأكد من البيانات';
+    }
 }
+
 async function clearAllCachedData(){
-    try{ if(idbReady&&dbCache){ await dbCache.clear('cache'); await dbCache.clear('pending'); } }catch(e){ console.warn(e); }
+    try{
+        if(idbReady&&dbCache){
+            await dbCache.clear('cache');
+            await dbCache.clear('pending');
+            await dbCache.clear('localInvoices');
+            await dbCache.clear('localCounters');
+        }
+    }catch(e){ console.warn(e); }
     allProducts=[]; allCustomers=[]; allSuppliers=[]; allInvoicesCache=[]; allMissingProducts=[];
     currentUserAuth=null; userData=null; currentStoreId=null; currentRole=null; isAdminGlobal=false;
     missingProductsLoaded=false; currentProductPage=1; cart=[]; lastReceiptData=null;
 }
-window.logoutUser=async()=>{ await clearAllCachedData(); await auth.signOut(); location.reload(); };
-auth.onAuthStateChanged(async(u)=>{ if(u) await handleSignedInUser(u); else{ document.getElementById('loginScreen').style.display='flex'; document.getElementById('dashboard').style.display='none'; } });
+
+window.logoutUser=async()=>{
+    await clearAllCachedData();
+    await auth.signOut();
+    location.reload();
+};
+
+/* Handle auth state – works offline too via cached credentials */
+auth.onAuthStateChanged(async(u)=>{
+    if(u){
+        await handleSignedInUser(u);
+    } else {
+        document.getElementById('loginScreen').style.display='flex';
+        document.getElementById('dashboard').style.display='none';
+        updateStatusBar();
+    }
+});
+
+/* Periodic status bar update */
+setInterval(updateStatusBar, 10000);
 </script>
 </body>
 </html>
