@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profileExists() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSystemAdmin() {
+      return profileExists() && profile().role == 'admin';
+    }
+
+    function isStoreMember(storeId) {
+      return profileExists()
+        && profile().isActive != false
+        && (isSystemAdmin() || profile().storeId == storeId);
+    }
+
+    function canOperateStore(storeId) {
+      return isStoreMember(storeId)
+        && (isSystemAdmin() || profile().role in ['owner', 'manager']);
+    }
+
+    function isStoreOwner(storeId) {
+      return isStoreMember(storeId)
+        && (isSystemAdmin() || profile().role == 'owner');
+    }
+
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isSystemAdmin());
+      allow list: if isSystemAdmin();
+      // Roles, ownership and activation are provisioned by trusted server code only.
+      allow create, update, delete: if false;
+    }
+
+    match /stores/{storeId} {
+      allow get: if isStoreMember(storeId);
+      allow list: if isSystemAdmin();
+      // Store creation and ownership changes happen in Cloud Functions/Admin SDK.
+      allow create, update, delete: if false;
+
+      match /products/{productId} {
+        allow read: if isStoreMember(storeId);
+        allow create, update: if canOperateStore(storeId);
+        allow delete: if isStoreOwner(storeId);
+      }
+
+      match /customers/{customerId} {
+        allow read: if isStoreMember(storeId);
+        allow create, update: if canOperateStore(storeId);
+        allow delete: if isStoreOwner(storeId);
+      }
+
+      match /suppliers/{supplierId} {
+        allow read: if isStoreMember(storeId);
+        allow create, update: if canOperateStore(storeId);
+        allow delete: if isStoreOwner(storeId);
+
+        match /products/{supplierProductId} {
+          allow read: if isStoreMember(storeId);
+          allow create, update: if canOperateStore(storeId);
+          allow delete: if isStoreOwner(storeId);
+        }
+      }
+
+      match /invoices/{invoiceId} {
+        allow read: if isStoreMember(storeId);
+        allow create: if canOperateStore(storeId)
+          && request.resource.data.userId == request.auth.uid;
+        // Existing invoices are immutable except for one-way cancellation.
+        allow update: if canOperateStore(storeId)
+          && resource.data.cancelled != true
+          && request.resource.data.cancelled == true
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['cancelled', 'cancelledAt']);
+        allow delete: if false;
+      }
+
+      match /counters/{counterId} {
+        allow read, create, update: if canOperateStore(storeId);
+        allow delete: if isStoreOwner(storeId);
+      }
+
+      match /missingProducts/{missingProductId} {
+        allow read: if isStoreMember(storeId);
+        allow create, update: if canOperateStore(storeId);
+        allow delete: if isStoreOwner(storeId);
+      }
+    }
+
+    match /_registrationOtp/{documentId} {
+      allow read, write: if false;
+    }
+    match /_registrationOtpRateLimits/{documentId} {
+      allow read, write: if false;
+    }
+  }
+}
