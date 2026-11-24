@@ -1,0 +1,20 @@
+{
+  "name": "ManaraTech POS",
+  "short_name": "Manara POS",
+  "description": "إدارة المبيعات والمخزون والفواتير",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "Icon.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
