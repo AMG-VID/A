@@ -1369,35 +1369,121 @@ window.changePassword=async()=>{
     }catch(e){ msg.style.display='block'; msg.innerText=e.code==='auth/wrong-password'?'كلمة المرور القديمة خاطئة':'حدث خطأ'; setTimeout(()=>msg.style.display='none',3000); }
 };
 
-// ========== تسجيل الدخول ==========
-async function handleSignedInUser(user){
+// ========== تسجيل الدخول وإنشاء حساب بالبريد ==========
+let authHandlingUid=null;
+function showAuthMessage(message,isError){
+    const box=document.getElementById('authMessage');
+    if(!box)return;
+    box.textContent=message;
+    box.className=isError?'auth-message error':'auth-message';
+    box.style.display='block';
+}
+function showAuthPanel(panel){
+    const register=panel==='register';
+    document.getElementById('loginPanel').style.display=register?'none':'block';
+    document.getElementById('registerPanel').style.display=register?'block':'none';
+    document.getElementById('loginTabBtn').classList.toggle('active',!register);
+    document.getElementById('registerTabBtn').classList.toggle('active',register);
+    const box=document.getElementById('authMessage');
+    if(box)box.style.display='none';
+}
+function functionsClient(){return firebase.app().functions('us-central1');}
+async function sendRegistrationCode(){
+    const storeName=document.getElementById('registerStoreName').value.trim();
+    const email=document.getElementById('registerEmail').value.trim().toLowerCase();
+    const password=document.getElementById('registerPassword').value;
+    const confirmPassword=document.getElementById('registerPasswordConfirm').value;
+    if(!storeName||!email||!password||!confirmPassword)return showAuthMessage('أكمل جميع البيانات أولًا.',true);
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return showAuthMessage('اكتب بريدًا إلكترونيًا صحيحًا.',true);
+    if(password.length<8)return showAuthMessage('كلمة المرور يجب أن تكون 8 أحرف على الأقل.',true);
+    if(password!==confirmPassword)return showAuthMessage('كلمتا المرور غير متطابقتين.',true);
+    const button=document.getElementById('sendCodeButton');
+    button.disabled=true;
     try{
-        const info=await ensureUserDocument(user.uid,user.email);
-        currentUserAuth=user; userData=info; currentStoreId=info.storeId; currentRole=info.role; isAdminGlobal=(currentRole==='admin');
-        document.getElementById('loginScreen').style.display='none';
-        document.getElementById('dashboard').style.display='block';
-        document.getElementById('storeTitle').innerHTML=`<i class="fas fa-store"></i> ${info.storeName||'المحل'}`;
-        if(!isAdminGlobal) await loadStoreData(true);
-        await ensureInvoicesCache(); await ensureMissingProductsCache();
-        buildTabs();
-        setTimeout(()=>syncPendingOps(),1000);
-    }catch(e){ console.error(e); await auth.signOut(); location.reload(); }
+        await functionsClient().httpsCallable('requestRegistrationCode')({email:email,storeName:storeName});
+        document.getElementById('registrationCodeArea').style.display='block';
+        showAuthMessage('إذا كان البريد صالحًا وغير مستخدم، فستصلك رسالة بكود التحقق. افحص الوارد والرسائل غير المرغوب فيها.');
+    }catch(error){
+        console.error(error);
+        showAuthMessage(error.message||'تعذر إرسال كود التحقق. حاول لاحقًا.',true);
+    }finally{button.disabled=false;}
+}
+async function completeRegistration(){
+    const storeName=document.getElementById('registerStoreName').value.trim();
+    const email=document.getElementById('registerEmail').value.trim().toLowerCase();
+    const password=document.getElementById('registerPassword').value;
+    const code=document.getElementById('registrationCode').value.trim();
+    if(!/^\d{6}$/.test(code))return showAuthMessage('أدخل كود التحقق المكوّن من 6 أرقام.',true);
+    try{
+        await functionsClient().httpsCallable('completeRegistration')({email:email,storeName:storeName,password:password,code:code});
+        await auth.signInWithEmailAndPassword(email,password);
+        showAuthMessage('تم إنشاء الحساب بنجاح. جاري فتح المتجر...');
+    }catch(error){
+        console.error(error);
+        showAuthMessage(error.message||'تعذر إنشاء الحساب. راجع الكود وحاول مرة أخرى.',true);
+    }
 }
 async function loginUser(){
-    const id=document.getElementById('loginId').value.trim();
-    const pwd=document.getElementById('loginPassword').value;
-    if(!id||!pwd){ document.getElementById('loginError').innerText='أدخل اسم المستخدم وكلمة المرور'; return; }
-    try{ const cred=await auth.signInWithEmailAndPassword(id+"@bkalla.com",pwd); await handleSignedInUser(cred.user); }
-    catch(e){ document.getElementById('loginError').innerText='فشل الدخول - تأكد من البيانات'; }
+    const email=document.getElementById('loginEmail').value.trim().toLowerCase();
+    const password=document.getElementById('loginPassword').value;
+    if(!email||!password)return showAuthMessage('أدخل البريد الإلكتروني وكلمة المرور.',true);
+    try{await auth.signInWithEmailAndPassword(email,password);}
+    catch(error){
+        const invalid=error.code==='auth/user-not-found'||error.code==='auth/wrong-password'||error.code==='auth/invalid-credential';
+        showAuthMessage(invalid?'البريد الإلكتروني أو كلمة المرور غير صحيحة.':(error.message||'تعذر تسجيل الدخول.'),true);
+    }
+}
+async function requestPasswordReset(){
+    const email=document.getElementById('loginEmail').value.trim().toLowerCase();
+    if(!email)return showAuthMessage('اكتب بريدك الإلكتروني أولًا.',true);
+    try{
+        await auth.sendPasswordResetEmail(email);
+        showAuthMessage('إذا كان البريد مسجلًا، فستصلك رسالة لإعادة تعيين كلمة المرور.');
+    }catch(error){showAuthMessage('تعذر إرسال رسالة الاستعادة. تحقق من البريد وحاول مرة أخرى.',true);}
+}
+async function handleSignedInUser(user){
+    if(authHandlingUid===user.uid)return;
+    authHandlingUid=user.uid;
+    try{
+        await dbReadyPromise;
+        const info=await ensureUserDocument(user.uid,user.email);
+        currentUserAuth=user;userData=info;currentStoreId=info.storeId||null;
+        currentRole=info.role;isAdminGlobal=currentRole==='admin';
+        document.getElementById('loginScreen').style.display='none';
+        document.getElementById('dashboard').style.display='block';
+        document.getElementById('storeTitle').innerHTML='<i class="fas fa-store"></i> '+escapeHtml(info.storeName||'المحل');
+        if(!isAdminGlobal){
+            await loadFromCacheThenSync();
+            await loadStoreData(true);
+        }
+        await ensureInvoicesCache();
+        await ensureMissingProductsCache();
+        buildTabs();
+        setTimeout(function(){syncPendingOps();},1000);
+    }catch(error){
+        console.error('Account initialization failed:',error);
+        authHandlingUid=null;
+        await auth.signOut();
+        document.getElementById('loginScreen').style.display='flex';
+        document.getElementById('dashboard').style.display='none';
+        showAuthMessage(error.message||'تعذر فتح الحساب. تواصل مع الدعم.',true);
+    }
 }
 async function clearAllCachedData(){
-    try{ if(idbReady&&dbCache){ await dbCache.clear('cache'); await dbCache.clear('pending'); } }catch(e){ console.warn(e); }
-    allProducts=[]; allCustomers=[]; allSuppliers=[]; allInvoicesCache=[]; allMissingProducts=[];
-    currentUserAuth=null; userData=null; currentStoreId=null; currentRole=null; isAdminGlobal=false;
-    missingProductsLoaded=false; currentProductPage=1; cart=[]; lastReceiptData=null;
+    // لا نمسح قائمة العمليات المحلية عند تسجيل الخروج؛ قد تحتوي مبيعات لم تتم مزامنتها.
+    allProducts=[];allCustomers=[];allSuppliers=[];allInvoicesCache=[];allMissingProducts=[];
+    currentUserAuth=null;userData=null;currentStoreId=null;currentRole=null;isAdminGlobal=false;
+    authHandlingUid=null;missingProductsLoaded=false;currentProductPage=1;cart=[];lastReceiptData=null;
 }
-window.logoutUser=async()=>{ await clearAllCachedData(); await auth.signOut(); location.reload(); };
-auth.onAuthStateChanged(async(u)=>{ if(u) await handleSignedInUser(u); else{ document.getElementById('loginScreen').style.display='flex'; document.getElementById('dashboard').style.display='none'; } });
+window.logoutUser=async function(){await clearAllCachedData();await auth.signOut();};
+auth.onAuthStateChanged(async function(user){
+    if(user) await handleSignedInUser(user);
+    else{
+        authHandlingUid=null;currentUserAuth=null;userData=null;currentStoreId=null;currentRole=null;isAdminGlobal=false;
+        document.getElementById('loginScreen').style.display='flex';
+        document.getElementById('dashboard').style.display='none';
+    }
+});
 </script>
 </body>
 </html>
