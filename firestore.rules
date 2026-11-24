@@ -85,6 +85,16 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      match /payments/{paymentId} {
+        allow read: if isStoreMember(storeId);
+        allow create: if canOperateStore(storeId)
+          && request.resource.data.recordedBy == request.auth.uid
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0;
+        // Payment history is append-only for auditability.
+        allow update, delete: if false;
+      }
+
       match /counters/{counterId} {
         allow read, create, update: if canOperateStore(storeId);
         allow delete: if isStoreOwner(storeId);
