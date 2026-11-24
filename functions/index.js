@@ -258,7 +258,9 @@ export const completeRegistration = onCall(
                 });
             });
 
-            await otpRef.delete();
+            await otpRef.delete().catch((cleanupError) => {
+                console.warn('Verified account created; OTP document cleanup will be retried:', cleanupError);
+            });
             return { ok: true };
         } catch (error) {
             if (createdUser) {
