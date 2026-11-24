@@ -1079,7 +1079,7 @@ function filterAndDisplayInvoices(){
         const date=toDate(invoice.date);
         const dayName=date?dayNames[date.getDay()]:'—';
         const items=(invoice.items||[]).map(function(item){return escapeHtml(item.productName)+' ('+Number(item.quantity||0)+')';}).join(', ');
-        html+='<div class="card '+(cancelled?'cancelled':'')+'"><div class="card-info"><strong>فاتورة رقم: '+escapeHtml(invoice.invoiceNumber)+' - '+dayName+'</strong><br>المنتجات: '+items+'<br>الإجمالي: '+Number(invoice.total||0).toFixed(2)+' ج.م<br>طريقة الدفع: '+escapeHtml(getPaymentMethodArabic(invoice.paymentMethod))+' | العميل: '+escapeHtml(customer?customer.name:'نقدي')+'<br>التاريخ: '+escapeHtml(formatDate(invoice.date))+' | الحالة: '+(cancelled?'ملغاة':'ناجحة')+'</div><div>'+(!cancelled?'<button class="btn-sm btn-danger" onclick="cancelInvoice(\\''+escapeHtml(invoice.id)+'\\')">إلغاء</button>':'')+'</div></div>';
+        html+='<div class="card '+(cancelled?'cancelled':'')+'"><div class="card-info"><strong>فاتورة رقم: '+escapeHtml(invoice.invoiceNumber)+' - '+dayName+'</strong><br>المنتجات: '+items+'<br>الإجمالي: '+Number(invoice.total||0).toFixed(2)+' ج.م<br>طريقة الدفع: '+escapeHtml(getPaymentMethodArabic(invoice.paymentMethod))+' | العميل: '+escapeHtml(customer?customer.name:'نقدي')+'<br>التاريخ: '+escapeHtml(formatDate(invoice.date))+' | الحالة: '+(cancelled?'ملغاة':'ناجحة')+'</div><div>'+(!cancelled?'<button class="btn-sm btn-danger" onclick="cancelInvoice(\''+escapeHtml(invoice.id)+'\')">إلغاء</button>':'')+'</div></div>';
     }
     container.innerHTML=html;
 }
