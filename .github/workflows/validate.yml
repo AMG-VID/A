@@ -1,0 +1,27 @@
+name: Validate ManaraTech POS
+
+on:
+  push:
+    branches:
+      - feature/manaratech-critical-fixes-auth
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Cloud Functions dependencies
+        working-directory: functions
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Check Cloud Functions syntax
+        run: node --check functions/index.js
+      - name: Check browser JavaScript syntax
+        run: node scripts/check-inline-scripts.mjs
+      - name: Validate Firebase JSON
+        run: node -e "JSON.parse(require('fs').readFileSync('firebase.json','utf8')); JSON.parse(require('fs').readFileSync('functions/package.json','utf8')); JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('Firebase JSON files are valid.');"
