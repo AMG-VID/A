@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>ManaraTech</title>
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <link rel="icon" type="image/jpeg" href="Icon.png">
     <meta name="theme-color" content="#4c1d95">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,6 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-functions-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/idb@8.0.0/build/umd.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -95,6 +96,16 @@
         .install-steps { margin: 10px 0 14px 0; padding-right: 20px; }
         .install-steps li { margin-bottom: 8px; font-size: 14px; line-height: 1.8; }
         .unsupported-card { background: #fff3cd; border: 1px solid #ffc107; border-radius: 20px; padding: 24px; text-align: center; color: #856404; }
+        .auth-tabs { display:flex; gap:8px; margin:18px 0; }
+        .auth-tabs button { flex:1; }
+        .auth-tab { background:#e9e7ff; color:#4c1d95; }
+        .auth-tab.active { background:linear-gradient(95deg,#2563eb,#8b5cf6); color:#fff; }
+        .auth-panel { text-align:right; }
+        .auth-message { display:none; padding:12px 14px; border-radius:14px; margin-top:12px; line-height:1.7; background:#e0f2fe; color:#075985; }
+        .auth-message.error { background:#fee2e2; color:#991b1b; }
+        .auth-help { background:none; color:#4f46e5; padding:8px; width:auto; font-size:14px; text-decoration:underline; }
+        .auth-note { color:#64748b; font-size:13px; line-height:1.7; margin:8px 0; }
+        .auth-submit { margin-top:10px; }
         @media print {
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { margin: 0; padding: 0; background: white; }
@@ -128,14 +139,35 @@
 <div class="container" id="app">
     <div id="loginScreen">
         <div class="login-box">
-            <h1><i class="fas fa-store"></i>ManaraTech</h1>
-            <input type="text" id="loginId" placeholder="اسم المستخدم" autocomplete="off">
-            <input type="password" id="loginPassword" placeholder="كلمة المرور">
-            <button onclick="loginUser()">دخول</button>
-            <div id="loginError" style="color:#dc2626; margin-top:12px;"></div>
+            <h1><i class="fas fa-store"></i> ManaraTech</h1>
+            <p class="auth-note">نظام إدارة المبيعات والمخزون للمحلات</p>
+            <div class="auth-tabs">
+                <button id="loginTabBtn" class="auth-tab active" onclick="showAuthPanel('login')">تسجيل الدخول</button>
+                <button id="registerTabBtn" class="auth-tab" onclick="showAuthPanel('register')">إنشاء حساب</button>
+            </div>
+            <div id="loginPanel" class="auth-panel">
+                <input type="email" id="loginEmail" placeholder="البريد الإلكتروني (Gmail أو غيره)" autocomplete="email">
+                <input type="password" id="loginPassword" placeholder="كلمة المرور" autocomplete="current-password">
+                <button class="auth-submit" onclick="loginUser()">دخول إلى حسابي</button>
+                <button class="auth-help" onclick="requestPasswordReset()">نسيت كلمة المرور؟ إرسال رابط الاستعادة</button>
+            </div>
+            <div id="registerPanel" class="auth-panel" style="display:none;">
+                <input type="text" id="registerStoreName" placeholder="اسم المحل أو النشاط التجاري" maxlength="80">
+                <input type="email" id="registerEmail" placeholder="بريدك الإلكتروني لاستقبال كود التحقق" autocomplete="email">
+                <input type="password" id="registerPassword" placeholder="كلمة المرور (8 أحرف على الأقل)" autocomplete="new-password">
+                <input type="password" id="registerPasswordConfirm" placeholder="تأكيد كلمة المرور" autocomplete="new-password">
+                <button id="sendCodeButton" class="auth-submit" onclick="sendRegistrationCode()">إرسال كود التحقق إلى البريد</button>
+                <div id="registrationCodeArea" style="display:none;">
+                    <p class="auth-note">أرسلنا كودًا مكوّنًا من 6 أرقام. صلاحيته 10 دقائق.</p>
+                    <input type="text" id="registrationCode" inputmode="numeric" maxlength="6" placeholder="كود التحقق المكوّن من 6 أرقام" autocomplete="one-time-code">
+                    <button class="auth-submit" onclick="completeRegistration()">تأكيد البريد وإنشاء الحساب</button>
+                    <button class="auth-help" onclick="sendRegistrationCode()">إرسال كود جديد</button>
+                </div>
+            </div>
+            <div id="authMessage" class="auth-message" role="status" aria-live="polite"></div>
             <div class="support-buttons">
-                <a href="https://wa.me/201043340329" target="_blank" class="btn-whatsapp"><i class="fab fa-whatsapp"></i> واتساب</a>
-                <a href="https://t.me/amgadmousa1000" target="_blank" class="btn-telegram"><i class="fab fa-telegram"></i> تليجرام</a>
+                <a href="https://wa.me/201043340329" target="_blank" rel="noopener noreferrer" class="btn-whatsapp"><i class="fab fa-whatsapp"></i> واتساب</a>
+                <a href="https://t.me/amgadmousa1000" target="_blank" rel="noopener noreferrer" class="btn-telegram"><i class="fab fa-telegram"></i> تليجرام</a>
             </div>
         </div>
     </div>
@@ -152,51 +184,12 @@
 <script>
 // ======================= PWA Service Worker =======================
 (function setupPWA() {
-    const manifestObj = {
-        "name": "ManaraTech", "short_name": "ManaraTech", "start_url": ".",
-        "display": "standalone", "theme_color": "#4c1d95", "background_color": "#eef2ff",
-        "icons": [{ "src": "Icon.png", "sizes": "any", "type": "image/jpeg" }]
-    };
-    const manifestBlob = new Blob([JSON.stringify(manifestObj)], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(manifestBlob);
-    let manifestLink = document.querySelector('link[rel="manifest"]');
-    if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
-    manifestLink.href = manifestURL;
-
-    const swCode = `
-const CACHE_NAME = 'manara-v3';
-const urlsToCache = [
-    './', './index.html', 'Icon.png',
-    'https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css',
-    'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js',
-    'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js',
-    'https://cdn.jsdelivr.net/npm/idb@8.0.0/build/umd.js'
-];
-self.addEventListener('install', e => {
-    e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(urlsToCache)).catch(()=>{}));
-    self.skipWaiting();
+    if (!('serviceWorker' in navigator)) return;
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+            .catch(error => console.warn('Service Worker registration failed:', error));
+    });
 });
-self.addEventListener('activate', e => {
-    e.waitUntil(caches.keys().then(keys => Promise.all(keys.map(k => { if(k !== CACHE_NAME) return caches.delete(k); }))));
-    self.clients.claim();
-});
-self.addEventListener('fetch', e => {
-    e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-        if(res && res.status === 200 && e.request.method === 'GET') {
-            const resClone = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, resClone));
-        }
-        return res;
-    }).catch(() => caches.match('./'))));
-});`;
-    const swBlob = new Blob([swCode], {type:'application/javascript'});
-    const swURL = URL.createObjectURL(swBlob);
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register(swURL).catch(e => console.warn('SW:', e));
-    }
-})();
 
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
