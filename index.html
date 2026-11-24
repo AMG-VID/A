@@ -947,9 +947,9 @@ async function renderSuppliersTab(container){
     let html='<div class="table-responsive"><table class="data-table"><thead><tr><th>الاسم</th><th>الهاتف</th><th>إجراء</th></tr></thead><tbody>';
     for(const supplier of allSuppliers){
         const id=escapeHtml(supplier.id);
-        html+='<tr><td style="text-align:right;">'+escapeHtml(supplier.name)+'</td><td>'+escapeHtml(supplier.phone||'-')+'</td><td><button class="btn-sm" onclick="editSupplier(\\''+id+'\\')">✏️</button>';
-        if(currentRole==='owner')html+='<button class="btn-sm btn-danger" onclick="deleteSupplier(\\''+id+'\\')">🗑️</button>';
-        html+='<button class="btn-sm" onclick="openSupplierProducts(\\''+id+'\\')">📋 منتجات</button><button class="btn-sm" onclick="printSupplierProductsById(\\''+id+'\\')">🖨️</button></td></tr>';
+        html+='<tr><td style="text-align:right;">'+escapeHtml(supplier.name)+'</td><td>'+escapeHtml(supplier.phone||'-')+'</td><td><button class="btn-sm" onclick="editSupplier(\''+id+'\')">✏️</button>';
+        if(currentRole==='owner')html+='<button class="btn-sm btn-danger" onclick="deleteSupplier(\''+id+'\')">🗑️</button>';
+        html+='<button class="btn-sm" onclick="openSupplierProducts(\''+id+'\')">📋 منتجات</button><button class="btn-sm" onclick="printSupplierProductsById(\''+id+'\')">🖨️</button></td></tr>';
     }
     html+='</tbody></table></div>';
     listDiv.innerHTML=html;
@@ -976,10 +976,10 @@ window.showSupplierProducts=async function(sid,sname){
     const container=document.getElementById('tabContent');
     const snapshot=await getSuppliersCol().doc(sid).collection('products').limit(QUERY_LIMITS.supplierProducts).get();
     const products=snapshot.docs.map(function(doc){return {id:doc.id,name:doc.data().name};});
-    let html='<h3>📦 منتجات المورد: '+escapeHtml(sname)+'</h3><div><button class="btn-sm" onclick="showAddProductForm()">➕ إضافة منتج</button><button class="btn-sm" onclick="renderSuppliersTab(document.getElementById(\\'tabContent\\'))">🔙 رجوع</button></div><div id="supAddProd" style="display:none;"><div class="pos-row"><input id="supProdName" placeholder="اسم المنتج"><button onclick="addSupplierProductItem()">إضافة</button></div></div><div id="supplierProductsList"></div>';
+    let html='<h3>📦 منتجات المورد: '+escapeHtml(sname)+'</h3><div><button class="btn-sm" onclick="showAddProductForm()">➕ إضافة منتج</button><button class="btn-sm" onclick="renderSuppliersTab(document.getElementById(\'tabContent\'))">🔙 رجوع</button></div><div id="supAddProd" style="display:none;"><div class="pos-row"><input id="supProdName" placeholder="اسم المنتج"><button onclick="addSupplierProductItem()">إضافة</button></div></div><div id="supplierProductsList"></div>';
     container.innerHTML=html;
     const productRows=products.map(function(product){
-        return '<tr><td style="text-align:right;">'+escapeHtml(product.name)+'</td><td><button class="btn-sm btn-danger" onclick="deleteSupplierProduct(\\''+escapeHtml(product.id)+'\\')">🗑️</button></td></tr>';
+        return '<tr><td style="text-align:right;">'+escapeHtml(product.name)+'</td><td><button class="btn-sm btn-danger" onclick="deleteSupplierProduct(\''+escapeHtml(product.id)+'\')">🗑️</button></td></tr>';
     }).join('');
     document.getElementById('supplierProductsList').innerHTML='<div class="table-responsive"><table class="data-table"><thead><tr><th>اسم المنتج</th><th>إجراء</th></tr></thead><tbody>'+productRows+'</tbody></table></div>';
     window.showAddProductForm=function(){const form=document.getElementById('supAddProd');if(form)form.style.display='block';};
