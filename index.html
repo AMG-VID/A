@@ -189,7 +189,7 @@
         navigator.serviceWorker.register('./service-worker.js')
             .catch(error => console.warn('Service Worker registration failed:', error));
     });
-});
+})();
 
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -211,42 +211,71 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 db.enablePersistence({ synchronizeTabs: true, cacheSizeBytes: 104857600 }).catch(e => console.warn(e));
 
-const QUERY_LIMITS = { products:15000, customers:1000, suppliers:500, invoices:500, missingProducts:200, supplierProducts:200 };
+const QUERY_LIMITS = { products:15000, customers:1000, suppliers:500, invoices:5000, missingProducts:200, supplierProducts:200 };
 
-let idbReady = false, dbCache;
-const openDB = async () => {
-    if (!window.idb) return;
-    dbCache = await idb.openDB('FatoraMousaOffline', 10, {
-        upgrade(db) {
-            if (!db.objectStoreNames.contains('pending')) db.createObjectStore('pending', { autoIncrement: true });
-            if (!db.objectStoreNames.contains('cache')) db.createObjectStore('cache', { keyPath: 'key' });
+let idbReady=false,dbCache;
+const dbReadyPromise=(async function(){
+    if(!window.idb) throw new Error('مكتبة التخزين المحلي غير متاحة.');
+    dbCache=await idb.openDB('FatoraMousaOffline',11,{
+        upgrade:function(database){
+            if(!database.objectStoreNames.contains('pending')) database.createObjectStore('pending',{autoIncrement:true});
+            if(!database.objectStoreNames.contains('cache')) database.createObjectStore('cache',{keyPath:'key'});
         }
     });
-    idbReady = true;
-};
-openDB();
-
-async function cacheData(key, data) { if (idbReady && dbCache) await dbCache.put('cache', { key, data, timestamp: Date.now() }); }
-async function getCachedData(key) { if (idbReady && dbCache) { const res = await dbCache.get('cache', key); return res?.data; } return null; }
-async function addPendingOp(op) { if (idbReady && dbCache) await dbCache.add('pending', op); }
-async function getPendingOps() { if (idbReady && dbCache) return await dbCache.getAll('pending'); return []; }
-async function clearPendingOps() { if (idbReady && dbCache) await dbCache.clear('pending'); }
-
-let currentUserAuth=null, userData=null, currentStoreId=null, currentRole=null, isAdminGlobal=false;
-let allProducts=[], allCustomers=[], allSuppliers=[], allInvoicesCache=[], allMissingProducts=[];
-let lastReceiptData=null, isSyncing=false, currentEditProductId=null, missingProductsLoaded=false;
+    idbReady=true;
+})();
+let currentUserAuth=null,userData=null,currentStoreId=null,currentRole=null,isAdminGlobal=false;
+let allProducts=[],allCustomers=[],allSuppliers=[],allInvoicesCache=[],allMissingProducts=[];
+let lastReceiptData=null,isSyncing=false,currentEditProductId=null,missingProductsLoaded=false;
 let currentProductPage=1;
 const productsPerPage=100;
-
-async function loadFromCacheThenSync() {
-    allProducts = await getCachedData('products') || [];
-    allCustomers = await getCachedData('customers') || [];
-    allSuppliers = await getCachedData('suppliers') || [];
-    allInvoicesCache = await getCachedData('invoices') || [];
-    allMissingProducts = await getCachedData('missingProducts') || [];
+function scopedCacheKey(key){
+    if(!currentUserAuth||!currentStoreId) return null;
+    return currentUserAuth.uid+':'+currentStoreId+':'+key;
 }
-loadFromCacheThenSync();
-
+async function cacheData(key,data){
+    await dbReadyPromise;
+    const cacheKey=scopedCacheKey(key);
+    if(cacheKey) await dbCache.put('cache',{key:cacheKey,data:data,timestamp:Date.now()});
+}
+async function getCachedData(key){
+    await dbReadyPromise;
+    const cacheKey=scopedCacheKey(key);
+    if(!cacheKey) return null;
+    const result=await dbCache.get('cache',cacheKey);
+    return result?result.data:null;
+}
+function makeOperationId(){
+    if(window.crypto&&typeof window.crypto.randomUUID==='function') return window.crypto.randomUUID();
+    return 'op-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+}
+async function addPendingOp(op){
+    await dbReadyPromise;
+    if(!currentUserAuth||!currentStoreId) throw new Error('سجل الدخول أولًا قبل حفظ عملية دون إنترنت.');
+    return dbCache.add('pending',Object.assign({},op,{
+        operationId:op.operationId||makeOperationId(),storeId:currentStoreId,
+        userId:currentUserAuth.uid,createdAt:Date.now(),attempts:0
+    }));
+}
+async function getPendingOps(){
+    await dbReadyPromise;
+    const keys=await dbCache.getAllKeys('pending'),values=await dbCache.getAll('pending');
+    return values.map(function(value,index){return Object.assign({key:keys[index]},value);});
+}
+async function removePendingOp(key){await dbReadyPromise;await dbCache.delete('pending',key);}
+async function updatePendingOp(key,patch){
+    await dbReadyPromise;
+    const current=await dbCache.get('pending',key);
+    if(current) await dbCache.put('pending',Object.assign({},current,patch),key);
+}
+async function loadFromCacheThenSync(){
+    await dbReadyPromise;
+    allProducts=await getCachedData('products')||[];
+    allCustomers=await getCachedData('customers')||[];
+    allSuppliers=await getCachedData('suppliers')||[];
+    allInvoicesCache=await getCachedData('invoices')||[];
+    allMissingProducts=await getCachedData('missingProducts')||[];
+}
 let lastRefreshTime = 0;
 const REFRESH_COOLDOWN = 5 * 60 * 1000;
 
@@ -311,32 +340,37 @@ function showFlash(id,txt,err=false){
     el.innerText=txt; el.style.backgroundColor=err?'#ffe0e0':'#e0f2fe'; el.style.color=err?'#b91c1c':'#065f46';
     setTimeout(()=>el.remove(),3000);
 }
-function escapeHtml(s){ return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
-function formatDate(ts){ return ts?.toDate ? ts.toDate().toLocaleString('ar-EG') : new Date(ts).toLocaleString('ar-EG'); }
+function escapeHtml(value){
+    return String(value==null?'':value).replace(/[&<>"']/g,function(ch){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+    });
+}
+function toDate(value){
+    if(!value) return null;
+    const result=typeof value.toDate==='function'?value.toDate():new Date(value);
+    return Number.isNaN(result.getTime())?null:result;
+}
+function formatDate(value){
+    const date=toDate(value);
+    return date?date.toLocaleString('ar-EG'):'—';
+}
+function localDateKey(date){
+    const d=date||new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function getPaymentMethodArabic(m){ return m==='cash'?'كاش':m==='visa'?'فيزا':m==='credit'?'آجل':m; }
 
-async function ensureStoreDocument(sid,sname){
-    const ref=db.collection('stores').doc(sid); const doc=await ref.get();
-    if(!doc.exists) await ref.set({name:sname,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    return ref;
-}
 async function ensureUserDocument(uid,email){
-    const userRef=db.collection('users').doc(uid); const doc=await userRef.get();
-    if(doc.exists){
-        if(doc.data().isActive===false) throw new Error('الحساب معطل');
-        const data=doc.data();
-        await ensureStoreDocument(data.storeId,data.storeName||'محل تجاري');
-        return data;
-    }
-    let storeName=`محل ${email.split('@')[0]}`;
-    let storeIdBase=storeName.replace(/\s/g,'').replace(/[^a-zA-Z0-9\u0600-\u06FF]/g,'');
-    let storeId=`store_${storeIdBase}`;
-    const existing=await db.collection('stores').doc(storeId).get();
-    if(existing.exists) storeId=`store_${storeIdBase}_${Date.now()}`;
-    await ensureStoreDocument(storeId,storeName);
-    const newUser={email,role:'owner',storeId,storeName,isActive:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-    await userRef.set(newUser);
-    return newUser;
+    const userRef=db.collection('users').doc(uid);
+    const userDoc=await userRef.get();
+    if(!userDoc.exists) throw new Error('الحساب غير مهيأ على النظام. تواصل مع الدعم.');
+    const data=userDoc.data();
+    if(data.isActive===false) throw new Error('هذا الحساب معطل. تواصل مع الدعم.');
+    if(data.role==='admin') return data;
+    if(!data.storeId) throw new Error('لا يوجد متجر مرتبط بالحساب.');
+    const storeDoc=await db.collection('stores').doc(data.storeId).get();
+    if(!storeDoc.exists) throw new Error('بيانات المتجر غير موجودة. تواصل مع الدعم.');
+    return data;
 }
 
 async function getNextInvoiceNumber(){
@@ -353,41 +387,91 @@ async function getNextInvoiceNumber(){
 
 async function ensureInvoicesCache(){ return allInvoicesCache; }
 
+async function syncQueuedInvoice(entry){
+    if(!entry.invoiceId||!entry.data||!Array.isArray(entry.data.items)) throw new Error('عملية بيع قديمة بلا معرّف ثابت؛ تحتاج مراجعة.');
+    const invoiceRef=getInvoicesCol().doc(entry.invoiceId),data=entry.data,grouped=new Map();
+    data.items.forEach(function(item){grouped.set(item.productId,(grouped.get(item.productId)||0)+Number(item.quantity));});
+    await db.runTransaction(async function(transaction){
+        const existing=await transaction.get(invoiceRef);
+        if(existing.exists) return;
+        const today=new Date(),counterRef=getCountersCol().doc('daily_'+localDateKey(today));
+        const counterSnap=await transaction.get(counterRef),rows=[];
+        for(const pair of grouped.entries()){
+            const ref=getProductsCol().doc(pair[0]);
+            rows.push({ref:ref,snap:await transaction.get(ref),quantity:pair[1]});
+        }
+        let customerRef=null,customerSnap=null;
+        if(data.customerId&&Number(data.debtAdded)>0){
+            customerRef=getCustomersCol().doc(data.customerId);
+            customerSnap=await transaction.get(customerRef);
+            if(!customerSnap.exists) throw new Error('العميل المرتبط بهذه الفاتورة غير موجود.');
+        }
+        rows.forEach(function(row){
+            if(!row.snap.exists||Number(row.snap.data().qty||0)<row.quantity) throw new Error('المخزون الحالي لا يكفي لمزامنة فاتورة محلية. العملية محفوظة ولم تحذف.');
+        });
+        const invoiceNumber=counterSnap.exists?Number(counterSnap.data().current||0)+1:1;
+        transaction.set(counterRef,{current:invoiceNumber,date:firebase.firestore.Timestamp.fromDate(new Date(today.getFullYear(),today.getMonth(),today.getDate()))});
+        rows.forEach(function(row){transaction.update(row.ref,{qty:Number(row.snap.data().qty||0)-row.quantity});});
+        if(customerRef&&customerSnap) transaction.update(customerRef,{debt:Number(customerSnap.data().debt||0)+Number(data.debtAdded)});
+        transaction.set(invoiceRef,Object.assign({},data,{invoiceNumber:invoiceNumber,offlineInvoiceNumber:data.invoiceNumber||null,date:firebase.firestore.FieldValue.serverTimestamp()}));
+    });
+}
+async function syncQueuedCancellation(entry){
+    if(!entry.invoiceId) throw new Error('عملية إلغاء قديمة بلا معرّف فاتورة.');
+    const invoiceRef=getInvoicesCol().doc(entry.invoiceId);
+    await db.runTransaction(async function(transaction){
+        const snap=await transaction.get(invoiceRef);
+        if(!snap.exists) throw new Error('الفاتورة المراد إلغاؤها غير موجودة على الخادم.');
+        const invoice=snap.data();
+        if(invoice.cancelled===true) return;
+        const grouped=new Map();
+        (invoice.items||entry.items||[]).forEach(function(item){grouped.set(item.productId,(grouped.get(item.productId)||0)+Number(item.quantity));});
+        const rows=[];
+        for(const pair of grouped.entries()){
+            const ref=getProductsCol().doc(pair[0]);
+            rows.push({ref:ref,snap:await transaction.get(ref),quantity:pair[1]});
+        }
+        let customerRef=null,customerSnap=null;
+        if(invoice.customerId&&invoice.paymentMethod==='credit'&&Number(invoice.debtAdded)>0){
+            customerRef=getCustomersCol().doc(invoice.customerId);
+            customerSnap=await transaction.get(customerRef);
+        }
+        rows.forEach(function(row){if(row.snap.exists) transaction.update(row.ref,{qty:Number(row.snap.data().qty||0)+row.quantity});});
+        if(customerRef&&customerSnap&&customerSnap.exists) transaction.update(customerRef,{debt:Math.max(0,Number(customerSnap.data().debt||0)-Number(invoice.debtAdded||0))});
+        transaction.update(invoiceRef,{cancelled:true,cancelledAt:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+}
 async function syncPendingOps(){
-    if(!navigator.onLine||isSyncing) return;
+    if(!navigator.onLine||isSyncing||!currentStoreId||!currentUserAuth) return;
     isSyncing=true;
-    const pending=await getPendingOps();
-    if(pending.length===0){ isSyncing=false; return; }
-    for(let op of pending){
-        try{
-            if(op.type==='addInvoice'){
-                await getInvoicesCol().add(op.data);
-                const productIds=[...new Set(op.data.items.map(i=>i.productId))];
-                const prodDocs=await Promise.all(productIds.map(pid=>getProductsCol().doc(pid).get()));
-                const prodMap={};
-                prodDocs.forEach(doc=>{if(doc.exists) prodMap[doc.id]=doc.data();});
-                const batch=db.batch();
-                for(let item of op.data.items){ if(prodMap[item.productId]!==undefined) batch.update(getProductsCol().doc(item.productId),{qty:firebase.firestore.FieldValue.increment(-item.quantity)}); }
-                await batch.commit();
-                if(op.data.customerId&&op.data.paymentMethod==='credit'&&op.data.debtAdded>0) await getCustomersCol().doc(op.data.customerId).update({debt:firebase.firestore.FieldValue.increment(op.data.debtAdded)});
-            } else if(op.type==='addProduct'){
-                const docRef=await getProductsCol().add(op.data);
-                allProducts.push({id:docRef.id,...op.data}); await cacheData('products',allProducts);
-            } else if(op.type==='cancelInvoice'){
-                const invRef=getInvoicesCol().doc(op.invoiceId);
-                const batch=db.batch(); batch.update(invRef,{cancelled:true});
-                for(let item of op.items) batch.update(getProductsCol().doc(item.productId),{qty:firebase.firestore.FieldValue.increment(item.quantity)});
-                if(op.customerId&&op.debtRemoved>0) batch.update(getCustomersCol().doc(op.customerId),{debt:firebase.firestore.FieldValue.increment(-op.debtRemoved)});
-                await batch.commit();
-            } else if(op.type==='addMissingProduct') await getMissingProductsCol().add(op.data);
-            else if(op.type==='deleteMissingProduct') await getMissingProductsCol().doc(op.missingId).delete();
-        }catch(e){ console.warn(e); }
-    }
-    await clearPendingOps();
-    await refreshFromFirestore(true);
-    if(document.getElementById('salesLogList')) filterAndDisplayInvoices();
-    if(document.getElementById('otherContent')) loadOtherSubContent();
-    isSyncing=false;
+    try{
+        const pending=await getPendingOps();
+        for(const entry of pending){
+            if(entry.storeId!==currentStoreId||entry.userId!==currentUserAuth.uid) continue;
+            try{
+                if(entry.type==='addInvoice') await syncQueuedInvoice(entry);
+                else if(entry.type==='cancelInvoice') await syncQueuedCancellation(entry);
+                else if(entry.type==='addProduct'){
+                    if(!entry.docId) throw new Error('عملية إضافة منتج قديمة بلا معرّف ثابت؛ تحتاج مراجعة.');
+                    await getProductsCol().doc(entry.docId).set(entry.data);
+                }else if(entry.type==='updateProduct') await getProductsCol().doc(entry.productId).update(entry.data);
+                else if(entry.type==='addMissingProduct'){
+                    if(!entry.docId) throw new Error('عملية منتج ناقص قديمة بلا معرّف ثابت؛ تحتاج مراجعة.');
+                    await getMissingProductsCol().doc(entry.docId).set(entry.data);
+                }else if(entry.type==='deleteMissingProduct') await getMissingProductsCol().doc(entry.missingId).delete();
+                else throw new Error('نوع عملية غير معروف. احتفظنا بها للمراجعة.');
+                await removePendingOp(entry.key);
+            }catch(error){
+                console.error('Pending operation retained:',error);
+                await updatePendingOp(entry.key,{attempts:Number(entry.attempts||0)+1,lastAttemptAt:Date.now(),syncError:error.message||'فشلت المزامنة'});
+                showFlash('productsLoadingBar','تعذرت مزامنة عملية محلية؛ لم نحذفها. راجع المخزون أو الاتصال.',true);
+                break;
+            }
+        }
+        await refreshFromFirestore(true);
+        if(document.getElementById('salesLogList')) filterAndDisplayInvoices();
+        if(document.getElementById('otherContent')) loadOtherSubContent();
+    }finally{isSyncing=false;}
 }
 window.addEventListener('online',async()=>{ document.getElementById('statusBar').innerHTML=''; await syncPendingOps(); });
 window.addEventListener('offline',()=>{ document.getElementById('statusBar').style.backgroundColor='#fee2e2'; });
