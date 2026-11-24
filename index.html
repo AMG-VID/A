@@ -146,7 +146,7 @@
                 <button id="registerTabBtn" class="auth-tab" onclick="showAuthPanel('register')">إنشاء حساب</button>
             </div>
             <div id="loginPanel" class="auth-panel">
-                <input type="email" id="loginEmail" placeholder="البريد الإلكتروني (Gmail أو غيره)" autocomplete="email">
+                <input type="email" id="loginEmail" placeholder="البريد الإلكتروني أو اسم المستخدم القديم" autocomplete="email">
                 <input type="password" id="loginPassword" placeholder="كلمة المرور" autocomplete="current-password">
                 <button class="auth-submit" onclick="loginUser()">دخول إلى حسابي</button>
                 <button class="auth-help" onclick="requestPasswordReset()">نسيت كلمة المرور؟ إرسال رابط الاستعادة</button>
@@ -442,35 +442,44 @@ async function syncQueuedCancellation(entry){
     });
 }
 async function syncPendingOps(){
-    if(!navigator.onLine||isSyncing||!currentStoreId||!currentUserAuth) return;
+    if(!navigator.onLine||isSyncing||!currentStoreId||!currentUserAuth)return;
     isSyncing=true;
+    let blockedByFailure=false;
     try{
         const pending=await getPendingOps();
         for(const entry of pending){
-            if(entry.storeId!==currentStoreId||entry.userId!==currentUserAuth.uid) continue;
+            if(entry.storeId!==currentStoreId||entry.userId!==currentUserAuth.uid)continue;
             try{
-                if(entry.type==='addInvoice') await syncQueuedInvoice(entry);
-                else if(entry.type==='cancelInvoice') await syncQueuedCancellation(entry);
+                if(entry.type==='addInvoice')await syncQueuedInvoice(entry);
+                else if(entry.type==='cancelInvoice')await syncQueuedCancellation(entry);
                 else if(entry.type==='addProduct'){
-                    if(!entry.docId) throw new Error('عملية إضافة منتج قديمة بلا معرّف ثابت؛ تحتاج مراجعة.');
+                    if(!entry.docId)throw new Error('عملية إضافة منتج قديمة بلا معرّف ثابت؛ تحتاج مراجعة.');
                     await getProductsCol().doc(entry.docId).set(entry.data);
-                }else if(entry.type==='updateProduct') await getProductsCol().doc(entry.productId).update(entry.data);
+                }else if(entry.type==='updateProduct')await getProductsCol().doc(entry.productId).update(entry.data);
                 else if(entry.type==='addMissingProduct'){
-                    if(!entry.docId) throw new Error('عملية منتج ناقص قديمة بلا معرّف ثابت؛ تحتاج مراجعة.');
+                    if(!entry.docId)throw new Error('عملية منتج ناقص قديمة بلا معرّف ثابت؛ تحتاج مراجعة.');
                     await getMissingProductsCol().doc(entry.docId).set(entry.data);
-                }else if(entry.type==='deleteMissingProduct') await getMissingProductsCol().doc(entry.missingId).delete();
+                }else if(entry.type==='deleteMissingProduct')await getMissingProductsCol().doc(entry.missingId).delete();
                 else throw new Error('نوع عملية غير معروف. احتفظنا بها للمراجعة.');
                 await removePendingOp(entry.key);
             }catch(error){
+                blockedByFailure=true;
                 console.error('Pending operation retained:',error);
-                await updatePendingOp(entry.key,{attempts:Number(entry.attempts||0)+1,lastAttemptAt:Date.now(),syncError:error.message||'فشلت المزامنة'});
-                showFlash('productsLoadingBar','تعذرت مزامنة عملية محلية؛ لم نحذفها. راجع المخزون أو الاتصال.',true);
+                await updatePendingOp(entry.key,{
+                    attempts:Number(entry.attempts||0)+1,
+                    lastAttemptAt:Date.now(),
+                    syncError:error.message||'فشلت المزامنة'
+                });
+                showFlash('productsLoadingBar','تعذرت مزامنة عملية محلية؛ احتفظنا بها ولم نحذفها. راجع المخزون أو الاتصال.',true);
                 break;
             }
         }
-        await refreshFromFirestore(true);
-        if(document.getElementById('salesLogList')) filterAndDisplayInvoices();
-        if(document.getElementById('otherContent')) loadOtherSubContent();
+        // Do not overwrite optimistic local inventory while a failed sale remains queued.
+        if(!blockedByFailure){
+            await refreshFromFirestore(true);
+            if(document.getElementById('salesLogList'))filterAndDisplayInvoices();
+            if(document.getElementById('otherContent'))loadOtherSubContent();
+        }
     }finally{isSyncing=false;}
 }
 window.addEventListener('online',async()=>{ document.getElementById('statusBar').innerHTML=''; await syncPendingOps(); });
@@ -1330,29 +1339,128 @@ window.calculateTopByTime=async()=>{
 
 window.printLowStockTable=()=>{ const t=document.getElementById('lowStockPrintTable'); if(!t) return; directPrint(generatePrintHTML('المنتجات الأقل من حد التنبيه','',t.querySelector('thead').innerHTML,t.querySelector('tbody').innerHTML,'')); };
 
-window.showReportToday=async()=>{ const s=new Date(); s.setHours(0,0,0,0); const e=new Date(); e.setHours(23,59,59,999); displayReportTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date&&toDate(inv.date)>=s&&toDate(inv.date)<=e),'تقرير اليوم'); };
-window.showReportCustomDate=()=>{ const d=prompt("أدخل التاريخ (YYYY-MM-DD):",new Date().toISOString().split('T')[0]); if(!d) return; const s=new Date(d); s.setHours(0,0,0,0); const e=new Date(d); e.setHours(23,59,59,999); displayReportTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date&&toDate(inv.date)>=s&&toDate(inv.date)<=e),`تقرير ${d}`); };
-window.showReportAll=()=>{ displayReportTable(allInvoicesCache.filter(inv=>!inv.cancelled),'التقرير الإجمالي'); };
+async function fetchInvoicesForReport(startDate,endDate){
+    if(!isOnline())throw new Error('التقارير التاريخية تحتاج اتصالًا بالإنترنت. البيانات المحفوظة محليًا قد لا تشمل كل الفواتير.');
+    let query=getInvoicesCol();
+    if(startDate)query=query.where('date','>=',firebase.firestore.Timestamp.fromDate(startDate));
+    if(endDate)query=query.where('date','<=',firebase.firestore.Timestamp.fromDate(endDate));
+    query=query.orderBy('date','desc');
+    const all=[],pageSize=500;
+    let last=null;
+    while(true){
+        let pageQuery=query.limit(pageSize);
+        if(last)pageQuery=pageQuery.startAfter(last);
+        const snap=await pageQuery.get();
+        if(snap.empty)break;
+        all.push(...snap.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());}));
+        last=snap.docs[snap.docs.length-1];
+        if(snap.docs.length<pageSize)break;
+    }
+    return all;
+}
+function makeLocalDay(dateText){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dateText))throw new Error('صيغة التاريخ يجب أن تكون YYYY-MM-DD.');
+    const parts=dateText.split('-').map(Number);
+    const start=new Date(parts[0],parts[1]-1,parts[2],0,0,0,0);
+    if(start.getFullYear()!==parts[0]||start.getMonth()!==parts[1]-1||start.getDate()!==parts[2])throw new Error('التاريخ غير صحيح.');
+    const end=new Date(parts[0],parts[1]-1,parts[2],23,59,59,999);
+    return {start:start,end:end};
+}
+function showReportError(error){
+    const el=document.getElementById('reportResult');
+    if(el)el.textContent=error.message||'تعذر تحميل التقرير.';
+}
+window.showReportToday=async()=>{
+    try{
+        const now=new Date(),range=makeLocalDay(localDateKey(now));
+        const invoices=await fetchInvoicesForReport(range.start,range.end);
+        displayReportTable(invoices.filter(function(inv){return !inv.cancelled;}),'تقرير اليوم');
+    }catch(error){showReportError(error);}
+};
+window.showReportCustomDate=async()=>{
+    try{
+        const value=prompt('أدخل التاريخ (YYYY-MM-DD):',localDateKey(new Date()));
+        if(!value)return;
+        const range=makeLocalDay(value);
+        const invoices=await fetchInvoicesForReport(range.start,range.end);
+        displayReportTable(invoices.filter(function(inv){return !inv.cancelled;}),'تقرير '+value);
+    }catch(error){showReportError(error);}
+};
+window.showReportAll=async()=>{
+    try{
+        const invoices=await fetchInvoicesForReport(null,null);
+        displayReportTable(invoices.filter(function(inv){return !inv.cancelled;}),'التقرير الإجمالي');
+    }catch(error){showReportError(error);}
+};
 function displayReportTable(invoices,title){
-    if(!invoices.length){ document.getElementById('reportResult').innerHTML='<p>لا توجد بيانات</p>'; return; }
-    let totalSales=0,totalProfit=0;
-    for(let inv of invoices){ totalSales+=inv.total; for(let it of inv.items){ const prod=allProducts.find(p=>p.id===it.productId); totalProfit+=it.total-((it.unitCost!==undefined?it.unitCost:(prod?.cost||0))*it.quantity); } }
-    let html=`<h4>${title}</h4><p>إجمالي المبيعات: ${totalSales.toFixed(2)} ج.م | إجمالي الأرباح: ${totalProfit.toFixed(2)} ج.م</p><div class="table-responsive"><table class="data-table" id="reportPrintTable"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>المنتجات</th></tr></thead><tbody>`;
-    for(let inv of invoices) html+=`<tr><td>${inv.invoiceNumber}</td><td>${formatDate(inv.date)}</td><td>${inv.total.toFixed(2)}</td><td style="text-align:right;">${inv.items.map(it=>`${it.productName}(${it.quantity})`).join(', ')}</td></tr>`;
-    html+=`</tbody></table></div><button class="btn-sm" onclick="printReportTable()">🖨️ طباعة التقرير</button>`;
-    document.getElementById('reportResult').innerHTML=html;
+    const target=document.getElementById('reportResult');
+    if(!target)return;
+    if(!invoices.length){target.innerHTML='<p>لا توجد بيانات</p>';return;}
+    let totalSales=0,totalProfit=0,hasHistoricalCostGaps=false;
+    for(const invoice of invoices){
+        const revenue=Number(invoice.total)||0;
+        let costTotal=0;
+        for(const item of (invoice.items||[])){
+            const product=allProducts.find(function(p){return p.id===item.productId;});
+            const unitCost=item.unitCost!==undefined?Number(item.unitCost):(Number(product&&product.cost)||0);
+            if(item.unitCost===undefined)hasHistoricalCostGaps=true;
+            costTotal+=unitCost*Number(item.quantity||0);
+        }
+        totalSales+=revenue;
+        totalProfit+=revenue-costTotal;
+    }
+    let html='<h4>'+escapeHtml(title)+'</h4><p>إجمالي المبيعات: '+totalSales.toFixed(2)+' ج.م | إجمالي الربح التقريبي: '+totalProfit.toFixed(2)+' ج.م</p>';
+    if(hasHistoricalCostGaps)html+='<p class="auth-note">تنبيه: بعض الفواتير القديمة لا تحتوي تكلفة الشراء وقت البيع؛ تم استخدام تكلفة المنتج الحالية لهذه الفواتير، لذلك أرباحها تقديرية.</p>';
+    html+='<div class="table-responsive"><table class="data-table" id="reportPrintTable"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>المنتجات</th></tr></thead><tbody>';
+    for(const invoice of invoices){
+        const items=(invoice.items||[]).map(function(item){return escapeHtml(item.productName)+' ('+Number(item.quantity||0)+')';}).join(', ');
+        html+='<tr><td>'+escapeHtml(invoice.invoiceNumber)+'</td><td>'+escapeHtml(formatDate(invoice.date))+'</td><td>'+Number(invoice.total||0).toFixed(2)+'</td><td style="text-align:right;">'+items+'</td></tr>';
+    }
+    html+='</tbody></table></div><button class="btn-sm" onclick="printReportTable()">🖨️ طباعة التقرير</button>';
+    target.innerHTML=html;
 }
 window.printReportTable=()=>{ const t=document.getElementById('reportPrintTable'); if(!t) return; directPrint(generatePrintHTML('تقرير المبيعات','',t.querySelector('thead').innerHTML,t.querySelector('tbody').innerHTML,'')); };
 
-window.showSalesToday=async()=>{ const s=new Date(); s.setHours(0,0,0,0); const e=new Date(); e.setHours(23,59,59,999); displaySalesTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date&&toDate(inv.date)>=s&&toDate(inv.date)<=e),'مبيعات اليوم'); };
-window.showSalesYesterday=async()=>{ const s=new Date(); s.setDate(s.getDate()-1); s.setHours(0,0,0,0); const e=new Date(); e.setDate(e.getDate()-1); e.setHours(23,59,59,999); displaySalesTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date&&toDate(inv.date)>=s&&toDate(inv.date)<=e),'مبيعات الأمس'); };
-window.showSalesByDate=()=>{ const d=prompt("أدخل التاريخ (YYYY-MM-DD):",new Date().toISOString().split('T')[0]); if(!d) return; const s=new Date(d); s.setHours(0,0,0,0); const e=new Date(d); e.setHours(23,59,59,999); displaySalesTable(allInvoicesCache.filter(inv=>!inv.cancelled&&inv.date&&toDate(inv.date)>=s&&toDate(inv.date)<=e),`مبيعات ${d}`); };
+function showSalesError(error){
+    const el=document.getElementById('salesReportResult');
+    if(el)el.textContent=error.message||'تعذر تحميل المبيعات.';
+}
+window.showSalesToday=async()=>{
+    try{
+        const range=makeLocalDay(localDateKey(new Date()));
+        const invoices=await fetchInvoicesForReport(range.start,range.end);
+        displaySalesTable(invoices.filter(function(inv){return !inv.cancelled;}),'مبيعات اليوم');
+    }catch(error){showSalesError(error);}
+};
+window.showSalesYesterday=async()=>{
+    try{
+        const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+        const range=makeLocalDay(localDateKey(yesterday));
+        const invoices=await fetchInvoicesForReport(range.start,range.end);
+        displaySalesTable(invoices.filter(function(inv){return !inv.cancelled;}),'مبيعات الأمس');
+    }catch(error){showSalesError(error);}
+};
+window.showSalesByDate=async()=>{
+    try{
+        const value=prompt('أدخل التاريخ (YYYY-MM-DD):',localDateKey(new Date()));
+        if(!value)return;
+        const range=makeLocalDay(value);
+        const invoices=await fetchInvoicesForReport(range.start,range.end);
+        displaySalesTable(invoices.filter(function(inv){return !inv.cancelled;}),'مبيعات '+value);
+    }catch(error){showSalesError(error);}
+};
 function displaySalesTable(invoices,title){
-    if(!invoices.length){ document.getElementById('salesReportResult').innerHTML='<p>لا توجد مبيعات</p>'; return; }
-    let html=`<h4>${title}</h4><div class="table-responsive"><table class="data-table" id="salesPrintTable"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>العميل</th><th>الإجمالي</th><th>المنتجات</th></tr></thead><tbody>`;
-    for(let inv of invoices){ let custName=inv.customerId?(allCustomers.find(c=>c.id===inv.customerId)?.name||'نقدي'):'نقدي'; html+=`<tr><td>${inv.invoiceNumber}</td><td>${formatDate(inv.date)}</td><td>${custName}</td><td>${inv.total.toFixed(2)}</td><td style="text-align:right;">${inv.items.map(it=>`${it.productName}(${it.quantity})`).join(', ')}</td></tr>`; }
-    html+=`</tbody></table></div><button class="btn-sm" onclick="printSalesTable()">🖨️ طباعة الجدول</button>`;
-    document.getElementById('salesReportResult').innerHTML=html;
+    const target=document.getElementById('salesReportResult');
+    if(!target)return;
+    if(!invoices.length){target.innerHTML='<p>لا توجد مبيعات</p>';return;}
+    let html='<h4>'+escapeHtml(title)+'</h4><div class="table-responsive"><table class="data-table" id="salesPrintTable"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>العميل</th><th>الإجمالي</th><th>المنتجات</th></tr></thead><tbody>';
+    for(const invoice of invoices){
+        const customerName=invoice.customerId?(allCustomers.find(function(customer){return customer.id===invoice.customerId;})?.name||'نقدي'):'نقدي';
+        const items=(invoice.items||[]).map(function(item){return escapeHtml(item.productName)+' ('+Number(item.quantity||0)+')';}).join(', ');
+        html+='<tr><td>'+escapeHtml(invoice.invoiceNumber)+'</td><td>'+escapeHtml(formatDate(invoice.date))+'</td><td>'+escapeHtml(customerName)+'</td><td>'+Number(invoice.total||0).toFixed(2)+'</td><td style="text-align:right;">'+items+'</td></tr>';
+    }
+    html+='</tbody></table></div><button class="btn-sm" onclick="printSalesTable()">🖨️ طباعة الجدول</button>';
+    target.innerHTML=html;
 }
 window.printSalesTable=()=>{ const t=document.getElementById('salesPrintTable'); if(!t) return; directPrint(generatePrintHTML('تقرير المبيعات اليومية','',t.querySelector('thead').innerHTML,t.querySelector('tbody').innerHTML,'')); };
 
@@ -1424,9 +1532,10 @@ async function completeRegistration(){
     }
 }
 async function loginUser(){
-    const email=document.getElementById('loginEmail').value.trim().toLowerCase();
+    const entered=document.getElementById('loginEmail').value.trim().toLowerCase();
+    const email=entered.includes('@')?entered:entered+'@bkalla.com';
     const password=document.getElementById('loginPassword').value;
-    if(!email||!password)return showAuthMessage('أدخل البريد الإلكتروني وكلمة المرور.',true);
+    if(!entered||!password)return showAuthMessage('أدخل البريد الإلكتروني أو اسم المستخدم وكلمة المرور.',true);
     try{await auth.signInWithEmailAndPassword(email,password);}
     catch(error){
         const invalid=error.code==='auth/user-not-found'||error.code==='auth/wrong-password'||error.code==='auth/invalid-credential';
@@ -1458,6 +1567,11 @@ async function handleSignedInUser(user){
         }
         await ensureInvoicesCache();
         await ensureMissingProductsCache();
+        const queuedLocalOps=await getPendingOps();
+        const legacyOps=queuedLocalOps.filter(function(op){return !op.storeId||!op.userId;});
+        if(legacyOps.length){
+            showFlash('productsLoadingBar','تنبيه: عثرنا على '+legacyOps.length+' عملية محفوظة من إصدار قديم. احتفظنا بها ولم نرسلها تلقائيًا حتى لا تختلط الفواتير أو بيانات متجر آخر؛ راجعها قبل الاعتماد.',true);
+        }
         buildTabs();
         setTimeout(function(){syncPendingOps();},1000);
     }catch(error){
